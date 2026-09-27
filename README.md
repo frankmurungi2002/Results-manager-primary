@@ -125,3 +125,4 @@ later as a wrong report card.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how it fits together and why
 - [`docs/SECURITY.md`](docs/SECURITY.md) — the security model, and how to turn on database encryption
 - [`docs/SRS.md`](docs/SRS.md) — the consolidated specification this is built from
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — every requirement, its current status, and the milestone it belongs to
