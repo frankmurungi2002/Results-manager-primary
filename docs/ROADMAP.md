@@ -27,7 +27,7 @@ current state in this repository and the milestone it belongs to.
 | Milestone | Goal | Exit criteria |
 | --- | --- | --- |
 | **M0 — Stabilise** | What is already here actually works | `scripts/verify.py` passes, `cargo test` passes, `npm run typecheck` passes, a clean install signs in and prints a report card, and all three run in CI |
-| **M1 — Finish the pilot (SRS Phase 0)** | MB Primary School runs one full term on RM | Every Phase 0 row below is ✅ and one real term's report cards were printed from RM |
+| **M1 — Finish the pilot (SRS Phase 0)** | The pilot school (Rainbow Nursery and Primary School) runs one full term on RM | Every Phase 0 row below is ✅ and one real term's report cards were printed from RM |
 | **M2 — First paying cohort (SRS Phase 1)** | About 20 schools, manual activation | Every Phase 1 row is ✅ and subscription enforcement (FR-B11) is live |
 | **M3 — Scale-up (SRS Phase 2)** | About 100 schools, automated payments | Every Phase 2 row is ✅ |
 | **M4 — Mature product (SRS Phase 3)** | Long-term features that need data or scale | Built as demand appears |
@@ -102,14 +102,14 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | --- | --- | --- | --- | --- |
 | FR-C1 | Teachers see only their assigned classes and subjects | ✅ | — | |
 | FR-C2 | Subject Teacher / Class Teacher mode | ✅ | — | |
-| FR-C3 | Marks entry: Excel upload, in-app grid, guided form | 🟡 | **M1** | Grid and form done. **Excel upload missing**: export a pre-filled template per class/subject/exam, read it back through the same validator and save path. SRS 14.7 requires all three to be equally reliable |
+| FR-C3 | Marks entry: Excel upload, in-app grid, guided form | 🟡 | **M1** | Grid and form done. **Excel upload missing**: export a pre-filled template and read it back through the same validator and save path. Both layouts are required (decided 2026-09-27): one sheet per subject (a subject teacher's class and exam) and one workbook per class with all subjects (a class teacher's view). SRS 14.7 requires all three to be equally reliable |
 | FR-C5 | Subject analytics | ✅ | — | |
 | FR-C6 | Marks-entry deadline and per-teacher progress | ✅ | — | |
 | FR-C7 | Search by name or registration number | ✅ | — | |
 | FR-C8 | Audited bio-data editing | ✅ | — | |
 | FR-C9 | Correction messages from Subject Teacher to Class Teacher | ⬜ | M2 | Needs a small inbox: message, learner, status (open/resolved) |
 | FR-C10 | Add and drop learners, never delete | ✅ | — | Includes readmit and transfer |
-| FR-C11 | Streams (up to 20 per class) | 🧱 | **M2** | `streams` table and stream-scoped assignment index exist. Needs commands, roster/marks/report scoping and screens. SRS 16.5 says most schools need this |
+| FR-C11 | Streams (up to 20 per class) | 🧱 | **M2** | `streams` table and stream-scoped assignment index exist. Needs commands, roster/marks/report scoping and screens. SRS 16.5 says most schools need this. Not yet confirmed whether the pilot school runs streams; if it does, this moves into M1 |
 | FR-C12 | Weekly assignments | ⬜ (flag only) | M3 | |
 | FR-C13 | Per-class subject rename, grading override, maximum | ✅ | — | |
 | FR-C14 | Late marks for a closed term | 🟡 simplified | M2 (simplified), M3 (full workflow) | Today: an admin reopens the whole term. M2: an admin edits one closed mark with a mandatory, audited reason (SRS 16.5). M3: request → approve → 24-hour reversal |
@@ -147,7 +147,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 
 | ID | Requirement | Status | Milestone | Notes |
 | --- | --- | --- | --- | --- |
-| FR-G1 | Document generator: Custom Builder / Template Upload, letters, certificates | ⬜ | **M1** (Custom Builder), M3 (Template Upload + letters + certificates) | Must reuse `DocumentEnvelope`; the report card becomes one template of this engine |
+| FR-G1 | Document generator: Custom Builder / Template Upload, letters, certificates | ⬜ | M2 (Custom Builder), M3 (Template Upload + letters + certificates) | Moved out of the pilot (decided 2026-09-27): M1 ships one fixed, well-designed report card instead. Must reuse `DocumentEnvelope`; the report card becomes one template of this engine |
 | FR-G2 | Visitor log and visitation slip | ⬜ | M2 | |
 | FR-G3 | School overview dashboard | 🟡 | M4 | `dashboard_summary` exists; the full version waits for attendance, fees and staff data |
 | FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | ⬜ | M3 | |
@@ -227,21 +227,28 @@ or consciously rejected.
 | X7 | **Error reporting**: a local log file the school can send to support | Offline product; support needs something to read | M1 |
 | X8 | **Installer signing** on Windows | Unsigned installers trigger SmartScreen warnings, which frighten a headteacher | M2 |
 | X9 | **Data retention for dropped learners and retired staff** | Never-delete keeps data forever; a school may need to answer what is kept and why | M3 |
-| X10 | **Class-level position and subject position on report cards** (a common Ugandan request) | Confirm with the pilot school | M1 decision |
+| X10 | **Class-level position and subject position on report cards** (a common Ugandan request) | Confirm with Rainbow Nursery and Primary School | M1 decision |
 
 ---
 
-## Decisions needed from the product owner
+## Decisions made
+
+| Date | Decision |
+| --- | --- |
+| 2026-09-27 | The pilot school is **Rainbow Nursery and Primary School** (for now). The SRS names MB Primary School as sponsor; the SRS text is left unchanged |
+| 2026-09-27 | M1 is SRS Phase 0 **minus the Custom Report Builder** (FR-G1), which moves to M2. M1 ships one fixed, well-designed report card |
+| 2026-09-27 | Excel marks upload (FR-C3) supports **both** layouts: one sheet per subject, and one workbook per class with all subjects |
+| 2026-09-27 | M0 fixes ship in their own pull request, separate from this roadmap |
+
+## Decisions still needed from the product owner
 
 These block or shape specific rows above.
 
-1. **Pilot scope**: confirm SRS Phase 0 as the M1 scope, or trim it. In particular, the Custom Report Builder (FR-G1) is the largest M1 item; a fixed, well-designed report card could ship first.
+1. **Streams at the pilot school**: SRS 16.5 puts streams in Phase 1 (M2). If Rainbow Nursery and Primary School runs streams (e.g. P5 East / P5 West), streams move into M1. To confirm with the school.
 2. **Activation and subscription (FR-B11)**: format of the offline activation key, and who issues it during M2.
 3. **SMS gateway (FR-G8)**: Africa's Talking or EgoSMS, and who pays for messages.
 4. **Report card layout**: does the pilot school want position per subject, A4 or A5, and a photo on the card?
-5. **Streams timing**: SRS 16.5 moves streams to Phase 1 (M2). If MB Primary runs streams, it has to move into M1.
-6. **X2 admin recovery**: recovery code or support-issued reset.
-7. **Excel marks template (FR-C3)**: one sheet per subject, or one sheet per class with all subjects.
+5. **X2 admin recovery**: recovery code or support-issued reset.
 
 ---
 
@@ -252,9 +259,9 @@ Dependencies first, then the highest daily-use value:
 1. M0 items (everything else depends on sign-in and backups working)
 2. FR-G13 onboarding import screen (the pilot's data goes in first)
 3. FR-G9 daily attendance (cheap, daily use, feeds the report card)
-4. FR-C3 Excel marks upload
+4. FR-C3 Excel marks upload, both layouts
 5. X4/X5 PDF and print layout on real printers
 6. FR-G16 ID cards
-7. FR-G1 Custom Report Builder
+7. A fixed, well-designed report card layout (in place of the FR-G1 builder)
 8. PLE projection and subject heatmap screens
 9. X6 demo data and the SRS 14.6 performance check at 800 learners
