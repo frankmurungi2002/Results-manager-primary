@@ -49,7 +49,7 @@ export function Button({
   type = "button",
   ...rest
 }: ButtonProps) {
-  const iconOnly = !children && (icon || loading);
+  const iconOnly = !children && Boolean(icon || loading);
   return (
     <button
       type={type}

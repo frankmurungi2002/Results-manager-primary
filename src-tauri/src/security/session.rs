@@ -114,6 +114,7 @@ impl Session {
 
 /// What the frontend is allowed to know about the current session.
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionView {
     pub user_id: String,
     pub username: String,
