@@ -1,0 +1,260 @@
+/*
+ * Design tokens.
+ *
+ * SRS 14.6 asks for "one consistent colour palette, one font system, and
+ * consistent spacing and iconography throughout" and warns against a
+ * default-form-builder look. Everything visual in RM resolves to a token
+ * defined here — no component invents its own colour or spacing.
+ *
+ * The dark theme is defined independently rather than by inverting the light
+ * one, because an inverted palette is exactly the "not genuinely designed"
+ * result 14.6 calls out.
+ */
+
+:root {
+  /* --- Type ------------------------------------------------------------- */
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
+    "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, "SF Mono", monospace;
+
+  /* A 1.2 modular scale, rounded to whole pixels so text stays crisp. */
+  --text-2xs: 0.6875rem; /* 11px — table meta, footnotes */
+  --text-xs: 0.75rem; /* 12px — labels, captions      */
+  --text-sm: 0.8125rem; /* 13px — body in dense tables  */
+  --text-base: 0.875rem; /* 14px — default UI text       */
+  --text-md: 1rem; /* 16px — emphasis              */
+  --text-lg: 1.125rem; /* 18px — section titles        */
+  --text-xl: 1.375rem; /* 22px — page titles           */
+  --text-2xl: 1.75rem; /* 28px — stat figures          */
+  --text-3xl: 2.25rem; /* 36px — hero numbers          */
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* --- Space: a strict 4px grid ----------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* --- Radius ----------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius-md: 7px;
+  --radius-lg: 11px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* --- Motion ----------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  /* --- Layout ----------------------------------------------------------- */
+  --sidebar-width: 244px;
+  --sidebar-width-compact: 68px;
+  --topbar-height: 56px;
+  --content-max: 1400px;
+
+  /* --- Brand ------------------------------------------------------------ */
+  /* The school's own accent colour (FR-B2) overrides --accent at runtime. */
+  --brand-50: #eef1fd;
+  --brand-100: #dde3fb;
+  --brand-200: #bcc7f6;
+  --brand-300: #94a5ef;
+  --brand-400: #6b80e4;
+  --brand-500: #4f63d2;
+  --brand-600: #3f4eb4;
+  --brand-700: #343f91;
+  --brand-800: #2b3374;
+  --brand-900: #1f2454;
+
+  --gold-100: #fdf1d8;
+  --gold-300: #f3cf83;
+  --gold-500: #e0a63c;
+  --gold-600: #bd8524;
+  --gold-700: #94661b;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Light theme                                                             */
+/* ---------------------------------------------------------------------- */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --accent: var(--brand-500);
+  --accent-hover: var(--brand-600);
+  --accent-active: var(--brand-700);
+  --accent-soft: var(--brand-50);
+  --accent-soft-border: var(--brand-200);
+  --accent-contrast: #ffffff;
+
+  /* Surfaces, coolest at the back and warmest at the front. */
+  --bg-canvas: #f4f5f9;
+  --bg-surface: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-sunken: #eceef4;
+  --bg-inset: #f8f9fc;
+  --bg-hover: rgba(31, 36, 84, 0.045);
+  --bg-active: rgba(31, 36, 84, 0.08);
+  --bg-selected: var(--brand-50);
+
+  --text-primary: #171a2b;
+  --text-secondary: #4c5471;
+  --text-tertiary: #737c99;
+  --text-disabled: #a4abc2;
+  --text-inverse: #ffffff;
+  --text-on-accent: #ffffff;
+
+  --border-subtle: #e6e8f0;
+  --border-default: #d5d9e6;
+  --border-strong: #b6bdd2;
+  --border-focus: var(--brand-500);
+
+  --success: #16794a;
+  --success-soft: #e3f5ec;
+  --success-border: #a9ddc4;
+  --warning: #9a6510;
+  --warning-soft: #fdf3e1;
+  --warning-border: #eccb92;
+  --danger: #b4262a;
+  --danger-soft: #fdeceb;
+  --danger-border: #f0b3b1;
+  --info: #1a5f96;
+  --info-soft: #e6f1fa;
+  --info-border: #a8cce9;
+
+  --shadow-xs: 0 1px 2px rgba(23, 26, 43, 0.06);
+  --shadow-sm: 0 1px 3px rgba(23, 26, 43, 0.08), 0 1px 2px rgba(23, 26, 43, 0.04);
+  --shadow-md: 0 4px 12px rgba(23, 26, 43, 0.08), 0 1px 3px rgba(23, 26, 43, 0.05);
+  --shadow-lg: 0 12px 32px rgba(23, 26, 43, 0.12), 0 3px 8px rgba(23, 26, 43, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(79, 99, 210, 0.22);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Dark theme — designed, not inverted (SRS 14.6)                          */
+/* ---------------------------------------------------------------------- */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Lifted and slightly desaturated so it reads on a dark ground. */
+  --accent: #8496f0;
+  --accent-hover: #9aa9f4;
+  --accent-active: #b0bcf7;
+  --accent-soft: rgba(132, 150, 240, 0.14);
+  --accent-soft-border: rgba(132, 150, 240, 0.32);
+  --accent-contrast: #12152a;
+
+  /* Surfaces get lighter as they come forward — the opposite of light. */
+  --bg-canvas: #0e1019;
+  --bg-surface: #161a27;
+  --bg-raised: #1c2130;
+  --bg-sunken: #0a0c14;
+  --bg-inset: #12151f;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.09);
+  --bg-selected: rgba(132, 150, 240, 0.14);
+
+  --text-primary: #e8eaf2;
+  --text-secondary: #a8aec4;
+  --text-tertiary: #7b8299;
+  --text-disabled: #565d73;
+  --text-inverse: #12152a;
+  --text-on-accent: #12152a;
+
+  --border-subtle: #232838;
+  --border-default: #2f3547;
+  --border-strong: #434a60;
+  --border-focus: #8496f0;
+
+  --success: #59c69a;
+  --success-soft: rgba(89, 198, 154, 0.13);
+  --success-border: rgba(89, 198, 154, 0.3);
+  --warning: #e0b366;
+  --warning-soft: rgba(224, 179, 102, 0.13);
+  --warning-border: rgba(224, 179, 102, 0.3);
+  --danger: #f0837f;
+  --danger-soft: rgba(240, 131, 127, 0.13);
+  --danger-border: rgba(240, 131, 127, 0.3);
+  --info: #6fb3e8;
+  --info-soft: rgba(111, 179, 232, 0.13);
+  --info-border: rgba(111, 179, 232, 0.3);
+
+  /* Dark surfaces are separated by light, not by shadow. */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-focus: 0 0 0 3px rgba(132, 150, 240, 0.3);
+}
+
+/* Follow Windows when the user has not chosen (FR-B9's "system" option). */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    color-scheme: dark;
+
+    --accent: #8496f0;
+    --accent-hover: #9aa9f4;
+    --accent-active: #b0bcf7;
+    --accent-soft: rgba(132, 150, 240, 0.14);
+    --accent-soft-border: rgba(132, 150, 240, 0.32);
+    --accent-contrast: #12152a;
+
+    --bg-canvas: #0e1019;
+    --bg-surface: #161a27;
+    --bg-raised: #1c2130;
+    --bg-sunken: #0a0c14;
+    --bg-inset: #12151f;
+    --bg-hover: rgba(255, 255, 255, 0.05);
+    --bg-active: rgba(255, 255, 255, 0.09);
+    --bg-selected: rgba(132, 150, 240, 0.14);
+
+    --text-primary: #e8eaf2;
+    --text-secondary: #a8aec4;
+    --text-tertiary: #7b8299;
+    --text-disabled: #565d73;
+    --text-inverse: #12152a;
+    --text-on-accent: #12152a;
+
+    --border-subtle: #232838;
+    --border-default: #2f3547;
+    --border-strong: #434a60;
+    --border-focus: #8496f0;
+
+    --success: #59c69a;
+    --success-soft: rgba(89, 198, 154, 0.13);
+    --success-border: rgba(89, 198, 154, 0.3);
+    --warning: #e0b366;
+    --warning-soft: rgba(224, 179, 102, 0.13);
+    --warning-border: rgba(224, 179, 102, 0.3);
+    --danger: #f0837f;
+    --danger-soft: rgba(240, 131, 127, 0.13);
+    --danger-border: rgba(240, 131, 127, 0.3);
+    --info: #6fb3e8;
+    --info-soft: rgba(111, 179, 232, 0.13);
+    --info-border: rgba(111, 179, 232, 0.3);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+    --shadow-focus: 0 0 0 3px rgba(132, 150, 240, 0.3);
+  }
+}

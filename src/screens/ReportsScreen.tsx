@@ -1,0 +1,535 @@
+/**
+ * FR-D1 (partial and final report cards), FR-D2 (class lists),
+ * FR-G11 (comment bank) and FR-G12 (bulk print with a skipped-learner summary).
+ *
+ * Nothing here renders a document itself — everything is handed to the global
+ * print pipeline in `PrintDocument.tsx` (FR-D4).
+ */
+
+import { useEffect, useState } from "react";
+import { ArrowLeft, FileText, List, MessageSquareText, Printer } from "lucide-react";
+
+import { api } from "../lib/api";
+import type {
+  AcademicYearRow,
+  ClassListBody,
+  ClassRow,
+  CommentBankEntry,
+  DocumentEnvelope,
+  ReportCardBatch,
+  StudentRow,
+  TermRow,
+} from "../lib/types";
+import { useStore } from "../state/store";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Loading,
+  Modal,
+  SelectInput,
+  TextArea,
+  cx,
+} from "../components/ui";
+import {
+  ClassListSheet,
+  PrintPreview,
+  ReportCardSheets,
+} from "../components/PrintDocument";
+
+type Preview =
+  | { kind: "report_cards"; envelope: DocumentEnvelope<ReportCardBatch> }
+  | { kind: "class_list"; envelope: DocumentEnvelope<ClassListBody> }
+  | null;
+
+export function ReportsScreen() {
+  const reportError = useStore((state) => state.reportError);
+
+  const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [years, setYears] = useState<AcademicYearRow[]>([]);
+  const [classId, setClassId] = useState("");
+  const [termId, setTermId] = useState("");
+  const [examIds, setExamIds] = useState<string[]>([]);
+  const [roster, setRoster] = useState<StudentRow[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [preview, setPreview] = useState<Preview>(null);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [commentsFor, setCommentsFor] = useState<StudentRow | null>(null);
+
+  useEffect(() => {
+    Promise.all([api.listClasses(), api.listAcademicYears()])
+      .then(([loadedClasses, loadedYears]) => {
+        setClasses(loadedClasses);
+        setYears(loadedYears);
+        if (loadedClasses.length > 0) setClassId(loadedClasses[0]!.id);
+
+        const openTerm = loadedYears
+          .flatMap((year) => year.terms)
+          .find((term) => term.status === "open");
+        if (openTerm) setTermId(openTerm.id);
+        else {
+          const firstTerm = loadedYears[0]?.terms[0];
+          if (firstTerm) setTermId(firstTerm.id);
+        }
+      })
+      .catch(reportError)
+      .finally(() => setLoading(false));
+  }, [reportError]);
+
+  useEffect(() => {
+    if (!classId) return;
+    api
+      .listClassRoster(classId)
+      .then((loaded) => {
+        setRoster(loaded);
+        setSelected([]);
+      })
+      .catch(reportError);
+  }, [classId, reportError]);
+
+  const terms: TermRow[] = years.flatMap((year) => year.terms);
+  const term = terms.find((entry) => entry.id === termId);
+
+  async function buildReportCards() {
+    setBusy(true);
+    try {
+      const envelope = await api.buildReportCards({
+        classId,
+        termId,
+        studentIds: selected,
+        examIds,
+      });
+      setPreview({ kind: "report_cards", envelope });
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function buildClassList() {
+    setBusy(true);
+    try {
+      const envelope = await api.buildClassList(classId);
+      setPreview({ kind: "class_list", envelope });
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="page">
+        <Loading label="Loading" />
+      </div>
+    );
+  }
+
+  // --- Preview mode: the document fills the screen and owns printing ------
+
+  if (preview) {
+    const blocked =
+      preview.kind === "report_cards" ? preview.envelope.body.blocked : [];
+
+    return (
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <PrintPreview
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                icon={<ArrowLeft size={15} />}
+                onClick={() => setPreview(null)}
+              >
+                Back
+              </Button>
+              <span className="grow" />
+              {preview.kind === "report_cards" && (
+                <Badge tone="neutral">
+                  {preview.envelope.body.cards.length} report card
+                  {preview.envelope.body.cards.length === 1 ? "" : "s"}
+                </Badge>
+              )}
+              {blocked.length > 0 && (
+                <Badge tone="warning">{blocked.length} blocked on fees</Badge>
+              )}
+            </>
+          }
+        >
+          {blocked.length > 0 && (
+            <div
+              className="no-print"
+              style={{ maxWidth: "210mm", margin: "0 auto var(--space-5)" }}
+            >
+              <Alert tone="warning" title={`${blocked.length} learners were not printed`}>
+                {blocked
+                  .map((entry) => `${entry.fullName} (${entry.reason})`)
+                  .join("; ")}
+                . Clear the fees flag on the Learners screen to include them.
+              </Alert>
+            </div>
+          )}
+
+          {preview.kind === "report_cards" ? (
+            preview.envelope.body.cards.length === 0 ? (
+              <div
+                className="no-print"
+                style={{ maxWidth: "210mm", margin: "0 auto" }}
+              >
+                <Card>
+                  <EmptyState icon={<FileText size={18} />} title="Nothing to print">
+                    Every learner in this selection is either blocked on fees or
+                    has no marks recorded for this term.
+                  </EmptyState>
+                </Card>
+              </div>
+            ) : (
+              <ReportCardSheets envelope={preview.envelope} />
+            )
+          ) : (
+            <ClassListSheet envelope={preview.envelope} />
+          )}
+        </PrintPreview>
+      </div>
+    );
+  }
+
+  // --- Setup mode ---------------------------------------------------------
+
+  return (
+    <div className="page">
+      <div className="page-inner">
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Reports &amp; printing</h1>
+            <p className="page-description">
+              Every document carries your school's name and logo and nothing
+              else. Print a whole class in one go, or pick out individual
+              learners.
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <div className="grid-form">
+            <SelectInput
+              label="Class"
+              value={classId}
+              onChange={(event) => setClassId(event.target.value)}
+            >
+              {classes.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} ({entry.learnerCount} learners)
+                </option>
+              ))}
+            </SelectInput>
+
+            <SelectInput
+              label="Term"
+              value={termId}
+              onChange={(event) => {
+                setTermId(event.target.value);
+                setExamIds([]);
+              }}
+            >
+              {years.map((year) => (
+                <optgroup key={year.id} label={year.label}>
+                  {year.terms.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                      {entry.status === "open" ? " — open" : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </SelectInput>
+          </div>
+
+          {term && term.exams.length > 0 && (
+            <div className="field" style={{ marginTop: "var(--space-5)" }}>
+              <span className="field-label">Which examinations</span>
+              <div className="row" style={{ flexWrap: "wrap" }}>
+                <button
+                  className={cx("pick", examIds.length === 0 && "is-selected")}
+                  style={{ width: "auto" }}
+                  onClick={() => setExamIds([])}
+                >
+                  Whole term
+                </button>
+                {term.exams.map((exam) => (
+                  <button
+                    key={exam.id}
+                    className={cx("pick", examIds.includes(exam.id) && "is-selected")}
+                    style={{ width: "auto" }}
+                    onClick={() =>
+                      setExamIds((current) =>
+                        current.includes(exam.id)
+                          ? current.filter((id) => id !== exam.id)
+                          : [...current, exam.id],
+                      )
+                    }
+                  >
+                    {exam.name}
+                  </button>
+                ))}
+              </div>
+              <span className="field-hint">
+                “Whole term” produces the end-of-term card using every
+                examination's weight. Picking one produces a partial report.
+              </span>
+            </div>
+          )}
+        </Card>
+
+        <div className="grid grid-2">
+          <Card
+            title="Report cards"
+            subtitle="FR-D1 — front page with grades, aggregate, position and comments"
+            footer={
+              <div className="row-between">
+                <span className="field-hint">
+                  {selected.length === 0
+                    ? `Whole class (${roster.length} learners)`
+                    : `${selected.length} selected`}
+                </span>
+                <Button
+                  variant="primary"
+                  icon={<Printer size={15} />}
+                  loading={busy}
+                  disabled={!classId || !termId || roster.length === 0}
+                  onClick={() => void buildReportCards()}
+                >
+                  Build report cards
+                </Button>
+              </div>
+            }
+            flush
+          >
+            {roster.length === 0 ? (
+              <EmptyState icon={<FileText size={18} />} title="No learners in this class" />
+            ) : (
+              <div className="table-wrap" style={{ maxHeight: 320 }}>
+                <table className="table table-compact">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 44 }} className="center">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all"
+                          checked={selected.length === roster.length && roster.length > 0}
+                          onChange={(event) =>
+                            setSelected(
+                              event.target.checked ? roster.map((s) => s.id) : [],
+                            )
+                          }
+                        />
+                      </th>
+                      <th>Learner</th>
+                      <th style={{ width: 130 }}>Reg. No.</th>
+                      <th style={{ width: 120 }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roster.map((student) => (
+                      <tr key={student.id}>
+                        <td className="center">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${student.fullName}`}
+                            checked={selected.includes(student.id)}
+                            onChange={(event) =>
+                              setSelected((current) =>
+                                event.target.checked
+                                  ? [...current, student.id]
+                                  : current.filter((id) => id !== student.id),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>{student.fullName}</td>
+                        <td className="mono muted">{student.regNumber}</td>
+                        <td>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon={<MessageSquareText size={13} />}
+                            onClick={() => setCommentsFor(student)}
+                          >
+                            Comments
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <div className="stack">
+            <Card
+              title="Class list"
+              subtitle="FR-D2 — every learner with guardian contacts, ready to post"
+              footer={
+                <Button
+                  icon={<List size={15} />}
+                  loading={busy}
+                  disabled={!classId}
+                  onClick={() => void buildClassList()}
+                >
+                  Build class list
+                </Button>
+              }
+            >
+              <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
+                A numbered roll with registration numbers, sex, guardian name
+                and phone, totalled by sex at the foot.
+              </p>
+            </Card>
+
+            <Alert tone="info" title="Coming in the next phase">
+              Examination permits, mark sheets and registers use the same
+              pipeline and are next on the build plan, along with the
+              weekly-assignment back page.
+            </Alert>
+          </div>
+        </div>
+      </div>
+
+      <CommentsModal
+        student={commentsFor}
+        termId={termId}
+        onClose={() => setCommentsFor(null)}
+      />
+    </div>
+  );
+}
+
+/** FR-G11 — pick a comment from the bank, then edit it for this learner. */
+function CommentsModal({
+  student,
+  termId,
+  onClose,
+}: {
+  student: StudentRow | null;
+  termId: string;
+  onClose: () => void;
+}) {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+
+  const [classBank, setClassBank] = useState<CommentBankEntry[]>([]);
+  const [headBank, setHeadBank] = useState<CommentBankEntry[]>([]);
+  const [classComment, setClassComment] = useState("");
+  const [headComment, setHeadComment] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!student) return;
+    setClassComment("");
+    setHeadComment("");
+    Promise.all([
+      api.listCommentBank("class_teacher"),
+      api.listCommentBank("head_teacher"),
+    ])
+      .then(([classEntries, headEntries]) => {
+        setClassBank(classEntries);
+        setHeadBank(headEntries);
+      })
+      .catch(reportError);
+  }, [student, reportError]);
+
+  if (!student) return null;
+
+  return (
+    <Modal
+      open
+      wide
+      title={`Comments for ${student.fullName}`}
+      description="Pick a phrase to start from, then change it however you like. Editing here never changes the shared bank."
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            variant="primary"
+            loading={busy}
+            onClick={() => {
+              setBusy(true);
+              api
+                .saveReportComment({
+                  studentId: student.id,
+                  termId,
+                  classTeacherComment: classComment.trim() || null,
+                  headTeacherComment: headComment.trim() || null,
+                })
+                .then(() => {
+                  toast("success", "Comments saved.");
+                  onClose();
+                })
+                .catch(reportError)
+                .finally(() => setBusy(false));
+            }}
+          >
+            Save comments
+          </Button>
+        </>
+      }
+    >
+      <div className="stack">
+        <CommentPicker
+          label="Class Teacher's comment"
+          bank={classBank}
+          value={classComment}
+          onChange={setClassComment}
+        />
+        <CommentPicker
+          label="Headteacher's comment"
+          bank={headBank}
+          value={headComment}
+          onChange={setHeadComment}
+        />
+      </div>
+    </Modal>
+  );
+}
+
+function CommentPicker({
+  label,
+  bank,
+  value,
+  onChange,
+}: {
+  label: string;
+  bank: CommentBankEntry[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="field">
+      <span className="field-label">{label}</span>
+      <div
+        className="row"
+        style={{ flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}
+      >
+        {bank.slice(0, 8).map((entry) => (
+          <button
+            key={entry.id}
+            className="badge badge-neutral"
+            style={{ height: 24, cursor: "pointer", maxWidth: 280 }}
+            title={entry.text}
+            onClick={() => onChange(entry.text)}
+          >
+            <span className="truncate">{entry.text}</span>
+          </button>
+        ))}
+      </div>
+      <TextArea value={value} onChange={(event) => onChange(event.target.value)} />
+    </div>
+  );
+}

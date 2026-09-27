@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The only capability set granted to the main window. Nothing beyond the core defaults and the file dialogs is permitted: RM's webview cannot read the filesystem, run a shell, open a URL, or reach the network. Everything it needs goes through a named, permission-checked Rust command. See docs/SECURITY.md.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default"]
+}

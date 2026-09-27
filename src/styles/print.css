@@ -1,0 +1,441 @@
+/*
+ * The global print pipeline's stylesheet (FR-D4).
+ *
+ * Every document RM produces is rendered by one component — `PrintDocument` —
+ * and styled here. Nothing else in the application may define print output, so
+ * the header, the footer and the branding cannot be bypassed.
+ *
+ * Print colours are fixed rather than themed: a report card looks the same
+ * whether the School Admin happened to be in dark mode.
+ */
+
+.print-root {
+  --paper: #ffffff;
+  --ink: #14161f;
+  --ink-soft: #4a5164;
+  --ink-faint: #7c8296;
+  --rule: #c8cdd9;
+  --rule-soft: #e3e6ee;
+  --band: #f2f4f8;
+
+  background: var(--bg-sunken);
+  padding: var(--space-6);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto var(--space-6);
+  padding: 14mm 14mm 12mm;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  font-size: 10.5pt;
+  line-height: 1.4;
+}
+
+.sheet-landscape {
+  width: 297mm;
+  min-height: 210mm;
+}
+
+/* --- FR-D4 header: the institution's own identity, and nothing else ----- */
+
+.doc-head {
+  display: flex;
+  align-items: center;
+  gap: 6mm;
+  padding-bottom: 3mm;
+  border-bottom: 2px solid var(--ink);
+}
+
+.doc-logo {
+  width: 20mm;
+  height: 20mm;
+  object-fit: contain;
+  flex: none;
+}
+
+.doc-logo-placeholder {
+  width: 20mm;
+  height: 20mm;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--rule);
+  border-radius: 2mm;
+  font-size: 7pt;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.doc-identity {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.doc-institution {
+  font-size: 17pt;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.doc-motto {
+  font-size: 9pt;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-top: 0.8mm;
+}
+
+.doc-contact {
+  font-size: 8pt;
+  color: var(--ink-soft);
+  margin-top: 1.2mm;
+}
+
+.doc-title {
+  margin-top: 4mm;
+  text-align: center;
+  font-size: 12pt;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.doc-subtitle {
+  text-align: center;
+  font-size: 9.5pt;
+  color: var(--ink-soft);
+  margin-top: 1mm;
+}
+
+.doc-body {
+  flex: 1;
+  margin-top: 5mm;
+}
+
+/* --- FR-D4 footer: fixed text, never a sponsor ------------------------- */
+
+.doc-foot {
+  margin-top: 6mm;
+  padding-top: 2mm;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4mm;
+  font-size: 7.5pt;
+  color: var(--ink-faint);
+}
+
+/* --- Report card ------------------------------------------------------- */
+
+.rc-learner {
+  display: flex;
+  gap: 5mm;
+  align-items: flex-start;
+  margin-bottom: 4mm;
+}
+
+.rc-photo {
+  width: 25mm;
+  height: 30mm;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+  flex: none;
+}
+
+.rc-fields {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.6mm 6mm;
+}
+
+.rc-field {
+  display: flex;
+  gap: 2mm;
+  font-size: 10pt;
+  border-bottom: 1px dotted var(--rule-soft);
+  padding-bottom: 0.8mm;
+}
+
+.rc-field-label {
+  color: var(--ink-soft);
+  font-size: 9pt;
+  min-width: 26mm;
+}
+
+.rc-field-value {
+  font-weight: 600;
+}
+
+.rc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+.rc-table th,
+.rc-table td {
+  border: 1px solid var(--rule);
+  padding: 1.6mm 2mm;
+}
+
+.rc-table thead th {
+  background: var(--band);
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.rc-table th.left,
+.rc-table td.left {
+  text-align: left;
+}
+
+.rc-table td {
+  text-align: center;
+}
+
+.rc-table td.subject {
+  text-align: left;
+  font-weight: 600;
+}
+
+.rc-table tr.non-core td.subject {
+  font-weight: 400;
+}
+
+.rc-table td.grade {
+  font-weight: 700;
+}
+
+.rc-summary {
+  display: flex;
+  gap: 3mm;
+  margin-top: 4mm;
+}
+
+.rc-summary-box {
+  flex: 1;
+  border: 1px solid var(--rule);
+  padding: 2mm 3mm;
+  text-align: center;
+}
+
+.rc-summary-label {
+  font-size: 7.5pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.rc-summary-value {
+  font-size: 14pt;
+  font-weight: 700;
+  margin-top: 0.8mm;
+}
+
+.rc-comments {
+  margin-top: 4mm;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+}
+
+.rc-comment {
+  border: 1px solid var(--rule);
+  padding: 2.5mm 3mm;
+  min-height: 16mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.rc-comment-label {
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 1.2mm;
+}
+
+.rc-comment-text {
+  flex: 1;
+  font-size: 10pt;
+  line-height: 1.45;
+}
+
+.rc-signature {
+  margin-top: 6mm;
+  align-self: flex-end;
+  width: 60mm;
+  border-top: 1px solid var(--ink);
+  padding-top: 1mm;
+  font-size: 8.5pt;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.rc-key {
+  margin-top: 4mm;
+  font-size: 8pt;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.rc-key strong {
+  color: var(--ink);
+}
+
+/* --- Class list -------------------------------------------------------- */
+
+.cl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+.cl-table th,
+.cl-table td {
+  border: 1px solid var(--rule);
+  padding: 1.8mm 2.5mm;
+  text-align: left;
+}
+
+.cl-table thead th {
+  background: var(--band);
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cl-table td.num {
+  text-align: right;
+  width: 12mm;
+}
+
+.cl-totals {
+  display: flex;
+  gap: 6mm;
+  margin-top: 4mm;
+  font-size: 9.5pt;
+  font-weight: 600;
+}
+
+/* --- Screen-only chrome around the preview ----------------------------- */
+
+.print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin: calc(var(--space-6) * -1) calc(var(--space-6) * -1) var(--space-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Print                                                                   */
+/* ---------------------------------------------------------------------- */
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  /* Nothing but the document reaches the paper.
+   *
+   * `.app` must NOT be hidden here. `PrintDocument` renders inside it
+   * (AppShell > .app > .main > screen > .print-root), so hiding `.app` hides
+   * the document along with the chrome and the print dialog shows a blank
+   * page. Hide the chrome itself instead. */
+  .sidebar,
+  .topbar,
+  .print-toolbar,
+  .toast-region,
+  .no-print {
+    display: none !important;
+  }
+
+  /* `.app` and `.main` constrain and clip only so the screen scrolls. On
+   * paper the document sets its own height, so flatten both — otherwise the
+   * sheet is clipped to one viewport even once `.app` is visible. */
+  .app {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .main {
+    display: block;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .print-root {
+    padding: 0;
+    background: #fff;
+    height: auto;
+    overflow: visible;
+    display: block;
+  }
+
+  .sheet {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    box-shadow: none;
+    padding: 12mm 12mm 10mm;
+    /* One document per sheet, always. */
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* A table row must never be split across two pages. */
+  .rc-table tr,
+  .cl-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .rc-table thead,
+  .cl-table thead {
+    display: table-header-group;
+  }
+
+  .doc-head,
+  .rc-summary,
+  .rc-comment {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,63 @@
+[package]
+name = "results-manager"
+version = "0.1.0"
+description = "Offline-first school management for Ugandan nursery and primary schools"
+authors = ["Results Manager"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "results_manager_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Storage. `bundled` compiles SQLite into the binary so a school PC needs
+# no system SQLite. The `encrypted-db` feature below swaps this for SQLCipher.
+rusqlite = { version = "0.32", features = ["bundled", "chrono", "serde_json", "backup", "functions"] }
+
+# Password hashing. Argon2id is the current OWASP recommendation.
+argon2 = { version = "0.5", features = ["std"] }
+rand = "0.8"
+zeroize = { version = "1", features = ["derive"] }
+
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "1"
+parking_lot = "0.12"
+log = "0.4"
+
+# Excel reading for FR-C3 (marks upload) and FR-G13 (onboarding import).
+# Done in Rust rather than JS so untrusted spreadsheets are parsed in a
+# memory-safe sandbox, never in the webview.
+calamine = "0.26"
+rust_xlsxwriter = "0.79"
+
+# OS-keychain storage for the database key, used only by `encrypted-db`.
+keyring = { version = "3", optional = true }
+
+[features]
+default = []
+# Full-database encryption at rest via SQLCipher.
+#
+# Turning this on requires NASM and Perl on the build machine because
+# openssl-src compiles OpenSSL from source. See docs/SECURITY.md.
+encrypted-db = ["rusqlite/bundled-sqlcipher-vendored-openssl", "dep:keyring"]
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
