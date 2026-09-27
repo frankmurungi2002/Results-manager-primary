@@ -56,7 +56,8 @@ Nothing leaves this folder unless someone exports or backs up.
 | FR-B8 | Fees block — flagged learners are excluded from printing and listed, never silently skipped |
 | FR-B9 | Genuinely designed light and dark themes, plus "match Windows" |
 | FR-B10 | Backup status; cloud controls visible and marked coming soon |
-| FR-B12 | Simplified per SRS 16.1 — scheduled snapshot to a second drive, not a hand-built RAID |
+| FR-B12 | Simplified per SRS 16.1 — a snapshot every 15 minutes while data changes and on close, to this PC and a second drive, not a hand-built RAID |
+| FR-E4 | Restore from any snapshot, with a preview first; the data it replaces is saved before anything is overwritten |
 | FR-C3 | Marks entry: in-app grid and guided form, one shared validator and save path |
 | FR-C5 | Subject analytics — mean, pass rate, range, grade distribution |
 | FR-C6 | Per-subject marks-entry progress |
@@ -77,7 +78,8 @@ Following SRS 16 and 17 deliberately: no payment gateway, no hardware
 fingerprint, no transactional dual-SSD mirror, no owner admin panel, no
 worldwide grading presets beyond the two Uganda actually uses. Excel upload
 (the third FR-C3 method), exam permits, streams, weekly assignments, promotion,
-ID cards and onboarding import are the next items in the plan.
+ID cards and the onboarding import screen (its backend is built) are the next
+items in the plan. [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks every requirement.
 
 ---
 
@@ -106,6 +108,11 @@ python3 scripts/verify.py      # schema, every SQL query, and the data guarantee
 cd src-tauri && cargo test     # grading, ranking, passwords, sessions, migrations
 npm run typecheck              # the whole interface
 ```
+
+CI runs all three on every pull request (`.github/workflows/ci.yml`). On Linux,
+`cargo test` needs Tauri's system libraries: `libwebkit2gtk-4.1-dev`,
+`libgtk-3-dev`, `librsvg2-dev` and `libsoup-3.0-dev`, and a built interface in
+`dist/` (`npm run build`).
 
 `scripts/verify.py` needs nothing but Python 3 — no Rust toolchain, no
 `npm install`. It builds the schema from the migrations, compiles every SQL

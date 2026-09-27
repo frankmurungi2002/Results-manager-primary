@@ -7,6 +7,7 @@
 //! request crosses the IPC boundary as a named, permission-checked command.
 
 pub mod audit;
+pub mod backup;
 pub mod commands;
 pub mod db;
 pub mod domain;
@@ -37,6 +38,7 @@ pub fn run() {
                 .map_err(|e| format!("could not open the school database: {e}"))?;
 
             app.manage(state);
+            backup::spawn_scheduler(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -62,6 +64,9 @@ pub fn run() {
             commands::system::backup_status,
             commands::system::set_mirror_path,
             commands::system::run_backup,
+            commands::system::list_backups,
+            commands::system::inspect_backup,
+            commands::system::restore_backup,
             commands::system::dashboard_summary,
             // --- Academic structure (FR-B3, FR-B5, FR-B7, FR-C13) ----------
             commands::academics::list_classes,
@@ -120,6 +125,17 @@ pub fn run() {
             commands::reports::set_fees_rule,
             commands::reports::get_fees_rule,
         ])
-        .run(tauri::generate_context!())
-        .expect("Results Manager failed to start");
+        .build(tauri::generate_context!())
+        .expect("Results Manager failed to start")
+        .run(|app, event| {
+            // A last snapshot on the way out, if anything changed since the
+            // scheduled one (SRS 16.1: every fifteen minutes and on close).
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<AppState>() {
+                    if let Err(err) = backup::take_if_changed(&state, backup::Trigger::OnExit) {
+                        log::error!("backup on exit failed: {err}");
+                    }
+                }
+            }
+        });
 }

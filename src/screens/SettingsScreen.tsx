@@ -7,7 +7,9 @@ import { useEffect, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   DatabaseBackup,
+  FolderOpen,
   HardDrive,
+  History,
   Image as ImageIcon,
   Palette,
   ShieldCheck,
@@ -16,7 +18,13 @@ import {
 } from "lucide-react";
 
 import { ApiError, api } from "../lib/api";
-import type { BackupStatus, FeatureFlags, Institution } from "../lib/types";
+import type {
+  BackupFile,
+  BackupStatus,
+  BackupSummary,
+  FeatureFlags,
+  Institution,
+} from "../lib/types";
 import { useStore } from "../state/store";
 import {
   Alert,
@@ -24,6 +32,7 @@ import {
   Button,
   Card,
   Loading,
+  Modal,
   Segmented,
   Switch,
   TextInput,
@@ -459,6 +468,8 @@ function BackupTab() {
 
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  // Bumped after each backup so the restore list shows the new snapshot.
+  const [backupsTaken, setBackupsTaken] = useState(0);
 
   function reload() {
     api.backupStatus().then(setStatus).catch(reportError);
@@ -494,6 +505,7 @@ function BackupTab() {
                       : "Backed up to this computer.",
                   );
                   reload();
+                  setBackupsTaken((n) => n + 1);
                 })
                 .catch(reportError)
                 .finally(() => setBusy(false));
@@ -572,6 +584,8 @@ function BackupTab() {
         </p>
       </Card>
 
+      <RestoreCard key={backupsTaken} />
+
       <Card title="Cloud backup">
         <div className="row-between">
           <span>
@@ -587,6 +601,163 @@ function BackupTab() {
       </Card>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Restoring a backup (FR-E4, scenario 1)
+// ---------------------------------------------------------------------------
+
+function RestoreCard() {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+  const signOut = useStore((state) => state.signOut);
+
+  const [files, setFiles] = useState<BackupFile[] | null>(null);
+  const [preview, setPreview] = useState<BackupSummary | null>(null);
+  const [restoring, setRestoring] = useState(false);
+
+  useEffect(() => {
+    api.listBackups().then(setFiles).catch(reportError);
+  }, [reportError]);
+
+  function inspect(path: string) {
+    api.inspectBackup(path).then(setPreview).catch(reportError);
+  }
+
+  function chooseFile() {
+    openDialog({
+      multiple: false,
+      filters: [{ name: "Results Manager backup", extensions: ["rmdb"] }],
+    })
+      .then((path) => {
+        if (typeof path === "string") inspect(path);
+      })
+      .catch((error) => {
+        if (error instanceof ApiError) reportError(error);
+      });
+  }
+
+  function restore(path: string) {
+    setRestoring(true);
+    api
+      .restoreBackup(path)
+      .then(() => {
+        setPreview(null);
+        toast("success", "Backup restored. Sign in again to continue.");
+        return signOut();
+      })
+      .catch(reportError)
+      .finally(() => setRestoring(false));
+  }
+
+  return (
+    <Card
+      title="Restore a backup"
+      subtitle="Replace the school's data with an earlier snapshot"
+      actions={
+        <Button icon={<FolderOpen size={15} />} onClick={chooseFile}>
+          Choose a file
+        </Button>
+      }
+    >
+      {!files ? (
+        <Loading />
+      ) : files.length === 0 ? (
+        <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
+          No backups yet. Take one above, or choose a backup file from another drive.
+        </p>
+      ) : (
+        <div className="table-wrap">
+          <table className="table table-compact">
+            <thead>
+              <tr>
+                <th>Taken</th>
+                <th>Where</th>
+                <th className="num">Size</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {files.slice(0, 15).map((file) => (
+                <tr key={file.path}>
+                  <td>
+                    {formatDateTime(file.modifiedAt)}
+                    {file.fileName.includes("before-restore") && (
+                      <div className="subtle" style={{ fontSize: "var(--text-xs)" }}>
+                        Saved before a restore
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <Badge tone={file.location === "mirror" ? "accent" : "neutral"}>
+                      {file.location === "mirror" ? "Second drive" : "This computer"}
+                    </Badge>
+                  </td>
+                  <td className="num">{formatBytes(file.bytes)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon={<History size={14} />}
+                      onClick={() => inspect(file.path)}
+                    >
+                      Restore…
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal
+        open={preview !== null}
+        title="Restore this backup?"
+        description="Everything entered since this backup was taken will be replaced."
+        onClose={() => !restoring && setPreview(null)}
+        footer={
+          <div className="row">
+            <Button variant="ghost" disabled={restoring} onClick={() => setPreview(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              loading={restoring}
+              disabled={!preview?.compatible}
+              onClick={() => preview && restore(preview.path)}
+            >
+              Restore
+            </Button>
+          </div>
+        }
+      >
+        {preview && (
+          <div className="stack">
+            {!preview.compatible && (
+              <Alert tone="danger" title="Made by a newer version of Results Manager">
+                Update RM on this computer before restoring this backup.
+              </Alert>
+            )}
+            <Row label="School" value={preview.institutionName ?? "Not set up yet"} />
+            <Row label="Learners" value={String(preview.learners)} />
+            <Row label="Marks" value={String(preview.marks)} />
+            <Row label="Last activity" value={formatDateTime(preview.lastActivityAt)} />
+            <Row label="File" value={preview.path} mono />
+            <Alert tone="info" title="Nothing is lost">
+              The data on this computer now is saved as a backup first, so this
+              restore can itself be undone. Everyone is signed out afterwards.
+            </Alert>
+          </div>
+        )}
+      </Modal>
+    </Card>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Row({

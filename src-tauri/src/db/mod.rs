@@ -82,6 +82,45 @@ impl Database {
         backup.run_to_completion(256, std::time::Duration::from_millis(50), None)?;
         Ok(())
     }
+
+    /// Changes written through the live connection since it was opened. The
+    /// backup scheduler compares this with its last snapshot to skip copying
+    /// a database nobody has touched.
+    pub fn total_changes(&self) -> u64 {
+        self.lock().total_changes()
+    }
+
+    /// Replaces the live database's contents with the snapshot at `src`, in
+    /// place, then brings its schema up to date. The connection stays open, so
+    /// nothing else in the process has to reconnect.
+    ///
+    /// The caller is responsible for checking the snapshot first
+    /// (`open_snapshot`) and for keeping a copy of what is being replaced.
+    pub fn restore_from(&self, src: &Path) -> AppResult<()> {
+        let source = open_snapshot(src)?;
+        let mut conn = self.lock();
+        {
+            let restore = rusqlite::backup::Backup::new(&source, &mut conn)?;
+            restore.run_to_completion(256, std::time::Duration::from_millis(50), None)?;
+        }
+        apply_pragmas(&conn)?;
+        migrations::run(&mut conn)?;
+        Ok(())
+    }
+}
+
+/// Opens a backup file read-only, for inspecting or restoring it. Never used
+/// for the live database.
+pub fn open_snapshot(path: &Path) -> AppResult<Connection> {
+    let conn = Connection::open_with_flags(
+        path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+
+    #[cfg(feature = "encrypted-db")]
+    apply_encryption_key(&conn, path)?;
+
+    Ok(conn)
 }
 
 /// Connection settings applied on every open.
