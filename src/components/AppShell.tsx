@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileText,
   GraduationCap,
+  DoorOpen,
   LayoutDashboard,
   LogOut,
   Moon,
@@ -39,6 +40,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "marks", label: "Marks entry", icon: ClipboardList },
       { id: "learners", label: "Learners", icon: Users },
+      { id: "passouts", label: "Pass-outs", icon: DoorOpen },
       { id: "reports", label: "Reports & printing", icon: FileText },
     ],
   },
@@ -62,6 +64,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
 
 const SCREEN_TITLES: Record<ScreenId, string> = {
   dashboard: "Dashboard",
+  passouts: "Pass-outs",
   marks: "Marks entry",
   classes: "Classes & subjects",
   learners: "Learners",

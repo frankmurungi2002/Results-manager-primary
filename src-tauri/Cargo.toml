@@ -41,6 +41,10 @@ log = "0.4"
 calamine = "0.26"
 rust_xlsxwriter = "0.79"
 
+# HTTPS to the SMS gateway (FR-G8), used only at the moment a queued message
+# is sent. Blocking and rustls-based: no OpenSSL to build, nothing async.
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
 # OS-keychain storage for the database key, used only by `encrypted-db`.
 keyring = { version = "3", optional = true }
 

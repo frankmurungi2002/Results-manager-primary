@@ -3,6 +3,7 @@ pub mod auth;
 pub mod importer;
 pub mod insights;
 pub mod marks;
+pub mod passouts;
 pub mod reports;
 pub mod setup;
 pub mod students;

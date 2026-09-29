@@ -600,6 +600,198 @@
   border-radius: 3mm;
 }
 
+/* --- Pass-out slip (FR-G22): two copies on one A4 page -------------------- */
+
+.po-sheet {
+  --doc-accent: #4f63d2;
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.po-copy {
+  border: 0.4mm solid var(--rule);
+  border-radius: 3mm;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.po-copy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2mm 4mm;
+  background: var(--doc-accent);
+  color: #fff;
+}
+
+.po-copy-kind {
+  font-size: 9pt;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.po-copy-number {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12pt;
+  font-weight: 800;
+}
+
+.po-copy-body {
+  display: flex;
+  gap: 4mm;
+  padding: 4mm;
+}
+
+.po-photo {
+  width: 24mm;
+  height: 29mm;
+  flex: none;
+  object-fit: cover;
+  border-radius: 2mm;
+  border: 0.5mm solid var(--doc-accent);
+  box-sizing: border-box;
+}
+
+.po-photo-blank {
+  display: grid;
+  place-items: center;
+  background: var(--band);
+  color: var(--ink-faint);
+  font-size: 15pt;
+  font-weight: 800;
+}
+
+.po-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.po-name {
+  font-size: 14pt;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.po-sub {
+  margin-top: 0.5mm;
+  font-weight: 600;
+  color: var(--doc-accent);
+}
+
+.po-facts {
+  margin: 2.5mm 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.2mm 3mm;
+}
+
+.po-facts dt {
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-top: 0.4mm;
+}
+
+.po-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.po-times {
+  width: 38mm;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+}
+
+.po-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2mm;
+  border-radius: 2.5mm;
+  background: var(--band);
+}
+
+.po-time span {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.po-time strong {
+  font-size: 17pt;
+  line-height: 1.1;
+}
+
+.po-time-back {
+  background: var(--doc-accent);
+}
+
+.po-time-back span,
+.po-time-back strong {
+  color: #fff;
+}
+
+.po-copy-foot {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5mm;
+  padding: 1mm 4mm 2mm;
+}
+
+.po-sign {
+  min-height: 9mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-weight: 700;
+}
+
+.po-sign span {
+  margin-top: 1mm;
+  padding-top: 0.8mm;
+  border-top: 1px dotted var(--ink-faint);
+  font-size: 7pt;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+.po-note {
+  padding: 1.6mm 4mm;
+  background: var(--band);
+  font-size: 8pt;
+  color: var(--ink-soft);
+}
+
+.po-cut {
+  position: relative;
+  border-top: 0.3mm dashed var(--ink-faint);
+  margin: 2mm 0;
+}
+
+.po-cut span {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -50%);
+  padding: 0 2mm;
+  background: var(--paper);
+  font-size: 7pt;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Print                                                                   */
 /* ---------------------------------------------------------------------- */

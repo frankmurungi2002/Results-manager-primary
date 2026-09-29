@@ -41,6 +41,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "staff_photos",
         sql: M004_STAFF_PHOTOS,
     },
+    Migration {
+        version: 5,
+        name: "pass_outs_and_sms",
+        sql: M005_PASS_OUTS_AND_SMS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -592,4 +597,62 @@ INSERT INTO comment_bank (id, scope, category, text, is_builtin, status, created
 const M004_STAFF_PHOTOS: &str = r#"
 
 ALTER TABLE users ADD COLUMN photo_png BLOB;
+"#;
+
+// ---------------------------------------------------------------------------
+// 005 — pass-outs (FR-G22) and the SMS outbox (FR-G8)
+// ---------------------------------------------------------------------------
+
+const M005_PASS_OUTS_AND_SMS: &str = r#"
+
+-- Every message RM sends, written here first and sent when there is internet.
+CREATE TABLE sms_outbox (
+    id           TEXT PRIMARY KEY,
+    to_phone     TEXT NOT NULL,             -- +256XXXXXXXXX
+    body         TEXT NOT NULL,
+    kind         TEXT NOT NULL,             -- pass_out, pass_out_return, test
+    related_id   TEXT,
+    status       TEXT NOT NULL DEFAULT 'queued'
+                      CHECK (status IN ('queued', 'sent', 'failed')),
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    last_error   TEXT,
+    provider_ref TEXT,
+    created_by   TEXT REFERENCES users (id),
+    created_at   TEXT NOT NULL,
+    sent_at      TEXT
+);
+
+CREATE INDEX idx_sms_outbox_status ON sms_outbox (status, created_at);
+
+-- A learner leaving the school during the day (FR-G22). Times are UTC,
+-- RFC 3339 to the second, so they sort and compare as text.
+CREATE TABLE pass_outs (
+    id                     TEXT PRIMARY KEY,
+    number                 INTEGER NOT NULL UNIQUE,   -- printed as PO-0001
+    student_id             TEXT NOT NULL REFERENCES students (id),
+    class_id               TEXT NOT NULL REFERENCES classes (id),
+    reason_kind            TEXT NOT NULL
+                                CHECK (reason_kind IN ('sick', 'appointment', 'family', 'permission', 'other')),
+    reason                 TEXT,
+    destination            TEXT,
+    picked_up_by           TEXT,
+    picked_up_relationship TEXT,
+    picked_up_phone        TEXT,
+    time_out               TEXT NOT NULL,
+    -- NULL means the learner is not coming back today.
+    expected_back          TEXT,
+    returned_at            TEXT,
+    status                 TEXT NOT NULL DEFAULT 'out'
+                                CHECK (status IN ('out', 'returned')),
+    guardian_phone         TEXT,
+    sms_out_id             TEXT REFERENCES sms_outbox (id),
+    sms_return_id          TEXT REFERENCES sms_outbox (id),
+    issued_by              TEXT REFERENCES users (id),
+    returned_by            TEXT REFERENCES users (id),
+    created_at             TEXT NOT NULL,
+    updated_at             TEXT NOT NULL
+);
+
+CREATE INDEX idx_pass_outs_time ON pass_outs (time_out DESC);
+CREATE INDEX idx_pass_outs_status ON pass_outs (status, expected_back);
 "#;

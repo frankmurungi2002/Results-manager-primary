@@ -21,7 +21,7 @@ import {
 import { api } from "../lib/api";
 import type { AcademicYearRow, ClassRow, DashboardSummary } from "../lib/types";
 import { useStore, type ScreenId } from "../state/store";
-import { Button, EmptyState, formatDate, initials, relativeTime } from "../components/ui";
+import { Alert, Button, EmptyState, formatDate, initials, relativeTime } from "../components/ui";
 
 export function DashboardScreen() {
   const session = useStore((state) => state.session);
@@ -82,6 +82,29 @@ export function DashboardScreen() {
             </Button>
           </div>
         </header>
+
+        {/* ---- FR-G22: a learner late back from a pass-out is never missed ---- */}
+        {summary.overduePassOuts.length > 0 && (
+          <Alert
+            tone="warning"
+            title={`${summary.overduePassOuts.length} learner${
+              summary.overduePassOuts.length === 1 ? " is" : "s are"
+            } late back to school`}
+          >
+            {summary.overduePassOuts
+              .map(
+                (entry) =>
+                  `${entry.studentName} (${entry.className}), expected at ${new Date(
+                    entry.expectedBack,
+                  ).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`,
+              )
+              .join("; ")}
+            .{" "}
+            <button className="link" onClick={() => navigate("passouts")}>
+              Open pass-outs
+            </button>
+          </Alert>
+        )}
 
         {/* ---- The four numbers ---- */}
         <section className="dash-stats">

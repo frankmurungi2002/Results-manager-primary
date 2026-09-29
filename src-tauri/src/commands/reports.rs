@@ -1068,6 +1068,84 @@ pub fn build_id_cards(
 }
 
 // ---------------------------------------------------------------------------
+// FR-G22 — the pass-out slip
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PassOutSlip {
+    pub number: i64,
+    pub student_name: String,
+    pub reg_number: String,
+    pub class_name: String,
+    pub photo_data_url: Option<String>,
+    pub reason_label: String,
+    pub reason: Option<String>,
+    pub destination: Option<String>,
+    pub picked_up_by: Option<String>,
+    pub picked_up_relationship: Option<String>,
+    pub picked_up_phone: Option<String>,
+    /// UTC, RFC 3339. The interface shows it in local time.
+    pub time_out: String,
+    pub expected_back: Option<String>,
+    pub issued_by_name: Option<String>,
+    pub guardian_texted: bool,
+}
+
+#[tauri::command]
+pub fn build_pass_out_slip(
+    state: State<'_, AppState>,
+    id: String,
+) -> AppResult<DocumentEnvelope<PassOutSlip>> {
+    let session = state.sessions.require()?;
+    let conn = state.db.lock();
+
+    let class_id: String = conn
+        .query_row("SELECT class_id FROM pass_outs WHERE id = ?1", params![id], |row| {
+            row.get(0)
+        })
+        .optional()?
+        .ok_or_else(|| AppError::not_found("That pass-out"))?;
+    session.require_manage_class(&class_id)?;
+
+    let photos_on = repo::feature_enabled(&conn, "student_photos")?;
+    let slip = conn.query_row(
+        "SELECT p.number, s.full_name, s.reg_number, c.name, s.photo_png, p.reason_kind,
+                p.reason, p.destination, p.picked_up_by, p.picked_up_relationship,
+                p.picked_up_phone, p.time_out, p.expected_back, u.full_name,
+                p.sms_out_id IS NOT NULL
+         FROM pass_outs p
+         JOIN students s ON s.id = p.student_id
+         JOIN classes c ON c.id = p.class_id
+         LEFT JOIN users u ON u.id = p.issued_by
+         WHERE p.id = ?1",
+        params![id],
+        |row| {
+            let kind: String = row.get(5)?;
+            Ok(PassOutSlip {
+                number: row.get(0)?,
+                student_name: row.get(1)?,
+                reg_number: row.get(2)?,
+                class_name: row.get(3)?,
+                photo_data_url: if photos_on { png_data_url(row.get(4)?) } else { None },
+                reason_label: crate::commands::passouts::reason_label(&kind).to_string(),
+                reason: row.get(6)?,
+                destination: row.get(7)?,
+                picked_up_by: row.get(8)?,
+                picked_up_relationship: row.get(9)?,
+                picked_up_phone: row.get(10)?,
+                time_out: row.get(11)?,
+                expected_back: row.get(12)?,
+                issued_by_name: row.get(13)?,
+                guardian_texted: row.get::<_, i64>(14)? != 0,
+            })
+        },
+    )?;
+
+    envelope(&conn, "pass_out", slip)
+}
+
+// ---------------------------------------------------------------------------
 // FR-G11 — comment bank
 // ---------------------------------------------------------------------------
 

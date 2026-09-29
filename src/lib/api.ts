@@ -32,7 +32,13 @@ import type {
   MarkEntry,
   MarksSheet,
   PleProjection,
+  FlushResult,
   IdCardBatch,
+  PassOutReason,
+  PassOutRow,
+  PassOutSlip,
+  SmsOutboxRow,
+  SmsSettings,
   ReportCardBatch,
   ReportCommentDetail,
   ReportSettings,
@@ -323,6 +329,31 @@ export const api = {
   setStaffPhoto: (userId: string, png: number[] | null) =>
     call<void>("set_staff_photo", { userId, png }),
   getStaffPhoto: (userId: string) => call<number[] | null>("get_staff_photo", { userId }),
+  buildPassOutSlip: (id: string) =>
+    call<DocumentEnvelope<PassOutSlip>>("build_pass_out_slip", { id }),
+
+  // --- Pass-outs (FR-G22) and SMS (FR-G8) ---------------------------------
+  listPassOuts: () => call<PassOutRow[]>("list_pass_outs"),
+  createPassOut: (request: {
+    studentId: string;
+    reasonKind: PassOutReason;
+    reason?: string | null;
+    destination?: string | null;
+    pickedUpBy?: string | null;
+    pickedUpRelationship?: string | null;
+    pickedUpPhone?: string | null;
+    awayMinutes: number | null;
+    notifyGuardian: boolean;
+    guardianPhone?: string | null;
+  }) => call<PassOutRow>("create_pass_out", { request }),
+  markPassOutReturned: (id: string, notifyGuardian: boolean) =>
+    call<PassOutRow>("mark_pass_out_returned", { id, notifyGuardian }),
+  getSmsSettings: () => call<SmsSettings>("get_sms_settings"),
+  saveSmsSettings: (settings: SmsSettings) => call<void>("save_sms_settings", { settings }),
+  listSmsOutbox: () => call<SmsOutboxRow[]>("list_sms_outbox"),
+  sendQueuedSms: () => call<FlushResult>("send_queued_sms"),
+  sendTestSms: (phone: string) => call<string>("send_test_sms", { phone }),
+
   buildClassList: (classId: string) =>
     call<DocumentEnvelope<ClassListBody>>("build_class_list", { classId }),
   listCommentBank: (scope: "class_teacher" | "head_teacher") =>

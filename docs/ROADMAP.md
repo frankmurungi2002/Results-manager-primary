@@ -162,7 +162,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G5 | Fees ledger; drives the fees block automatically | ⬜ | **M2** | Fee per class per term, payments, running balance; FR-B8 then reads the balance |
 | FR-G6 | Timetable with double-booking check | ⬜ | M3 | |
 | FR-G7 | Shared exams and academic calendar | 🟡 | M3 | A calendar screen and `exams.scheduled_date` exist; holidays, events and per-subject exam times do not |
-| FR-G8 | SMS to parents (fees, results, absence) | ⬜ | M3 | Needs a local send queue; gateway choice is an open decision |
+| FR-G8 | SMS to parents (fees, results, absence) | 🟡 | M3 | Outbox, Africa's Talking and EgoSMS, test send and Settings → SMS are built and used by pass-outs; the fees, results and absence triggers remain |
 | FR-G9 | Daily attendance register | 🧱 | **M1** | `attendance` table exists; needs commands, a fast class register screen, the "days present" figure on the report card |
 | FR-G10 | Full data export to Excel/CSV | ⬜ | M2 | `rust_xlsxwriter` is already a dependency |
 | FR-G11 | Comment bank | ✅ | — | |
@@ -176,7 +176,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G19 | Meeting minutes and action points | ⬜ | M4 | |
 | FR-G20 | Petty cash and expenditure | ⬜ | M3 | |
 | FR-G21 | School store and uniform tracking | ⬜ | M3 | |
-| FR-G22 | Pass-out / exit pass with guardian SMS | ⬜ | M3 | Needs FR-G8 and FR-G2 |
+| FR-G22 | Pass-out / exit pass with guardian SMS | ✅ | M3 | Reason, destination, who with and time away; two-copy slip; SMS on leaving and on return; late-back flag on the dashboard |
 | FR-G23 | Bulk SMS broadcast with cost estimate | ⬜ | M3 | Built with FR-G8 |
 
 ### Not in the SRS numbering, but already in the code
