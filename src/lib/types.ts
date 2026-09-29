@@ -478,8 +478,227 @@ export interface ExamPermitBatch {
   className: string;
   examDate: string | null;
   subjects: string[];
+  paperTimes: (string | null)[];
   permits: ExamPermit[];
   blocked: BlockedLearner[];
+}
+
+// --- Daily attendance (FR-G9) --------------------------------------------------
+
+export type AttendanceState = "present" | "absent" | "late" | "excused";
+
+export interface RegisterRow {
+  studentId: string;
+  regNumber: string;
+  fullName: string;
+  gender: string | null;
+  streamName: string | null;
+  guardianPhone: string | null;
+  state: AttendanceState | null;
+  note: string | null;
+  absencesThisTerm: number;
+}
+
+export interface Register {
+  classId: string;
+  className: string;
+  streamId: string | null;
+  onDate: string;
+  weekday: string;
+  isWeekend: boolean;
+  termId: string | null;
+  termName: string | null;
+  alreadyMarked: boolean;
+  markedBy: string | null;
+  rows: RegisterRow[];
+}
+
+export interface SaveRegisterResult {
+  saved: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  textsQueued: number;
+}
+
+export interface AttendanceOverviewRow {
+  classId: string;
+  className: string;
+  learners: number;
+  marked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  markedBy: string | null;
+  classTeacherName: string | null;
+}
+
+export interface RegisterDay {
+  date: string;
+  day: number;
+  initial: string;
+  present: number | null;
+}
+
+export interface MonthRow {
+  studentId: string;
+  fullName: string;
+  regNumber: string;
+  gender: string | null;
+  marks: string[];
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  rate: number | null;
+}
+
+export interface MonthTotals {
+  daysMarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  rate: number | null;
+}
+
+export interface MonthRegister {
+  className: string;
+  streamName: string | null;
+  monthLabel: string;
+  days: RegisterDay[];
+  rows: MonthRow[];
+  totals: MonthTotals;
+}
+
+// --- Timetables (FR-G6) and the exam timetable (FR-G7) -------------------------
+
+export type PeriodKind = "lesson" | "break" | "lunch" | "assembly" | "games" | "prep";
+
+export interface PeriodRow {
+  id: string;
+  seq: number;
+  label: string;
+  startTime: string;
+  endTime: string;
+  kind: PeriodKind;
+}
+
+export interface TimetableSetup {
+  periods: PeriodRow[];
+  days: number;
+}
+
+export interface SlotRow {
+  day: number;
+  periodId: string;
+  subjectId: string | null;
+  subjectName: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
+  room: string | null;
+  clash: string | null;
+}
+
+export interface SubjectLoad {
+  classSubjectId: string;
+  subjectId: string;
+  name: string;
+  lessonsPerWeek: number;
+  placed: number;
+  teacherId: string | null;
+  teacherName: string | null;
+}
+
+export interface ClassTimetable {
+  classId: string;
+  className: string;
+  streamId: string | null;
+  streamName: string | null;
+  days: number;
+  periods: PeriodRow[];
+  slots: SlotRow[];
+  subjects: SubjectLoad[];
+}
+
+export interface AutoFillResult {
+  placed: number;
+  unplaced: string[];
+}
+
+export interface TeacherSlot {
+  day: number;
+  periodId: string;
+  className: string;
+  streamName: string | null;
+  subjectName: string | null;
+  room: string | null;
+}
+
+export interface TeacherTimetable {
+  userId: string;
+  teacherName: string;
+  days: number;
+  periods: PeriodRow[];
+  slots: TeacherSlot[];
+}
+
+export interface TimetableCell {
+  day: number;
+  periodId: string;
+  main: string;
+  sub: string | null;
+}
+
+export interface TimetableGrid {
+  heading: string;
+  subheading: string | null;
+  cells: TimetableCell[];
+}
+
+export interface TimetableDocument {
+  title: string;
+  days: number;
+  periods: PeriodRow[];
+  grids: TimetableGrid[];
+}
+
+export interface ExamPaperRow {
+  id: string;
+  examId: string;
+  subjectId: string;
+  subjectName: string;
+  paperLabel: string | null;
+  onDate: string;
+  startTime: string;
+  endTime: string;
+  venue: string | null;
+  invigilatorId: string | null;
+  invigilatorName: string | null;
+  classIds: string[];
+  classNames: string[];
+}
+
+export interface AutoExamResult {
+  created: number;
+  firstDate: string | null;
+  lastDate: string | null;
+}
+
+export interface ExamDay {
+  date: string;
+  label: string;
+  papers: ExamPaperRow[];
+}
+
+export interface ExamTimetableDocument {
+  examName: string;
+  termName: string;
+  academicYear: string;
+  className: string | null;
+  days: ExamDay[];
 }
 
 export interface ExamTotal {

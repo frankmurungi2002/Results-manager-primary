@@ -32,7 +32,20 @@ import type {
   MarkEntry,
   MarksSheet,
   PleProjection,
+  AttendanceOverviewRow,
+  AttendanceState,
+  AutoExamResult,
+  AutoFillResult,
+  ClassTimetable,
+  ExamPaperRow,
   ExamPermitBatch,
+  ExamTimetableDocument,
+  MonthRegister,
+  Register,
+  SaveRegisterResult,
+  TeacherTimetable,
+  TimetableDocument,
+  TimetableSetup,
   FlushResult,
   StreamRow,
   WeeklySheet,
@@ -378,6 +391,92 @@ export const api = {
     outOf: number;
     entries: { studentId: string; score: number | null; remark: string | null }[];
   }) => call<number>("save_weekly_scores", { request }),
+
+  // --- Daily attendance (FR-G9) --------------------------------------------
+  loadRegister: (classId: string, streamId: string | null, onDate: string) =>
+    call<Register>("load_register", { classId, streamId, onDate }),
+  saveRegister: (request: {
+    classId: string;
+    streamId: string | null;
+    onDate: string;
+    entries: { studentId: string; state: AttendanceState; note: string | null }[];
+    notifyAbsent: boolean;
+  }) => call<SaveRegisterResult>("save_register", { request }),
+  attendanceOverview: (onDate: string) =>
+    call<AttendanceOverviewRow[]>("attendance_overview", { onDate }),
+  attendanceMonth: (classId: string, streamId: string | null, year: number, month: number) =>
+    call<MonthRegister>("attendance_month", { classId, streamId, year, month }),
+  buildAttendanceRegister: (classId: string, streamId: string | null, year: number, month: number) =>
+    call<DocumentEnvelope<MonthRegister>>("build_attendance_register", {
+      classId,
+      streamId,
+      year,
+      month,
+    }),
+
+  // --- Timetables (FR-G6) and the exam timetable (FR-G7) ---------------------
+  getTimetableSetup: () => call<TimetableSetup>("get_timetable_setup"),
+  saveTimetableSetup: (
+    periods: { id: string | null; label: string; startTime: string; endTime: string; kind: string }[],
+    days: number,
+  ) => call<TimetableSetup>("save_timetable_setup", { periods, days }),
+  loadClassTimetable: (classId: string, streamId: string | null) =>
+    call<ClassTimetable>("load_class_timetable", { classId, streamId }),
+  saveTimetableSlot: (request: {
+    classId: string;
+    streamId: string | null;
+    day: number;
+    periodId: string;
+    subjectId: string | null;
+    teacherId: string | null;
+    room: string | null;
+  }) => call<void>("save_timetable_slot", { request }),
+  setLessonsPerWeek: (classSubjectId: string, lessons: number) =>
+    call<void>("set_lessons_per_week", { classSubjectId, lessons }),
+  clearTimetable: (classId: string, streamId: string | null) =>
+    call<number>("clear_timetable", { classId, streamId }),
+  autoFillTimetable: (targets: { classId: string; streamId: string | null }[], replace: boolean) =>
+    call<AutoFillResult>("auto_fill_timetable", { request: { targets, replace } }),
+  loadTeacherTimetable: (userId: string) =>
+    call<TeacherTimetable>("load_teacher_timetable", { userId }),
+  buildTimetableDocument: (request: {
+    scope: "class" | "teacher" | "school" | "teachers";
+    classId?: string | null;
+    streamId?: string | null;
+    userId?: string | null;
+  }) =>
+    call<DocumentEnvelope<TimetableDocument>>("build_timetable_document", {
+      request: {
+        scope: request.scope,
+        classId: request.classId ?? null,
+        streamId: request.streamId ?? null,
+        userId: request.userId ?? null,
+      },
+    }),
+  listExamPapers: (examId: string) => call<ExamPaperRow[]>("list_exam_papers", { examId }),
+  saveExamPaper: (request: {
+    id: string | null;
+    examId: string;
+    subjectId: string;
+    paperLabel: string | null;
+    onDate: string;
+    startTime: string;
+    endTime: string;
+    venue: string | null;
+    invigilatorId: string | null;
+    classIds: string[];
+  }) => call<string>("save_exam_paper", { request }),
+  deleteExamPaper: (id: string) => call<void>("delete_exam_paper", { id }),
+  autoGenerateExamTimetable: (request: {
+    examId: string;
+    startDate: string;
+    sessions: { startTime: string; endTime: string }[];
+    skipWeekends: boolean;
+    classIds: string[];
+    replace: boolean;
+  }) => call<AutoExamResult>("auto_generate_exam_timetable", { request }),
+  buildExamTimetable: (examId: string, classId: string | null) =>
+    call<DocumentEnvelope<ExamTimetableDocument>>("build_exam_timetable", { examId, classId }),
 
   buildClassList: (classId: string) =>
     call<DocumentEnvelope<ClassListBody>>("build_class_list", { classId }),

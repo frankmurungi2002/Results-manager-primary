@@ -42,10 +42,13 @@ import type {
   DocumentEnvelope,
   ExamPermit,
   ExamPermitBatch,
+  ExamTimetableDocument,
   Footer,
   IdCard,
   IdCardBatch,
+  MonthRegister,
   PassOutSlip,
+  TimetableDocument,
   ReportCard,
   Rating,
   ReportCardBatch,
@@ -306,6 +309,204 @@ function WeeklyBackSheet({
 }
 
 // ---------------------------------------------------------------------------
+// FR-G9 — the monthly attendance register
+// ---------------------------------------------------------------------------
+
+/** Landscape, like the paper register: a row per learner, a column per day. */
+export function AttendanceRegisterSheet({ envelope }: { envelope: DocumentEnvelope<MonthRegister> }) {
+  const { branding, footer, body } = envelope;
+  const className = body.streamName ? `${body.className} — ${body.streamName}` : body.className;
+
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      variant="compact"
+      landscape
+      title="Attendance Register"
+      subtitle={`${className}  •  ${body.monthLabel}  •  ${body.totals.daysMarked} days marked`}
+      pageNumber={1}
+      pageCount={1}
+    >
+      <table className="ar-table">
+        <thead>
+          <tr>
+            <th className="ar-num">#</th>
+            <th className="ar-name">Learner</th>
+            {body.days.map((day) => (
+              <th key={day.date} className="ar-day">
+                <span>{day.initial}</span>
+                {day.day}
+              </th>
+            ))}
+            <th className="ar-total">P</th>
+            <th className="ar-total">A</th>
+            <th className="ar-total">L</th>
+            <th className="ar-total">E</th>
+            <th className="ar-total">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.rows.map((row, index) => (
+            <tr key={row.studentId}>
+              <td className="ar-num">{index + 1}</td>
+              <td className="ar-name">{row.fullName}</td>
+              {row.marks.map((mark, dayIndex) => (
+                <td key={dayIndex} className={mark ? `ar-mark ar-${mark}` : "ar-mark"}>
+                  {mark === "P" ? "✓" : mark}
+                </td>
+              ))}
+              <td className="ar-total">{row.present}</td>
+              <td className="ar-total">{row.absent}</td>
+              <td className="ar-total">{row.late}</td>
+              <td className="ar-total">{row.excused}</td>
+              <td className="ar-total">{row.rate === null ? "—" : Math.round(row.rate)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td />
+            <td className="ar-name">In school</td>
+            {body.days.map((day) => (
+              <td key={day.date} className="ar-mark">
+                {day.present ?? ""}
+              </td>
+            ))}
+            <td className="ar-total">{body.totals.present}</td>
+            <td className="ar-total">{body.totals.absent}</td>
+            <td className="ar-total">{body.totals.late}</td>
+            <td className="ar-total">{body.totals.excused}</td>
+            <td className="ar-total">{body.totals.rate === null ? "—" : Math.round(body.totals.rate)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div className="ar-key">
+        ✓ Present  •  A Absent  •  L Late  •  E Excused  •  % counts late as present
+        <span className="ar-sign">Class Teacher's signature</span>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-G6 — timetables (one grid per page) and FR-G7 — the exam timetable
+// ---------------------------------------------------------------------------
+
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+export function TimetableSheets({ envelope }: { envelope: DocumentEnvelope<TimetableDocument> }) {
+  const { branding, footer, body } = envelope;
+  const days = Array.from({ length: body.days }, (_, index) => index + 1);
+
+  return (
+    <>
+      {body.grids.map((grid, index) => (
+        <Sheet
+          key={`${grid.heading}-${index}`}
+          branding={branding}
+          footer={footer}
+          variant="compact"
+          landscape
+          title={body.title}
+          subtitle={grid.subheading ? `${grid.heading}  •  ${grid.subheading}` : grid.heading}
+          pageNumber={index + 1}
+          pageCount={body.grids.length}
+        >
+          <table className="ttp-grid" style={{ "--doc-accent": branding.accentColor } as CSSProperties}>
+            <thead>
+              <tr>
+                <th className="ttp-time">Time</th>
+                {days.map((day) => (
+                  <th key={day}>{WEEKDAYS[day - 1]}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {body.periods.map((period) =>
+                period.kind === "lesson" || period.kind === "prep" ? (
+                  <tr key={period.id}>
+                    <th className="ttp-time">
+                      {period.label}
+                      <span>
+                        {period.startTime}–{period.endTime}
+                      </span>
+                    </th>
+                    {days.map((day) => {
+                      const cell = grid.cells.find((c) => c.day === day && c.periodId === period.id);
+                      return (
+                        <td key={day} className={cell?.main ? "ttp-cell is-filled" : "ttp-cell"}>
+                          {cell?.main && <strong>{cell.main}</strong>}
+                          {cell?.sub && <span>{cell.sub}</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : (
+                  <tr key={period.id} className="ttp-pause">
+                    <th className="ttp-time">
+                      {period.label}
+                      <span>
+                        {period.startTime}–{period.endTime}
+                      </span>
+                    </th>
+                    <td colSpan={body.days}>{period.label}</td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </Sheet>
+      ))}
+    </>
+  );
+}
+
+export function ExamTimetableSheet({ envelope }: { envelope: DocumentEnvelope<ExamTimetableDocument> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      variant="compact"
+      title={`${body.examName} Timetable`}
+      subtitle={[body.className ?? "All classes", `${body.termName} ${body.academicYear}`].join("  •  ")}
+      pageNumber={1}
+      pageCount={1}
+    >
+      <div className="etp" style={{ "--doc-accent": branding.accentColor } as CSSProperties}>
+        {body.days.map((day) => (
+          <section key={day.date} className="etp-day">
+            <h3>{day.label}</h3>
+            <table className="etp-table">
+              <tbody>
+                {day.papers.map((paper) => (
+                  <tr key={paper.id}>
+                    <td className="etp-time">
+                      {paper.startTime}–{paper.endTime}
+                    </td>
+                    <td className="etp-subject">
+                      {paper.subjectName}
+                      {paper.paperLabel ? ` — ${paper.paperLabel}` : ""}
+                    </td>
+                    <td className="etp-classes">{body.className ? "" : paper.classNames.join(", ")}</td>
+                    <td className="etp-venue">{paper.venue ?? ""}</td>
+                    <td className="etp-invigilator">{paper.invigilatorName ?? ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ))}
+      </div>
+      <p className="etp-note">
+        Candidates should be seated ten minutes before each paper. Bring a permit, pens, a pencil and a ruler.
+      </p>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // FR-D2 — examination permits
 // ---------------------------------------------------------------------------
 
@@ -385,9 +586,12 @@ export function ExamPermitSheets({ envelope }: { envelope: DocumentEnvelope<Exam
                     </tr>
                   </thead>
                   <tbody>
-                    {body.subjects.map((subject) => (
+                    {body.subjects.map((subject, index) => (
                       <tr key={subject}>
-                        <td className="left">{subject}</td>
+                        <td className="left">
+                          {subject}
+                          {body.paperTimes[index] && <span className="ep-when">{body.paperTimes[index]}</span>}
+                        </td>
                         <td />
                       </tr>
                     ))}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   BookOpenCheck,
+  CalendarCheck,
   CalendarDays,
   ChevronDown,
   ClipboardList,
@@ -17,6 +18,7 @@ import {
   Settings,
   Shield,
   Sun,
+  Table2,
   Users,
   UsersRound,
   X,
@@ -49,6 +51,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
         icon: NotebookPen,
         feature: "weeklyAssignments",
       },
+      { id: "attendance", label: "Attendance", icon: CalendarCheck },
       { id: "learners", label: "Learners", icon: Users },
       { id: "passouts", label: "Pass-outs", icon: DoorOpen },
       { id: "reports", label: "Reports & printing", icon: FileText },
@@ -59,6 +62,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
     items: [
       { id: "classes", label: "Classes & subjects", icon: BookOpenCheck },
       { id: "calendar", label: "Terms & exams", icon: CalendarDays, adminOnly: true },
+      { id: "timetables", label: "Timetables", icon: Table2 },
       { id: "grading", label: "Grading systems", icon: GraduationCap, adminOnly: true },
       { id: "staff", label: "Staff", icon: UsersRound, adminOnly: true },
     ],
@@ -74,6 +78,8 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
 
 const SCREEN_TITLES: Record<ScreenId, string> = {
   dashboard: "Dashboard",
+  attendance: "Attendance",
+  timetables: "Timetables",
   weekly: "Weekly assignments",
   passouts: "Pass-outs",
   marks: "Marks entry",
