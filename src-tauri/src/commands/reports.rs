@@ -135,12 +135,21 @@ fn envelope<T>(conn: &Connection, kind: &str, body: T) -> AppResult<DocumentEnve
 #[serde(rename_all = "camelCase")]
 pub struct ReportCardBatch {
     pub class_name: String,
+    /// `nursery` or `primary` — picks the report layout.
+    pub level_kind: String,
     pub stream_name: Option<String>,
     pub term_name: String,
     pub academic_year: String,
     pub exam_names: Vec<String>,
     pub is_final: bool,
     pub cards: Vec<ReportCard>,
+    /// The learning activities a nursery card rates, in print order.
+    pub activity_names: Vec<String>,
+    /// Start date of the following term, when it has one (YYYY-MM-DD).
+    pub next_term_begins: Option<String>,
+    /// What learners bring next term, as the school wrote it.
+    pub requirements: Option<String>,
+    pub head_teacher_name: Option<String>,
     /// FR-B8: who was left out, and why. Never silently dropped.
     pub blocked: Vec<BlockedLearner>,
 }
@@ -174,6 +183,55 @@ pub struct ReportCard {
     pub days_possible: Option<i64>,
     pub class_teacher_comment: Option<String>,
     pub head_teacher_comment: Option<String>,
+    /// Nursery: the "Behaviour and cleanliness" line.
+    pub conduct_comment: Option<String>,
+    pub class_teacher_name: Option<String>,
+    /// Sum of the term marks, and of the maxima they are out of.
+    pub total_score: Option<f64>,
+    pub total_max: f64,
+    pub activities: Vec<ActivityRating>,
+}
+
+/// One learning activity and how the learner did in it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityRating {
+    pub activity: String,
+    /// excellent / very_good / good / fair / needs_help
+    pub rating: String,
+}
+
+pub const RATINGS: &[&str] = &["excellent", "very_good", "good", "fair", "needs_help"];
+
+/// The activities a nursery report rates until the school changes the list.
+pub const DEFAULT_ACTIVITIES: &[&str] = &[
+    "Writing",
+    "Listening",
+    "Reading",
+    "Speaking",
+    "Drawing",
+    "Games",
+    "Rhymes and stories",
+    "Music",
+    "Health habits",
+    "Toilet habits",
+];
+
+fn nursery_activities(conn: &Connection) -> AppResult<Vec<String>> {
+    let stored = repo::get_setting(conn, "report.nursery_activities")?;
+    let list: Vec<String> = stored
+        .as_deref()
+        .unwrap_or("")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(String::from)
+        .collect();
+    Ok(if list.is_empty() {
+        DEFAULT_ACTIVITIES.iter().map(|a| a.to_string()).collect()
+    } else {
+        list
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -220,15 +278,36 @@ pub fn build_report_cards(
         .ok_or_else(|| AppError::validation("No academic year is active yet."))?;
 
     // --- Context ------------------------------------------------------------
-    let (class_name, academic_year, term_name): (String, String, String) = conn.query_row(
-        "SELECT c.name, y.label, t.name
+    let (class_name, level_kind, academic_year, term_name, term_seq): (
+        String,
+        String,
+        String,
+        String,
+        i64,
+    ) = conn.query_row(
+        "SELECT c.name, c.level_kind, y.label, t.name, t.seq
          FROM classes c
          CROSS JOIN terms t
          JOIN academic_years y ON y.id = t.academic_year_id
          WHERE c.id = ?1 AND t.id = ?2",
         params![request.class_id, request.term_id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
     )?;
+
+    // The term after this one, in this year or the next.
+    let next_term_begins: Option<String> = conn
+        .query_row(
+            "SELECT t.start_date
+             FROM terms t
+             JOIN academic_years y ON y.id = t.academic_year_id
+             WHERE y.label > ?1 OR (y.label = ?1 AND t.seq > ?2)
+             ORDER BY y.label ASC, t.seq ASC
+             LIMIT 1",
+            params![academic_year, term_seq],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten();
 
     // --- Exams in scope -----------------------------------------------------
     let exams: Vec<(String, String, f64, bool)> = {
@@ -333,6 +412,7 @@ pub fn build_report_cards(
         reg_number: String,
         gender: Option<String>,
         photo: Option<Vec<u8>>,
+        stream_id: Option<String>,
         stream_name: Option<String>,
         fees_blocked: bool,
         fees_note: Option<String>,
@@ -341,7 +421,7 @@ pub fn build_report_cards(
     let learners: Vec<Learner> = {
         let mut stmt = conn.prepare(
             "SELECT s.id, s.full_name, s.reg_number, s.gender, s.photo_png,
-                    st.name AS stream_name, s.fees_blocked, s.fees_note
+                    st.name AS stream_name, s.fees_blocked, s.fees_note, e.stream_id
              FROM enrollments e
              JOIN students s ON s.id = e.student_id
              LEFT JOIN streams st ON st.id = e.stream_id
@@ -355,6 +435,7 @@ pub fn build_report_cards(
                 reg_number: row.get(2)?,
                 gender: row.get(3)?,
                 photo: row.get(4)?,
+                stream_id: row.get(8)?,
                 stream_name: row.get(5)?,
                 fees_blocked: row.get::<_, i64>(6)? != 0,
                 fees_note: row.get(7)?,
@@ -416,17 +497,66 @@ pub fn build_report_cards(
     };
 
     // --- Comments (FR-G11) --------------------------------------------------
-    let comments: HashMap<String, (Option<String>, Option<String>)> = {
+    type Comments = (Option<String>, Option<String>, Option<String>);
+    let comments: HashMap<String, Comments> = {
         let mut stmt = conn.prepare(
-            "SELECT student_id, class_teacher_comment, head_teacher_comment
+            "SELECT student_id, class_teacher_comment, head_teacher_comment, conduct_comment
              FROM report_comments WHERE term_id = ?1",
         )?;
         let collected = stmt.query_map(params![request.term_id], |row| {
-            Ok((row.get::<_, String>(0)?, (row.get(1)?, row.get(2)?)))
+            Ok((row.get::<_, String>(0)?, (row.get(1)?, row.get(2)?, row.get(3)?)))
         })?
         .collect::<rusqlite::Result<_>>()?;
         collected
     };
+
+    // --- Nursery learning activities ----------------------------------------
+    let activity_names = nursery_activities(&conn)?;
+    let mut ratings: HashMap<String, Vec<ActivityRating>> = HashMap::new();
+    {
+        let mut stmt = conn.prepare(
+            "SELECT student_id, activity, rating
+             FROM learning_activity_ratings WHERE term_id = ?1",
+        )?;
+        let rows = stmt.query_map(params![request.term_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                ActivityRating {
+                    activity: row.get(1)?,
+                    rating: row.get(2)?,
+                },
+            ))
+        })?;
+        for row in rows {
+            let (student_id, rating) = row?;
+            ratings.entry(student_id).or_default().push(rating);
+        }
+    }
+
+    // --- Class teachers, per stream -----------------------------------------
+    let class_teachers: Vec<(Option<String>, String)> = {
+        let mut stmt = conn.prepare(
+            "SELECT ta.stream_id, u.full_name
+             FROM teacher_assignments ta
+             JOIN users u ON u.id = ta.user_id
+             WHERE ta.class_id = ?1 AND ta.role = 'class_teacher' AND ta.status = 'active'",
+        )?;
+        let collected = stmt
+            .query_map(params![request.class_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        collected
+    };
+    let class_teacher_for = |stream_id: &Option<String>| -> Option<String> {
+        class_teachers
+            .iter()
+            .find(|(stream, _)| stream.is_some() && stream == stream_id)
+            .or_else(|| class_teachers.iter().find(|(stream, _)| stream.is_none()))
+            .map(|(_, name)| name.clone())
+    };
+
+    let non_empty = |value: Option<String>| value.filter(|text| !text.trim().is_empty());
+    let requirements = non_empty(repo::get_setting(&conn, "report.requirements")?);
+    let head_teacher_name = non_empty(repo::get_setting(&conn, "report.head_teacher_name")?);
 
     // --- Build every card, then rank ----------------------------------------
     let mut cards = Vec::new();
@@ -507,10 +637,15 @@ pub fn build_report_cards(
             .map(|(present, total)| (Some(*present), Some(*total)))
             .unwrap_or((None, None));
 
-        let (class_comment, head_comment) = comments
+        let (class_comment, head_comment, conduct_comment) = comments
             .get(&learner.id)
             .cloned()
-            .unwrap_or((None, None));
+            .unwrap_or((None, None, None));
+
+        let scored: Vec<f64> = card_subjects.iter().filter_map(|s| s.term_score).collect();
+        let total_score = (!scored.is_empty())
+            .then(|| (scored.iter().sum::<f64>() * 100.0).round() / 100.0);
+        let total_max = card_subjects.iter().map(|s| s.max_score).sum();
 
         cards.push(ReportCard {
             student_id: learner.id.clone(),
@@ -537,6 +672,11 @@ pub fn build_report_cards(
             days_possible,
             class_teacher_comment: class_comment,
             head_teacher_comment: head_comment,
+            conduct_comment,
+            class_teacher_name: class_teacher_for(&learner.stream_id),
+            total_score,
+            total_max,
+            activities: ratings.remove(&learner.id).unwrap_or_default(),
         });
     }
 
@@ -567,6 +707,11 @@ pub fn build_report_cards(
 
     let batch = ReportCardBatch {
         class_name,
+        level_kind,
+        activity_names,
+        next_term_begins,
+        requirements,
+        head_teacher_name,
         stream_name: None,
         term_name,
         academic_year,
@@ -824,6 +969,66 @@ pub struct SaveReportCommentRequest {
     pub class_teacher_comment: Option<String>,
     #[serde(default)]
     pub head_teacher_comment: Option<String>,
+    #[serde(default)]
+    pub conduct_comment: Option<String>,
+    /// Nursery activity ratings. `None` leaves the stored ratings alone; a
+    /// list replaces them, and an activity left out becomes unrated.
+    #[serde(default)]
+    pub activity_ratings: Option<Vec<ActivityRating>>,
+}
+
+/// Everything already written on one learner's report this term.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportCommentDetail {
+    pub class_teacher_comment: Option<String>,
+    pub head_teacher_comment: Option<String>,
+    pub conduct_comment: Option<String>,
+    pub activity_ratings: Vec<ActivityRating>,
+    /// The activities this school rates, in print order.
+    pub activity_names: Vec<String>,
+}
+
+#[tauri::command]
+pub fn get_report_comment(
+    state: State<'_, AppState>,
+    student_id: String,
+    term_id: String,
+) -> AppResult<ReportCommentDetail> {
+    state.sessions.require()?;
+    let conn = state.db.lock();
+
+    let (class_teacher_comment, head_teacher_comment, conduct_comment) = conn
+        .query_row(
+            "SELECT class_teacher_comment, head_teacher_comment, conduct_comment
+             FROM report_comments WHERE student_id = ?1 AND term_id = ?2",
+            params![student_id, term_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?
+        .unwrap_or((None, None, None));
+
+    let mut stmt = conn.prepare(
+        "SELECT activity, rating FROM learning_activity_ratings
+         WHERE student_id = ?1 AND term_id = ?2",
+    )?;
+    let activity_ratings = stmt
+        .query_map(params![student_id, term_id], |row| {
+            Ok(ActivityRating {
+                activity: row.get(0)?,
+                rating: row.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(stmt);
+
+    Ok(ReportCommentDetail {
+        class_teacher_comment,
+        head_teacher_comment,
+        conduct_comment,
+        activity_ratings,
+        activity_names: nursery_activities(&conn)?,
+    })
 }
 
 /// A picked comment can still be edited per learner before printing; the edit
@@ -849,14 +1054,25 @@ pub fn save_report_comment(
         None => session.require_admin()?,
     }
 
+    if let Some(list) = &request.activity_ratings {
+        if let Some(bad) = list.iter().find(|r| !RATINGS.contains(&r.rating.as_str())) {
+            return Err(AppError::validation(format!(
+                "\"{}\" is not a rating.",
+                bad.rating
+            )));
+        }
+    }
+
     let now = Utc::now().to_rfc3339();
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "INSERT INTO report_comments
-            (id, student_id, term_id, class_teacher_comment, head_teacher_comment, updated_by, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            (id, student_id, term_id, class_teacher_comment, head_teacher_comment, conduct_comment, updated_by, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
          ON CONFLICT (student_id, term_id) DO UPDATE SET
             class_teacher_comment = excluded.class_teacher_comment,
             head_teacher_comment  = excluded.head_teacher_comment,
+            conduct_comment       = excluded.conduct_comment,
             updated_by            = excluded.updated_by,
             updated_at            = excluded.updated_at",
         params![
@@ -865,9 +1081,94 @@ pub fn save_report_comment(
             request.term_id,
             request.class_teacher_comment.as_deref().map(str::trim),
             request.head_teacher_comment.as_deref().map(str::trim),
+            request.conduct_comment.as_deref().map(str::trim),
             session.user_id,
             now,
         ],
+    )?;
+
+    if let Some(list) = &request.activity_ratings {
+        tx.execute(
+            "DELETE FROM learning_activity_ratings WHERE student_id = ?1 AND term_id = ?2",
+            params![request.student_id, request.term_id],
+        )?;
+        for entry in list {
+            tx.execute(
+                "INSERT INTO learning_activity_ratings
+                    (id, student_id, term_id, activity, rating, updated_by, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    new_id(prefix::REPORT_COMMENT),
+                    request.student_id,
+                    request.term_id,
+                    entry.activity.trim(),
+                    entry.rating,
+                    session.user_id,
+                    now,
+                ],
+            )?;
+        }
+    }
+    tx.commit()?;
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Report card settings
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportSettings {
+    pub head_teacher_name: String,
+    pub requirements: String,
+    pub nursery_activities: Vec<String>,
+}
+
+#[tauri::command]
+pub fn get_report_settings(state: State<'_, AppState>) -> AppResult<ReportSettings> {
+    state.sessions.require()?;
+    let conn = state.db.lock();
+    Ok(ReportSettings {
+        head_teacher_name: repo::get_setting(&conn, "report.head_teacher_name")?.unwrap_or_default(),
+        requirements: repo::get_setting(&conn, "report.requirements")?.unwrap_or_default(),
+        nursery_activities: nursery_activities(&conn)?,
+    })
+}
+
+#[tauri::command]
+pub fn save_report_settings(
+    state: State<'_, AppState>,
+    settings: ReportSettings,
+) -> AppResult<()> {
+    let session = state.sessions.require()?;
+    session.require_admin()?;
+
+    let activities: Vec<String> = settings
+        .nursery_activities
+        .iter()
+        .map(|a| a.trim().to_string())
+        .filter(|a| !a.is_empty())
+        .collect();
+    if activities.len() > 16 {
+        return Err(AppError::validation(
+            "A report card has room for 16 activities at most.",
+        ));
+    }
+
+    let conn = state.db.lock();
+    repo::set_setting(&conn, "report.head_teacher_name", settings.head_teacher_name.trim())?;
+    repo::set_setting(&conn, "report.requirements", settings.requirements.trim())?;
+    repo::set_setting(&conn, "report.nursery_activities", &activities.join("\n"))?;
+
+    audit::record(
+        &conn,
+        Some(&session),
+        "report.settings",
+        "setting",
+        "report",
+        "Updated the report card settings".to_string(),
     )?;
 
     Ok(())
@@ -1003,6 +1304,11 @@ mod tests {
             days_possible: None,
             class_teacher_comment: None,
             head_teacher_comment: None,
+            conduct_comment: None,
+            class_teacher_name: None,
+            total_score: None,
+            total_max: 0.0,
+            activities: vec![],
         }
     }
 

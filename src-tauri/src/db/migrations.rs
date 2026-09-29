@@ -31,6 +31,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "seed_grading_and_comments",
         sql: M002_SEED,
     },
+    Migration {
+        version: 3,
+        name: "nursery_report",
+        sql: M003_NURSERY_REPORT,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -539,4 +544,38 @@ INSERT INTO comment_bank (id, scope, category, text, is_builtin, status, created
  ('cb_ht_04', 'head_teacher', 'Effort',       'More effort is required next term.',                                    1, 'active', datetime('now'), datetime('now')),
  ('cb_ht_05', 'head_teacher', 'Concern',      'Please see the Headteacher at the beginning of next term.',             1, 'active', datetime('now'), datetime('now')),
  ('cb_ht_06', 'head_teacher', 'Promotion',    'Promoted to the next class.',                                           1, 'active', datetime('now'), datetime('now'));
+"#;
+
+// ---------------------------------------------------------------------------
+// 003 — the nursery report card
+// ---------------------------------------------------------------------------
+
+const M003_NURSERY_REPORT: &str = r#"
+
+-- The "Behaviour and cleanliness" line on a nursery report.
+ALTER TABLE report_comments ADD COLUMN conduct_comment TEXT;
+
+-- How a nursery learner did in each learning activity this term (writing,
+-- reading, games, toilet habits ...). The activity list itself is a setting,
+-- so a rating is keyed by the activity's name.
+CREATE TABLE learning_activity_ratings (
+    id         TEXT PRIMARY KEY,
+    student_id TEXT NOT NULL REFERENCES students (id),
+    term_id    TEXT NOT NULL REFERENCES terms (id),
+    activity   TEXT NOT NULL,
+    rating     TEXT NOT NULL
+                    CHECK (rating IN ('excellent', 'very_good', 'good', 'fair', 'needs_help')),
+    updated_by TEXT REFERENCES users (id),
+    updated_at TEXT NOT NULL,
+    UNIQUE (student_id, term_id, activity)
+);
+
+CREATE INDEX idx_activity_ratings_term ON learning_activity_ratings (term_id, student_id);
+
+INSERT INTO comment_bank (id, scope, category, text, is_builtin, status, created_at, updated_at) VALUES
+ ('cb_ct_n01', 'class_teacher', 'Nursery', 'Well done. Keep up the good work and aim for consistent excellence in all areas.', 1, 'active', datetime('now'), datetime('now')),
+ ('cb_ct_n02', 'class_teacher', 'Nursery', 'A cheerful learner who is growing well. Keep practising at home.',                1, 'active', datetime('now'), datetime('now')),
+ ('cb_ct_n03', 'class_teacher', 'Nursery', 'Good progress this term. Needs more support with reading and writing.',            1, 'active', datetime('now'), datetime('now')),
+ ('cb_ct_n04', 'class_teacher', 'Conduct', 'Improve on your personal hygiene.',                                                1, 'active', datetime('now'), datetime('now')),
+ ('cb_ct_n05', 'class_teacher', 'Conduct', 'Always neat, polite and plays well with others.',                                  1, 'active', datetime('now'), datetime('now'));
 "#;

@@ -20,6 +20,7 @@ import type {
   ClassListBody,
   ClassRow,
   ClassSubjectRow,
+  ActivityRating,
   CommentBankEntry,
   CreateStaffResult,
   DashboardSummary,
@@ -32,6 +33,8 @@ import type {
   MarksSheet,
   PleProjection,
   ReportCardBatch,
+  ReportCommentDetail,
+  ReportSettings,
   SaveMarksResult,
   SessionView,
   SpreadsheetPreview,
@@ -318,7 +321,14 @@ export const api = {
     termId: string;
     classTeacherComment?: string | null;
     headTeacherComment?: string | null;
+    conductComment?: string | null;
+    activityRatings?: ActivityRating[] | null;
   }) => call<void>("save_report_comment", { request }),
+  getReportComment: (studentId: string, termId: string) =>
+    call<ReportCommentDetail>("get_report_comment", { studentId, termId }),
+  getReportSettings: () => call<ReportSettings>("get_report_settings"),
+  saveReportSettings: (settings: ReportSettings) =>
+    call<void>("save_report_settings", { settings }),
   setFeesBlock: (studentId: string, blocked: boolean, note?: string | null) =>
     call<void>("set_fees_block", { studentId, blocked, note: note ?? null }),
   setFeesRule: (enabled: boolean) => call<void>("set_fees_rule", { enabled }),

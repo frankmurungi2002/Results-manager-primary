@@ -409,6 +409,33 @@ export interface ReportCard {
   daysPossible: number | null;
   classTeacherComment: string | null;
   headTeacherComment: string | null;
+  /** Nursery: the "Behaviour and cleanliness" line. */
+  conductComment: string | null;
+  classTeacherName: string | null;
+  totalScore: number | null;
+  totalMax: number;
+  activities: ActivityRating[];
+}
+
+export type Rating = "excellent" | "very_good" | "good" | "fair" | "needs_help";
+
+export interface ActivityRating {
+  activity: string;
+  rating: Rating;
+}
+
+export interface ReportCommentDetail {
+  classTeacherComment: string | null;
+  headTeacherComment: string | null;
+  conductComment: string | null;
+  activityRatings: ActivityRating[];
+  activityNames: string[];
+}
+
+export interface ReportSettings {
+  headTeacherName: string;
+  requirements: string;
+  nurseryActivities: string[];
 }
 
 export interface BlockedLearner {
@@ -420,6 +447,11 @@ export interface BlockedLearner {
 
 export interface ReportCardBatch {
   className: string;
+  levelKind: "nursery" | "primary";
+  activityNames: string[];
+  nextTermBegins: string | null;
+  requirements: string | null;
+  headTeacherName: string | null;
   streamName: string | null;
   termName: string;
   academicYear: string;

@@ -358,6 +358,398 @@
   margin: 0;
 }
 
+/* --- Nursery report card ---------------------------------------------- *
+ * Brighter than the primary card, the way nursery reports are: a coloured
+ * title band, a picture beside every activity and a rating in words and
+ * stars. Every colour is fixed here, and the school's accent colour
+ * (--doc-accent, set per sheet) drives the headings. */
+
+.sheet-nursery {
+  --doc-accent: #4f63d2;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-size: 9.5pt;
+  border-top: 3mm solid var(--doc-accent);
+}
+
+.sheet-nursery .doc-head {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sheet-nursery .doc-logo {
+  width: 22mm;
+  height: 22mm;
+}
+
+.sheet-nursery .doc-institution {
+  color: var(--doc-accent);
+  font-size: 17pt;
+}
+
+.sheet-nursery .doc-title {
+  margin-top: 3mm;
+  padding: 2.2mm 4mm;
+  border-radius: 3mm;
+  background: var(--doc-accent);
+  color: #fff;
+  font-size: 11.5pt;
+}
+
+.sheet-nursery .doc-subtitle {
+  margin-top: 1.2mm;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sheet-nursery .doc-body {
+  margin-top: 2.5mm;
+  display: flex;
+  flex-direction: column;
+  gap: 2.6mm;
+}
+
+.nr-photo {
+  width: 24mm;
+  height: 28mm;
+  flex: none;
+  object-fit: cover;
+  border-radius: 2.5mm;
+  border: 1px solid var(--rule);
+}
+
+.nr-photo-empty {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  font-size: 7.5pt;
+  color: var(--ink-faint);
+}
+
+/* Learner details */
+
+.nr-learner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.6mm 4mm;
+  padding: 2mm 3.5mm;
+  border-radius: 3mm;
+  background: var(--band);
+}
+
+.nr-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nr-field-wide {
+  grid-column: span 2;
+}
+
+.nr-field-label {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.nr-field-value {
+  font-weight: 600;
+  border-bottom: 1px dotted var(--rule);
+  padding-bottom: 0.4mm;
+  min-height: 5mm;
+}
+
+/* Two panels: learning areas and activities */
+
+.nr-columns {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 4mm;
+  align-items: start;
+}
+
+.nr-panel {
+  border: 1px solid var(--rule-soft);
+  border-radius: 3mm;
+  padding: 2.8mm 3mm 3mm;
+  break-inside: avoid;
+}
+
+.nr-heading {
+  margin: 0 0 2mm;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--doc-accent);
+}
+
+.nr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nr-table th {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0 1.5mm 1.2mm;
+  text-align: center;
+}
+
+.nr-table td {
+  padding: 1.1mm 1.5mm;
+  border-top: 1px solid var(--rule-soft);
+  vertical-align: middle;
+  text-align: center;
+}
+
+.nr-table .left {
+  text-align: left;
+}
+
+.nr-area {
+  font-weight: 700;
+}
+
+.nr-area-note {
+  font-size: 7.5pt;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+
+.nr-score {
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 10.5pt;
+}
+
+.nr-outof {
+  font-weight: 500;
+  font-size: 8pt;
+  color: var(--ink-faint);
+}
+
+.nr-remark {
+  font-weight: 600;
+  width: 22%;
+  white-space: nowrap;
+}
+
+.nr-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2mm;
+  margin-top: 2mm;
+}
+
+.nr-totals > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.6mm;
+  border-radius: 2mm;
+  background: var(--band);
+}
+
+.nr-totals span {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.nr-totals strong {
+  font-size: 11pt;
+}
+
+.nr-activities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nr-activity {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  padding: 0.75mm 0;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.nr-activity:first-child {
+  border-top: 0;
+}
+
+.nr-activity-icon {
+  width: 6.5mm;
+  height: 6.5mm;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.tint-0 { background: #fde2e4; color: #c0304a; }
+.tint-1 { background: #dff1ff; color: #1f6fb2; }
+.tint-2 { background: #fff1c9; color: #a86b00; }
+.tint-3 { background: #dcf5e6; color: #1d7a45; }
+.tint-4 { background: #ece4ff; color: #6a45c9; }
+.tint-5 { background: #ffe6d5; color: #c0561b; }
+
+.nr-activity-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.nr-rating {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 8pt;
+  font-weight: 700;
+  line-height: 1.15;
+  min-width: 18mm;
+}
+
+.nr-rating-blank {
+  height: 5mm;
+  border-bottom: 1px dotted var(--rule);
+}
+
+.nr-stars {
+  font-size: 7.5pt;
+  letter-spacing: 0.02em;
+}
+
+.nr-stars-empty {
+  color: #d9dce5;
+}
+
+.rating-excellent  { color: #1d7a45; }
+.rating-very_good  { color: #1f6fb2; }
+.rating-good       { color: #5a4fc2; }
+.rating-fair       { color: #a86b00; }
+.rating-needs_help { color: #c0304a; }
+
+/* Comments */
+
+.nr-comments {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--rule-soft);
+  border-radius: 3mm;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.nr-comments th {
+  width: 27%;
+  padding: 1.8mm 3mm;
+  text-align: left;
+  font-size: 8pt;
+  font-weight: 700;
+  color: var(--doc-accent);
+  background: var(--band);
+  vertical-align: top;
+}
+
+.nr-comments td {
+  padding: 1.8mm 3mm;
+  min-height: 9mm;
+  vertical-align: top;
+  font-style: italic;
+}
+
+.nr-comments tr + tr th,
+.nr-comments tr + tr td {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.nr-comments .nr-sign {
+  width: 26%;
+  font-style: normal;
+  font-weight: 700;
+  border-left: 1px solid var(--rule-soft);
+}
+
+.nr-sign span {
+  display: block;
+  margin-top: 3.5mm;
+  padding-top: 0.6mm;
+  border-top: 1px dotted var(--ink-faint);
+  font-size: 7pt;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+/* Foot: dates, requirements and the stamp */
+
+.nr-foot {
+  display: flex;
+  gap: 4mm;
+  align-items: stretch;
+  break-inside: avoid;
+}
+
+.nr-foot-facts {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2mm 4mm;
+}
+
+.nr-foot-facts > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.nr-foot-facts span {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.nr-foot-facts strong {
+  font-weight: 600;
+  border-bottom: 1px dotted var(--rule);
+  min-height: 5mm;
+}
+
+.nr-requirements {
+  grid-column: span 2;
+}
+
+.nr-requirements strong {
+  white-space: pre-line;
+}
+
+.nr-stamp {
+  width: 27mm;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--rule);
+  border-radius: 50%;
+  aspect-ratio: 1;
+  font-size: 7.5pt;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 @media print {
   html,
   body,
@@ -426,6 +818,10 @@
     break-after: page;
   }
 
+  .sheet-nursery {
+    padding-top: 9mm;
+  }
+
   .sheet:last-child {
     page-break-after: auto;
     break-after: auto;
@@ -445,7 +841,10 @@
 
   .doc-head,
   .rc-summary,
-  .rc-comment {
+  .rc-comment,
+  .nr-panel,
+  .nr-comments,
+  .nr-foot {
     page-break-inside: avoid;
     break-inside: avoid;
   }

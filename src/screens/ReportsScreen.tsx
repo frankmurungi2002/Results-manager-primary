@@ -14,8 +14,10 @@ import type {
   AcademicYearRow,
   ClassListBody,
   ClassRow,
+  ActivityRating,
   CommentBankEntry,
   DocumentEnvelope,
+  Rating,
   ReportCardBatch,
   StudentRow,
   TermRow,
@@ -91,6 +93,8 @@ export function ReportsScreen() {
   }, [classId, reportError]);
 
   const terms: TermRow[] = years.flatMap((year) => year.terms);
+  const isNursery =
+    classes.find((entry) => entry.id === classId)?.levelKind === "nursery";
   const term = terms.find((entry) => entry.id === termId);
 
   async function buildReportCards() {
@@ -288,8 +292,12 @@ export function ReportsScreen() {
 
         <div className="grid grid-2">
           <Card
-            title="Report cards"
-            subtitle="Grades, aggregate, position and comments for each learner"
+            title={isNursery ? "Nursery report cards" : "Report cards"}
+            subtitle={
+              isNursery
+                ? "Learning areas, activity ratings and comments for each learner"
+                : "Grades, aggregate, position and comments for each learner"
+            }
             footer={
               <div className="row-between">
                 <span className="field-hint">
@@ -331,7 +339,7 @@ export function ReportsScreen() {
                       </th>
                       <th>Learner</th>
                       <th style={{ width: 130 }}>Reg. No.</th>
-                      <th style={{ width: 120 }} />
+                      <th style={{ width: isNursery ? 170 : 120 }} />
                     </tr>
                   </thead>
                   <tbody>
@@ -360,7 +368,7 @@ export function ReportsScreen() {
                             icon={<MessageSquareText size={13} />}
                             onClick={() => setCommentsFor(student)}
                           >
-                            Comments
+                            {isNursery ? "Comments & ratings" : "Comments"}
                           </Button>
                         </td>
                       </tr>
@@ -404,20 +412,34 @@ export function ReportsScreen() {
       <CommentsModal
         student={commentsFor}
         termId={termId}
+        nursery={isNursery}
         onClose={() => setCommentsFor(null)}
       />
     </div>
   );
 }
 
-/** FR-G11 — pick a comment from the bank, then edit it for this learner. */
+export const RATING_OPTIONS: { value: Rating; label: string }[] = [
+  { value: "excellent", label: "Excellent" },
+  { value: "very_good", label: "Very good" },
+  { value: "good", label: "Good" },
+  { value: "fair", label: "Fair" },
+  { value: "needs_help", label: "Needs help" },
+];
+
+/**
+ * FR-G11 — pick a comment from the bank, then edit it for this learner. For a
+ * nursery class this is also where the learning activities are rated.
+ */
 function CommentsModal({
   student,
   termId,
+  nursery,
   onClose,
 }: {
   student: StudentRow | null;
   termId: string;
+  nursery: boolean;
   onClose: () => void;
 }) {
   const reportError = useStore((state) => state.reportError);
@@ -427,22 +449,41 @@ function CommentsModal({
   const [headBank, setHeadBank] = useState<CommentBankEntry[]>([]);
   const [classComment, setClassComment] = useState("");
   const [headComment, setHeadComment] = useState("");
+  const [conductComment, setConductComment] = useState("");
+  const [activityNames, setActivityNames] = useState<string[]>([]);
+  const [ratings, setRatings] = useState<Record<string, Rating>>({});
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!student) return;
+    setLoaded(false);
     setClassComment("");
     setHeadComment("");
+    setConductComment("");
+    setRatings({});
     Promise.all([
       api.listCommentBank("class_teacher"),
       api.listCommentBank("head_teacher"),
+      api.getReportComment(student.id, termId),
     ])
-      .then(([classEntries, headEntries]) => {
+      .then(([classEntries, headEntries, saved]) => {
         setClassBank(classEntries);
         setHeadBank(headEntries);
+        // What was already written this term, so reopening never blanks it.
+        setClassComment(saved.classTeacherComment ?? "");
+        setHeadComment(saved.headTeacherComment ?? "");
+        setConductComment(saved.conductComment ?? "");
+        setActivityNames(saved.activityNames);
+        setRatings(
+          Object.fromEntries(
+            saved.activityRatings.map((entry) => [entry.activity, entry.rating]),
+          ),
+        );
+        setLoaded(true);
       })
       .catch(reportError);
-  }, [student, reportError]);
+  }, [student, termId, reportError]);
 
   if (!student) return null;
 
@@ -450,7 +491,7 @@ function CommentsModal({
     <Modal
       open
       wide
-      title={`Comments for ${student.fullName}`}
+      title={nursery ? `Report for ${student.fullName}` : `Comments for ${student.fullName}`}
       description="Pick a phrase to start from, then change it however you like. Editing here never changes the shared bank."
       onClose={onClose}
       footer={
@@ -459,14 +500,23 @@ function CommentsModal({
           <Button
             variant="primary"
             loading={busy}
+            disabled={!loaded}
             onClick={() => {
               setBusy(true);
+              const activityRatings: ActivityRating[] | null = nursery
+                ? Object.entries(ratings).map(([activity, rating]) => ({
+                    activity,
+                    rating,
+                  }))
+                : null;
               api
                 .saveReportComment({
                   studentId: student.id,
                   termId,
                   classTeacherComment: classComment.trim() || null,
                   headTeacherComment: headComment.trim() || null,
+                  conductComment: conductComment.trim() || null,
+                  activityRatings,
                 })
                 .then(() => {
                   toast("success", "Comments saved.");
@@ -476,25 +526,74 @@ function CommentsModal({
                 .finally(() => setBusy(false));
             }}
           >
-            Save comments
+            {nursery ? "Save" : "Save comments"}
           </Button>
         </>
       }
     >
-      <div className="stack">
-        <CommentPicker
-          label="Class Teacher's comment"
-          bank={classBank}
-          value={classComment}
-          onChange={setClassComment}
-        />
-        <CommentPicker
-          label="Headteacher's comment"
-          bank={headBank}
-          value={headComment}
-          onChange={setHeadComment}
-        />
-      </div>
+      {!loaded ? (
+        <Loading label="Loading" />
+      ) : (
+        <div className="stack">
+          {nursery && (
+            <div className="field">
+              <span className="field-label">Learning activities</span>
+              <div className="rating-grid">
+                {activityNames.map((activity) => (
+                  <div key={activity} className="rating-row">
+                    <span className="rating-name">{activity}</span>
+                    <div className="segmented" role="radiogroup" aria-label={activity}>
+                      {RATING_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={ratings[activity] === option.value}
+                          className={cx(ratings[activity] === option.value && "is-active")}
+                          onClick={() =>
+                            setRatings((current) => {
+                              const next = { ...current };
+                              if (next[activity] === option.value) delete next[activity];
+                              else next[activity] = option.value;
+                              return next;
+                            })
+                          }
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <span className="field-hint">
+                Click a rating again to clear it. Change the list of activities
+                under Settings, School.
+              </span>
+            </div>
+          )}
+          <CommentPicker
+            label={nursery ? "Class Teacher's report" : "Class Teacher's comment"}
+            bank={classBank}
+            value={classComment}
+            onChange={setClassComment}
+          />
+          {nursery && (
+            <CommentPicker
+              label="Behaviour and cleanliness"
+              bank={classBank.filter((entry) => entry.category === "Conduct")}
+              value={conductComment}
+              onChange={setConductComment}
+            />
+          )}
+          <CommentPicker
+            label="Headteacher's comment"
+            bank={headBank}
+            value={headComment}
+            onChange={setHeadComment}
+          />
+        </div>
+      )}
     </Modal>
   );
 }

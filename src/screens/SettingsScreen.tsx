@@ -35,6 +35,7 @@ import {
   Modal,
   Segmented,
   Switch,
+  TextArea,
   TextInput,
   cx,
   formatDateTime,
@@ -166,13 +167,13 @@ function SchoolTab() {
       });
       if (typeof path !== "string") return;
 
-      // Read through the webview's own fetch of the file URL is not available
-      // under the app's CSP, so the file is handed to the backend by path in a
-      // later build. For now, guide the user rather than failing silently.
-      toast(
-        "info",
-        "Logo upload arrives in the next build. The header already leaves room for it.",
-      );
+      // The backend reads the file by path and checks it is a PNG under 2 MB.
+      const bytes = await api.readImageFile(path);
+      await api.setInstitutionLogo(bytes);
+      setLogo(URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "image/png" })));
+      setInstitution((current) => (current ? { ...current, hasLogo: true } : current));
+      toast("success", "Logo saved. It now prints on every document.");
+      void refreshInstitution();
     } catch (error) {
       reportError(error);
     }
@@ -311,6 +312,9 @@ function SchoolTab() {
                       .setInstitutionLogo(null)
                       .then(() => {
                         setLogo(null);
+                        setInstitution((current) =>
+                          current ? { ...current, hasLogo: false } : current,
+                        );
                         toast("success", "Logo removed.");
                         void refreshInstitution();
                       })
@@ -329,6 +333,8 @@ function SchoolTab() {
         </div>
       </Card>
 
+      <ReportSettingsCard />
+
       <Card title="Appearance" subtitle="Applies to this computer only">
         <div className="row-between">
           <span>Theme</span>
@@ -344,6 +350,85 @@ function SchoolTab() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** What every report card prints beyond marks: signatures and next-term notes. */
+function ReportSettingsCard() {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+
+  const [loaded, setLoaded] = useState(false);
+  const [headTeacherName, setHeadTeacherName] = useState("");
+  const [requirements, setRequirements] = useState("");
+  const [activities, setActivities] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .getReportSettings()
+      .then((settings) => {
+        setHeadTeacherName(settings.headTeacherName);
+        setRequirements(settings.requirements);
+        setActivities(settings.nurseryActivities.join("\n"));
+        setLoaded(true);
+      })
+      .catch(reportError);
+  }, [reportError]);
+
+  if (!loaded) return null;
+
+  return (
+    <Card
+      title="Report cards"
+      subtitle="Printed at the foot of every learner's report"
+      footer={
+        <div className="row-between">
+          <span className="field-hint">
+            The next term's start date comes from the term calendar.
+          </span>
+          <Button
+            variant="primary"
+            loading={busy}
+            onClick={() => {
+              setBusy(true);
+              api
+                .saveReportSettings({
+                  headTeacherName,
+                  requirements,
+                  nurseryActivities: activities.split("\n"),
+                })
+                .then(() => toast("success", "Report card settings saved."))
+                .catch(reportError)
+                .finally(() => setBusy(false));
+            }}
+          >
+            Save
+          </Button>
+        </div>
+      }
+    >
+      <div className="grid-form">
+        <TextInput
+          label="Headteacher's name"
+          value={headTeacherName}
+          onChange={(event) => setHeadTeacherName(event.target.value)}
+          placeholder="Printed beside the Headteacher's comment"
+        />
+        <TextArea
+          label="School requirements for next term"
+          value={requirements}
+          onChange={(event) => setRequirements(event.target.value)}
+          placeholder="Broom, ream of paper, box file, 12 books ..."
+        />
+        <TextArea
+          label="Nursery learning activities, one per line"
+          value={activities}
+          onChange={(event) => setActivities(event.target.value)}
+          rows={6}
+        />
+      </div>
+    </Card>
   );
 }
 
