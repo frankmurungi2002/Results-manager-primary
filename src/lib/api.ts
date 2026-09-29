@@ -32,7 +32,10 @@ import type {
   MarkEntry,
   MarksSheet,
   PleProjection,
+  ExamPermitBatch,
   FlushResult,
+  StreamRow,
+  WeeklySheet,
   IdCardBatch,
   PassOutReason,
   PassOutRow,
@@ -353,6 +356,28 @@ export const api = {
   listSmsOutbox: () => call<SmsOutboxRow[]>("list_sms_outbox"),
   sendQueuedSms: () => call<FlushResult>("send_queued_sms"),
   sendTestSms: (phone: string) => call<string>("send_test_sms", { phone }),
+
+  buildExamPermits: (request: { classId: string; examId: string; studentIds?: string[] }) =>
+    call<DocumentEnvelope<ExamPermitBatch>>("build_exam_permits", {
+      request: { ...request, studentIds: request.studentIds ?? [] },
+    }),
+
+  // --- Streams (FR-C11) and weekly assignments (FR-C12) --------------------
+  listStreams: (classId: string) => call<StreamRow[]>("list_streams", { classId }),
+  saveStream: (classId: string, name: string, id?: string | null) =>
+    call<string>("save_stream", { classId, name, id: id ?? null }),
+  retireStream: (id: string) => call<void>("retire_stream", { id }),
+  setStudentStream: (studentId: string, streamId: string | null) =>
+    call<void>("set_student_stream", { studentId, streamId }),
+  loadWeeklySheet: (classSubjectId: string, termId: string, week: number) =>
+    call<WeeklySheet>("load_weekly_sheet", { classSubjectId, termId, week }),
+  saveWeeklyScores: (request: {
+    classSubjectId: string;
+    termId: string;
+    week: number;
+    outOf: number;
+    entries: { studentId: string; score: number | null; remark: string | null }[];
+  }) => call<number>("save_weekly_scores", { request }),
 
   buildClassList: (classId: string) =>
     call<DocumentEnvelope<ClassListBody>>("build_class_list", { classId }),

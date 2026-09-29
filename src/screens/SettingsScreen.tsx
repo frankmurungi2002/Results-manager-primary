@@ -687,22 +687,23 @@ function FeaturesTab() {
     {
       key: "examPermits",
       label: "Examination permits",
-      detail: "Prints a permit per learner, respecting the fees block.",
-      ready: false,
+      detail:
+        "Prints an examination permit for each learner (Reports & printing). Learners blocked on fees get none.",
+      ready: true,
     },
     {
       key: "streams",
       label: "Streams",
       detail:
-        "Up to 20 streams per class, each with its own Class Teacher and roster.",
-      ready: false,
+        "Up to 20 streams per class (Classes & subjects), each with its own Class Teacher and roster.",
+      ready: true,
     },
     {
       key: "weeklyAssignments",
       label: "Weekly assignments",
       detail:
-        "Per-subject weekly scores, summarised on the back of the report card.",
-      ready: false,
+        "Per-subject weekly scores (Weekly assignments), summarised on the back of the report card.",
+      ready: true,
     },
   ];
 

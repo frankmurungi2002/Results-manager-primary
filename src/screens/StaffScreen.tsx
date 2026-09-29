@@ -12,6 +12,7 @@ import type {
   AssignmentRow,
   ClassRow,
   ClassSubjectRow,
+  StreamRow,
   UserSummary,
 } from "../lib/types";
 import { useStore } from "../state/store";
@@ -260,7 +261,10 @@ export function StaffScreen() {
                     {assignments.map((entry) => (
                       <tr key={entry.id}>
                         <td style={{ fontWeight: 500 }}>{entry.teacherName}</td>
-                        <td>{entry.className}</td>
+                        <td>
+                          {entry.className}
+                          {entry.streamName ? ` — ${entry.streamName}` : ""}
+                        </td>
                         <td>
                           <Badge
                             tone={entry.role === "class_teacher" ? "accent" : "neutral"}
@@ -529,6 +533,9 @@ function AssignModal({
   const [subjectId, setSubjectId] = useState("");
   const [subjects, setSubjects] = useState<ClassSubjectRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const features = useStore((state) => state.features);
+  const [streams, setStreams] = useState<StreamRow[]>([]);
+  const [streamId, setStreamId] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -536,6 +543,16 @@ function AssignModal({
     setClassId(classes[0]?.id ?? "");
     setRole("subject_teacher");
   }, [open, teachers, classes]);
+
+  // FR-C11: a Class Teacher can be given one stream of the class.
+  useEffect(() => {
+    setStreamId("");
+    if (!classId || !features.streams) {
+      setStreams([]);
+      return;
+    }
+    api.listStreams(classId).then(setStreams).catch(() => setStreams([]));
+  }, [classId, features.streams]);
 
   useEffect(() => {
     if (!classId) return;
@@ -567,6 +584,7 @@ function AssignModal({
                 .assignTeacher({
                   userId,
                   classId,
+                  streamId: streamId || null,
                   role,
                   subjectId: role === "subject_teacher" ? subjectId : null,
                 })
@@ -617,6 +635,21 @@ function AssignModal({
           <option value="assistant_class_teacher">Assistant Class Teacher</option>
           <option value="subject_teacher">Subject Teacher</option>
         </SelectInput>
+
+        {streams.length > 0 && (
+          <SelectInput
+            label="Stream"
+            value={streamId}
+            onChange={(event) => setStreamId(event.target.value)}
+          >
+            <option value="">The whole class</option>
+            {streams.map((stream) => (
+              <option key={stream.id} value={stream.id}>
+                {stream.name}
+              </option>
+            ))}
+          </SelectInput>
+        )}
 
         {role === "subject_teacher" && (
           <SelectInput

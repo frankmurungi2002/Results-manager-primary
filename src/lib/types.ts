@@ -420,7 +420,66 @@ export interface ReportCard {
   totalMax: number;
   examTotals: ExamTotal[];
   previous: PreviousTerm | null;
+  weekly: WeeklySummary[];
   activities: ActivityRating[];
+}
+
+// --- Optional features: streams (FR-C11), weekly work (FR-C12), permits ------
+
+export interface StreamRow {
+  id: string;
+  classId: string;
+  name: string;
+  learnerCount: number;
+  classTeacherName: string | null;
+}
+
+export interface WeeklySummary {
+  subject: string;
+  scores: (number | null)[];
+  weeksDone: number;
+  weeksSet: number;
+  meanPercentage: number | null;
+}
+
+export interface WeeklyRow {
+  studentId: string;
+  regNumber: string;
+  fullName: string;
+  streamName: string | null;
+  score: number | null;
+  remark: string | null;
+}
+
+export interface WeeklySheet {
+  classSubjectId: string;
+  className: string;
+  subjectName: string;
+  termName: string;
+  week: number;
+  outOf: number;
+  weeksRecorded: number[];
+  rows: WeeklyRow[];
+}
+
+export interface ExamPermit {
+  studentId: string;
+  fullName: string;
+  regNumber: string;
+  streamName: string | null;
+  photoDataUrl: string | null;
+  serial: string;
+}
+
+export interface ExamPermitBatch {
+  examName: string;
+  termName: string;
+  academicYear: string;
+  className: string;
+  examDate: string | null;
+  subjects: string[];
+  permits: ExamPermit[];
+  blocked: BlockedLearner[];
 }
 
 export interface ExamTotal {
@@ -483,6 +542,7 @@ export interface ReportCardBatch {
   classAverage: number | null;
   examClassAverages: (number | null)[];
   gradeKey: GradeKeyBand[];
+  weeklyWeeks: number;
   streamName: string | null;
   termName: string;
   academicYear: string;

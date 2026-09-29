@@ -8,6 +8,7 @@ import type { FeatureFlags, Institution, SessionView, TeacherMode } from "../lib
 export type ScreenId =
   | "dashboard"
   | "marks"
+  | "weekly"
   | "classes"
   | "learners"
   | "passouts"

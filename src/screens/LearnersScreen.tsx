@@ -17,7 +17,7 @@ import {
 import { ImportLearnersModal } from "../components/ImportLearnersModal";
 import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
-import type { ClassRow, StudentRow } from "../lib/types";
+import type { ClassRow, StreamRow, StudentRow } from "../lib/types";
 import { useStore } from "../state/store";
 import {
   Alert,
@@ -52,6 +52,9 @@ export function LearnersScreen() {
   const [dropping, setDropping] = useState<StudentRow | null>(null);
   const [photoFor, setPhotoFor] = useState<StudentRow | null>(null);
   const [importing, setImporting] = useState(false);
+  const features = useStore((state) => state.features);
+  const [streams, setStreams] = useState<StreamRow[]>([]);
+  const [streamFilter, setStreamFilter] = useState("all");
 
   const isAdmin = session?.isAdmin ?? false;
 
@@ -83,6 +86,18 @@ export function LearnersScreen() {
     void loadRoster();
   }, [loadRoster]);
 
+  // FR-C11: the class's streams, while the Streams toggle is on.
+  useEffect(() => {
+    setStreamFilter("all");
+    if (!classId || !features.streams) {
+      setStreams([]);
+      return;
+    }
+    api.listStreams(classId).then(setStreams).catch(reportError);
+  }, [classId, features.streams, reportError]);
+
+  const hasStreams = features.streams && streams.length > 0;
+
   // FR-C7: searching is institution-wide, but the backend still filters to the
   // classes this teacher is allowed to see.
   useEffect(() => {
@@ -97,7 +112,15 @@ export function LearnersScreen() {
     return () => window.clearTimeout(handle);
   }, [query, reportError]);
 
-  const shown = results ?? roster;
+  const shown =
+    results ??
+    roster.filter((student) =>
+      !hasStreams || streamFilter === "all"
+        ? true
+        : streamFilter === "none"
+          ? !student.streamId
+          : student.streamId === streamFilter,
+    );
   const selectedClass = classes.find((entry) => entry.id === classId);
 
   return (
@@ -147,6 +170,23 @@ export function LearnersScreen() {
                 ))}
               </SelectInput>
             </div>
+            {hasStreams && (
+              <div style={{ minWidth: 170, flex: "0 0 auto" }}>
+                <SelectInput
+                  label="Stream"
+                  value={streamFilter}
+                  onChange={(event) => setStreamFilter(event.target.value)}
+                >
+                  <option value="all">All streams</option>
+                  {streams.map((stream) => (
+                    <option key={stream.id} value={stream.id}>
+                      {stream.name} ({stream.learnerCount})
+                    </option>
+                  ))}
+                  <option value="none">Not in a stream</option>
+                </SelectInput>
+              </div>
+            )}
 
             <div className="grow" style={{ minWidth: 260 }}>
               <div className="field">
@@ -236,6 +276,7 @@ export function LearnersScreen() {
                       Sex
                     </th>
                     {results !== null && <th style={{ width: 130 }}>Class</th>}
+                    {results === null && hasStreams && <th style={{ width: 150 }}>Stream</th>}
                     <th style={{ width: 190 }}>Guardian</th>
                     <th style={{ width: 120 }}>Status</th>
                     <th style={{ width: 150 }} />
@@ -249,6 +290,34 @@ export function LearnersScreen() {
                       <td className="center">{student.gender ?? "—"}</td>
                       {results !== null && (
                         <td className="muted">{student.className ?? "—"}</td>
+                      )}
+                      {results === null && hasStreams && (
+                        <td>
+                          <select
+                            className="select"
+                            style={{ height: 32 }}
+                            aria-label={`Stream for ${student.fullName}`}
+                            value={student.streamId ?? ""}
+                            disabled={student.enrollmentStatus === "dropped"}
+                            onChange={(event) => {
+                              const next = event.target.value || null;
+                              api
+                                .setStudentStream(student.id, next)
+                                .then(() => {
+                                  void loadRoster();
+                                  api.listStreams(classId).then(setStreams).catch(() => undefined);
+                                })
+                                .catch(reportError);
+                            }}
+                          >
+                            <option value="">—</option>
+                            {streams.map((stream) => (
+                              <option key={stream.id} value={stream.id}>
+                                {stream.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
                       )}
                       <td>
                         <div>{student.guardianName ?? "—"}</div>

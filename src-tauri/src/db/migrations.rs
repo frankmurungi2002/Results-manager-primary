@@ -46,6 +46,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "pass_outs_and_sms",
         sql: M005_PASS_OUTS_AND_SMS,
     },
+    Migration {
+        version: 6,
+        name: "weekly_assignments",
+        sql: M006_WEEKLY_ASSIGNMENTS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -655,4 +660,32 @@ CREATE TABLE pass_outs (
 
 CREATE INDEX idx_pass_outs_time ON pass_outs (time_out DESC);
 CREATE INDEX idx_pass_outs_status ON pass_outs (status, expected_back);
+"#;
+
+// ---------------------------------------------------------------------------
+// 006 — weekly assignments (FR-C12)
+// ---------------------------------------------------------------------------
+
+const M006_WEEKLY_ASSIGNMENTS: &str = r#"
+
+-- One learner's score on one subject's assignment for one week of a term.
+-- `out_of` is kept per row: a teacher may mark one week out of 10 and the
+-- next out of 20, and the percentage must stay right for both.
+CREATE TABLE weekly_scores (
+    id               TEXT PRIMARY KEY,
+    student_id       TEXT NOT NULL REFERENCES students (id),
+    class_subject_id TEXT NOT NULL REFERENCES class_subjects (id),
+    term_id          TEXT NOT NULL REFERENCES terms (id),
+    week             INTEGER NOT NULL CHECK (week BETWEEN 1 AND 20),
+    score            REAL,
+    out_of           REAL NOT NULL DEFAULT 10 CHECK (out_of > 0),
+    remark           TEXT,
+    entered_by       TEXT REFERENCES users (id),
+    updated_at       TEXT NOT NULL,
+    CHECK (score IS NULL OR (score >= 0 AND score <= out_of)),
+    UNIQUE (student_id, class_subject_id, term_id, week)
+);
+
+CREATE INDEX idx_weekly_scores_sheet ON weekly_scores (class_subject_id, term_id, week);
+CREATE INDEX idx_weekly_scores_student ON weekly_scores (student_id, term_id);
 "#;

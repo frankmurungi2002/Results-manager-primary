@@ -95,7 +95,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-B4 | Up to three School Admins | ✅ | — | Enforced in the backend |
 | FR-B5 | Class ladder, subject catalogue, registration numbers | ✅ | — | |
 | FR-B6 | Teacher assignment; one Class Teacher and one Assistant per class | ✅ | — | Enforced by a unique index |
-| FR-B7 | Optional features: Photos, Exam Permits, Streams, Weekly Assignments | 🟡 | M2–M3 | Flags are stored; Photos works; the other three have nothing behind them yet |
+| FR-B7 | Optional features: Photos, Exam Permits, Streams, Weekly Assignments | ✅ | M2–M3 | All four toggles work; turning one off hides its screens and keeps its data |
 | FR-B8 | Fees-block rule at print time | ✅ (manual flag) | M2 reads from the Fees Ledger | |
 | FR-B9 | Light, dark and match-Windows themes | ✅ | — | |
 | FR-B10 | Backup status; cloud controls marked "coming soon" | ✅ | — | |
@@ -117,8 +117,8 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-C8 | Audited bio-data editing | ✅ | — | |
 | FR-C9 | Correction messages from Subject Teacher to Class Teacher | ⬜ | M2 | Needs a small inbox: message, learner, status (open/resolved) |
 | FR-C10 | Add and drop learners, never delete | ✅ | — | Includes readmit and transfer |
-| FR-C11 | Streams (up to 20 per class) | 🧱 | **M2** | `streams` table and stream-scoped assignment index exist. Needs commands, roster/marks/report scoping and screens. SRS 16.5 says most schools need this. Not yet confirmed whether the pilot school runs streams; if it does, this moves into M1 |
-| FR-C12 | Weekly assignments | ⬜ (flag only) | M3 | |
+| FR-C11 | Streams (up to 20 per class) | 🟡 | **M2** | Add, rename and remove streams per class (Classes); put learners in a stream and filter by it (Learners); a Class Teacher per stream (Staff); print reports, ID cards and permits for one stream (Reports). Still class-wide: marks entry and ranking (position is out of the whole class) |
+| FR-C12 | Weekly assignments | ✅ | M3 | Weekly assignments screen (weeks 1–20, a score out of any total, a remark); a back page on the report card with every week, weeks done and the term mean. Excel upload of weekly scores is not built |
 | FR-C13 | Per-class subject rename, grading override, maximum | ✅ | — | |
 | FR-C14 | Late marks for a closed term | 🟡 simplified | M2 (simplified), M3 (full workflow) | Today: an admin reopens the whole term. M2: an admin edits one closed mark with a mandatory, audited reason (SRS 16.5). M3: request → approve → 24-hour reversal |
 
@@ -127,7 +127,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | ID | Requirement | Status | Milestone | Notes |
 | --- | --- | --- | --- | --- |
 | FR-D1 | Partial and final report cards | ✅ | M3 adds the weekly-assignment back page | Aggregate, division, position, comments |
-| FR-D2 | Exam permits, class lists, mark lists, mark sheets, registers | 🟡 | **M2** | Class lists done. Missing: exam permits (gated by the toggle, dated from FR-G7 in M3), mark lists, mark sheets, exam registers, attendance registers |
+| FR-D2 | Exam permits, class lists, mark lists, mark sheets, registers | 🟡 | **M2** | Class lists and exam permits done (four per A4, fees block respected, dated from the exam's scheduled date). Missing: mark lists, mark sheets, exam registers, attendance registers |
 | FR-D4 | Global print pipeline, institution branding only | ✅ | — | Every new document must go through `DocumentEnvelope` |
 
 ### Phase E — Lifecycle, audit, recovery, history (SRS 9)

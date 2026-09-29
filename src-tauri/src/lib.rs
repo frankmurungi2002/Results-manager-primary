@@ -126,6 +126,14 @@ pub fn run() {
             commands::reports::get_report_comment,
             commands::reports::build_id_cards,
             commands::reports::build_pass_out_slip,
+            commands::reports::build_exam_permits,
+            // --- Optional features: streams (FR-C11), weekly work (FR-C12) --
+            commands::features::list_streams,
+            commands::features::save_stream,
+            commands::features::retire_stream,
+            commands::features::set_student_stream,
+            commands::features::load_weekly_sheet,
+            commands::features::save_weekly_scores,
             // --- Pass-outs (FR-G22) and SMS (FR-G8) ------------------------
             commands::passouts::list_pass_outs,
             commands::passouts::create_pass_out,
