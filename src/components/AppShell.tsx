@@ -11,6 +11,7 @@ import {
   DoorOpen,
   LayoutDashboard,
   LogOut,
+  NotebookPen,
   Moon,
   ScrollText,
   Settings,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { api } from "../lib/api";
+import type { FeatureFlags } from "../lib/types";
 import { type ScreenId, useStore } from "../state/store";
 import { APP_NAME, BrandMark } from "./Logo";
 import { Badge, Button, cx, initials } from "./ui";
@@ -31,6 +33,8 @@ interface NavEntry {
   label: string;
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
+  /** Shown only while this optional feature (FR-B7) is switched on. */
+  feature?: keyof FeatureFlags;
 }
 
 const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
@@ -39,6 +43,12 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "marks", label: "Marks entry", icon: ClipboardList },
+      {
+        id: "weekly",
+        label: "Weekly assignments",
+        icon: NotebookPen,
+        feature: "weeklyAssignments",
+      },
       { id: "learners", label: "Learners", icon: Users },
       { id: "passouts", label: "Pass-outs", icon: DoorOpen },
       { id: "reports", label: "Reports & printing", icon: FileText },
@@ -64,6 +74,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
 
 const SCREEN_TITLES: Record<ScreenId, string> = {
   dashboard: "Dashboard",
+  weekly: "Weekly assignments",
   passouts: "Pass-outs",
   marks: "Marks entry",
   classes: "Classes & subjects",
@@ -81,6 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const institution = useStore((state) => state.institution);
   const screen = useStore((state) => state.screen);
   const navigate = useStore((state) => state.navigate);
+  const features = useStore((state) => state.features);
   const signOut = useStore((state) => state.signOut);
   const theme = useStore((state) => state.theme);
   const setTheme = useStore((state) => state.setTheme);
@@ -174,7 +186,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-nav">
           {NAV_SECTIONS.map((section) => {
             const visible = section.items.filter(
-              (item) => !item.adminOnly || session.isAdmin,
+              (item) =>
+                (!item.adminOnly || session.isAdmin) &&
+                (!item.feature || features[item.feature]),
             );
             if (visible.length === 0) return null;
 

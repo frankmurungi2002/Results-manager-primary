@@ -11,6 +11,7 @@ import { LearnersScreen } from "./screens/LearnersScreen";
 import { LoginScreen } from "./screens/LoginScreen";
 import { MarksScreen } from "./screens/MarksScreen";
 import { PassOutsScreen } from "./screens/PassOutsScreen";
+import { WeeklyScreen } from "./screens/WeeklyScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SetupWizard } from "./screens/SetupWizard";
@@ -95,6 +96,8 @@ function renderScreen(screen: string) {
       return <ClassesScreen />;
     case "learners":
       return <LearnersScreen />;
+    case "weekly":
+      return <WeeklyScreen />;
     case "passouts":
       return <PassOutsScreen />;
     case "reports":

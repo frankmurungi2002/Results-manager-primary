@@ -14,6 +14,7 @@ import {
   List,
   MessageSquareText,
   Printer,
+  Ticket,
 } from "lucide-react";
 
 import { api } from "../lib/api";
@@ -24,8 +25,10 @@ import type {
   ActivityRating,
   CommentBankEntry,
   DocumentEnvelope,
+  ExamPermitBatch,
   IdCardBatch,
   Rating,
+  StreamRow,
   ReportCardBatch,
   StudentRow,
   TermRow,
@@ -43,9 +46,11 @@ import {
   SelectInput,
   TextArea,
   cx,
+  formatDate,
 } from "../components/ui";
 import {
   ClassListSheet,
+  ExamPermitSheets,
   IdCardSheets,
   type IdCardFormat,
   PrintPreview,
@@ -56,6 +61,7 @@ type Preview =
   | { kind: "report_cards"; envelope: DocumentEnvelope<ReportCardBatch> }
   | { kind: "class_list"; envelope: DocumentEnvelope<ClassListBody> }
   | { kind: "id_cards"; envelope: DocumentEnvelope<IdCardBatch> }
+  | { kind: "exam_permits"; envelope: DocumentEnvelope<ExamPermitBatch> }
   | null;
 
 export function ReportsScreen() {
@@ -75,6 +81,10 @@ export function ReportsScreen() {
   const [commentsFor, setCommentsFor] = useState<StudentRow | null>(null);
   const [idFor, setIdFor] = useState<"student" | "staff">("student");
   const [idFormat, setIdFormat] = useState<IdCardFormat>("sheet");
+  const features = useStore((state) => state.features);
+  const [streams, setStreams] = useState<StreamRow[]>([]);
+  const [streamId, setStreamId] = useState("");
+  const [permitExamId, setPermitExamId] = useState("");
 
   useEffect(() => {
     Promise.all([api.listClasses(), api.listAcademicYears()])
@@ -107,6 +117,29 @@ export function ReportsScreen() {
       .catch(reportError);
   }, [classId, reportError]);
 
+  // FR-C11: print one stream at a time while Streams is on.
+  useEffect(() => {
+    setStreamId("");
+    if (!classId || !features.streams) {
+      setStreams([]);
+      return;
+    }
+    api.listStreams(classId).then(setStreams).catch(() => setStreams([]));
+  }, [classId, features.streams]);
+
+  const visibleRoster = streamId
+    ? roster.filter((student) => student.streamId === streamId)
+    : roster;
+  // Ticked learners win; otherwise a chosen stream; otherwise the whole class.
+  const targetIds =
+    selected.length > 0 ? selected : streamId ? visibleRoster.map((s) => s.id) : [];
+  const scopeLabel =
+    selected.length > 0
+      ? `${selected.length} selected`
+      : streamId
+        ? `${streams.find((s) => s.id === streamId)?.name ?? "Stream"} (${visibleRoster.length} learners)`
+        : `Whole class (${roster.length} learners)`;
+
   const terms: TermRow[] = years.flatMap((year) => year.terms);
   const isNursery =
     classes.find((entry) => entry.id === classId)?.levelKind === "nursery";
@@ -118,7 +151,7 @@ export function ReportsScreen() {
       const envelope = await api.buildReportCards({
         classId,
         termId,
-        studentIds: selected,
+        studentIds: targetIds,
         examIds,
       });
       setPreview({ kind: "report_cards", envelope });
@@ -135,9 +168,25 @@ export function ReportsScreen() {
       const envelope = await api.buildIdCards(
         idFor === "staff"
           ? { kind: "staff" }
-          : { kind: "student", classId, ids: selected },
+          : { kind: "student", classId, ids: targetIds },
       );
       setPreview({ kind: "id_cards", envelope });
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function buildExamPermits() {
+    setBusy(true);
+    try {
+      const envelope = await api.buildExamPermits({
+        classId,
+        examId: permitExamId,
+        studentIds: targetIds,
+      });
+      setPreview({ kind: "exam_permits", envelope });
     } catch (error) {
       reportError(error);
     } finally {
@@ -169,7 +218,9 @@ export function ReportsScreen() {
 
   if (preview) {
     const blocked =
-      preview.kind === "report_cards" ? preview.envelope.body.blocked : [];
+      preview.kind === "report_cards" || preview.kind === "exam_permits"
+        ? preview.envelope.body.blocked
+        : [];
 
     return (
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
@@ -226,7 +277,19 @@ export function ReportsScreen() {
             </div>
           )}
 
-          {preview.kind === "id_cards" ? (
+          {preview.kind === "exam_permits" ? (
+            preview.envelope.body.permits.length === 0 ? (
+              <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto" }}>
+                <Card>
+                  <EmptyState icon={<Ticket size={18} />} title="No permits to print">
+                    Everyone in this selection is blocked on fees.
+                  </EmptyState>
+                </Card>
+              </div>
+            ) : (
+              <ExamPermitSheets envelope={preview.envelope} />
+            )
+          ) : preview.kind === "id_cards" ? (
             preview.envelope.body.cards.length === 0 ? (
               <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto" }}>
                 <Card>
@@ -292,12 +355,31 @@ export function ReportsScreen() {
               ))}
             </SelectInput>
 
+            {features.streams && streams.length > 0 && (
+              <SelectInput
+                label="Stream"
+                value={streamId}
+                onChange={(event) => {
+                  setStreamId(event.target.value);
+                  setSelected([]);
+                }}
+              >
+                <option value="">Whole class</option>
+                {streams.map((stream) => (
+                  <option key={stream.id} value={stream.id}>
+                    {stream.name} ({stream.learnerCount})
+                  </option>
+                ))}
+              </SelectInput>
+            )}
+
             <SelectInput
               label="Term"
               value={termId}
               onChange={(event) => {
                 setTermId(event.target.value);
                 setExamIds([]);
+                setPermitExamId("");
               }}
             >
               {years.map((year) => (
@@ -360,9 +442,7 @@ export function ReportsScreen() {
             footer={
               <div className="row-between">
                 <span className="field-hint">
-                  {selected.length === 0
-                    ? `Whole class (${roster.length} learners)`
-                    : `${selected.length} selected`}
+                  {scopeLabel}
                 </span>
                 <Button
                   variant="primary"
@@ -388,10 +468,12 @@ export function ReportsScreen() {
                         <input
                           type="checkbox"
                           aria-label="Select all"
-                          checked={selected.length === roster.length && roster.length > 0}
+                          checked={
+                            selected.length === visibleRoster.length && visibleRoster.length > 0
+                          }
                           onChange={(event) =>
                             setSelected(
-                              event.target.checked ? roster.map((s) => s.id) : [],
+                              event.target.checked ? visibleRoster.map((s) => s.id) : [],
                             )
                           }
                         />
@@ -402,7 +484,7 @@ export function ReportsScreen() {
                     </tr>
                   </thead>
                   <tbody>
-                    {roster.map((student) => (
+                    {visibleRoster.map((student) => (
                       <tr key={student.id}>
                         <td className="center">
                           <input
@@ -459,6 +541,47 @@ export function ReportsScreen() {
               </p>
             </Card>
 
+            {features.examPermits && (
+              <Card
+                title="Examination permits"
+                subtitle="One permit per learner for the chosen exam. Learners blocked on fees get none."
+                footer={
+                  <div className="row-between">
+                    <span className="field-hint">{scopeLabel}</span>
+                    <Button
+                      variant="primary"
+                      icon={<Ticket size={15} />}
+                      loading={busy}
+                      disabled={!classId || !permitExamId || roster.length === 0}
+                      onClick={() => void buildExamPermits()}
+                    >
+                      Build permits
+                    </Button>
+                  </div>
+                }
+              >
+                {term && term.exams.length > 0 ? (
+                  <SelectInput
+                    label="Examination"
+                    value={permitExamId}
+                    onChange={(event) => setPermitExamId(event.target.value)}
+                  >
+                    <option value="">Choose an examination</option>
+                    {term.exams.map((exam) => (
+                      <option key={exam.id} value={exam.id}>
+                        {exam.name}
+                        {exam.scheduledDate ? ` — ${formatDate(exam.scheduledDate)}` : ""}
+                      </option>
+                    ))}
+                  </SelectInput>
+                ) : (
+                  <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
+                    This term has no examinations yet. Add them under Terms &amp; exams.
+                  </p>
+                )}
+              </Card>
+            )}
+
             <Card
               title="ID cards"
               subtitle="Photo, name, class or role, number and the year it is valid for"
@@ -467,9 +590,7 @@ export function ReportsScreen() {
                   <span className="field-hint">
                     {idFor === "staff"
                       ? "Every active staff member"
-                      : selected.length === 0
-                        ? `Whole class (${roster.length} learners)`
-                        : `${selected.length} selected`}
+                      : scopeLabel}
                   </span>
                   <Button
                     variant="primary"

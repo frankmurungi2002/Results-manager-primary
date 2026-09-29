@@ -155,6 +155,8 @@ pub struct ReportCardBatch {
     pub exam_class_averages: Vec<Option<f64>>,
     /// The grading scale, printed as a key at the foot.
     pub grade_key: Vec<GradeKeyBand>,
+    /// FR-C12: how many weeks the back page shows; 0 means no back page.
+    pub weekly_weeks: i64,
     /// FR-B8: who was left out, and why. Never silently dropped.
     pub blocked: Vec<BlockedLearner>,
 }
@@ -199,6 +201,9 @@ pub struct ReportCard {
     pub exam_totals: Vec<ExamTotal>,
     /// The term before, in the same year, for the progress line.
     pub previous: Option<PreviousTerm>,
+    /// FR-C12: the weekly assignments summary for the back page. Empty when
+    /// the toggle is off or nothing was recorded.
+    pub weekly: Vec<crate::commands::features::WeeklySummary>,
     pub activities: Vec<ActivityRating>,
 }
 
@@ -804,12 +809,28 @@ fn compute_report_cards(
             total_max,
             exam_totals,
             previous: None,
+            weekly: Vec::new(),
             activities: ratings.remove(&learner.id).unwrap_or_default(),
         });
     }
 
     rank(&mut cards);
     rank_subjects(&mut cards);
+
+    // --- FR-C12: weekly assignments, for the back page -------------------------
+    let mut weekly_weeks = 0;
+    if !history && repo::feature_enabled(conn, "weekly_assignments")? {
+        let order: Vec<(String, String)> = subjects
+            .iter()
+            .map(|subject| (subject.id.clone(), subject.name.clone()))
+            .collect();
+        let (weeks, mut by_student) =
+            crate::commands::features::weekly_summaries(conn, term_id, &order)?;
+        weekly_weeks = weeks;
+        for card in &mut cards {
+            card.weekly = by_student.remove(&card.student_id).unwrap_or_default();
+        }
+    }
 
     // --- Previous term, for the progress line ---------------------------------
     if !history {
@@ -895,6 +916,7 @@ fn compute_report_cards(
         class_average,
         exam_class_averages,
         grade_key,
+        weekly_weeks,
         stream_name: None,
         term_name,
         academic_year,
@@ -1269,6 +1291,184 @@ pub fn build_id_cards(
         cards,
     };
     envelope(&conn, "id_card", batch)
+}
+
+// ---------------------------------------------------------------------------
+// FR-D2 — examination permits (behind the Exam Permits toggle)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExamPermitBatch {
+    pub exam_name: String,
+    pub term_name: String,
+    pub academic_year: String,
+    pub class_name: String,
+    /// The exam's date, when the calendar has one (YYYY-MM-DD).
+    pub exam_date: Option<String>,
+    /// The subjects the permit admits the learner to, in timetable order.
+    pub subjects: Vec<String>,
+    pub permits: Vec<ExamPermit>,
+    /// FR-B8: who got no permit, and why.
+    pub blocked: Vec<BlockedLearner>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExamPermit {
+    pub student_id: String,
+    pub full_name: String,
+    pub reg_number: String,
+    pub stream_name: Option<String>,
+    pub photo_data_url: Option<String>,
+    /// Printed on the permit so a gate or invigilator can quote it.
+    pub serial: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExamPermitRequest {
+    pub class_id: String,
+    pub exam_id: String,
+    /// Empty means the whole class.
+    #[serde(default)]
+    pub student_ids: Vec<String>,
+}
+
+#[tauri::command]
+pub fn build_exam_permits(
+    state: State<'_, AppState>,
+    request: ExamPermitRequest,
+) -> AppResult<DocumentEnvelope<ExamPermitBatch>> {
+    let session = state.sessions.require()?;
+    session.require_view_class(&request.class_id)?;
+    let conn = state.db.lock();
+
+    if !repo::feature_enabled(&conn, "exam_permits")? {
+        return Err(AppError::conflict(
+            "Exam Permits is switched off. Turn it on under Settings, Optional features.",
+        ));
+    }
+    let year_id = repo::current_academic_year_id(&conn)?
+        .ok_or_else(|| AppError::validation("No academic year is active yet."))?;
+
+    let (class_name, exam_name, exam_code, exam_date, term_name, academic_year): (
+        String,
+        String,
+        String,
+        Option<String>,
+        String,
+        String,
+    ) = conn
+        .query_row(
+            "SELECT c.name, e.name, e.code, e.scheduled_date, t.name, y.label
+             FROM classes c
+             CROSS JOIN exams e
+             JOIN terms t ON t.id = e.term_id
+             JOIN academic_years y ON y.id = t.academic_year_id
+             WHERE c.id = ?1 AND e.id = ?2",
+            params![request.class_id, request.exam_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?)),
+        )
+        .optional()?
+        .ok_or_else(|| AppError::not_found("That class or examination"))?;
+
+    let subjects: Vec<String> = {
+        let mut stmt = conn.prepare(
+            "SELECT COALESCE(cs.display_name, s.name)
+             FROM class_subjects cs JOIN subjects s ON s.id = cs.subject_id
+             WHERE cs.class_id = ?1 AND cs.status = 'active'
+             ORDER BY cs.is_core DESC, cs.position ASC",
+        )?;
+        let collected = stmt
+            .query_map(params![request.class_id], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        collected
+    };
+
+    let photos_on = repo::feature_enabled(&conn, "student_photos")?;
+    let fees_rule_on = repo::get_setting(&conn, "rule.fees_block")?.as_deref() == Some("on");
+
+    let mut permits = Vec::new();
+    let mut blocked = Vec::new();
+    {
+        let mut stmt = conn.prepare(
+            "SELECT s.id, s.full_name, s.reg_number, st.name, s.photo_png, s.fees_blocked, s.fees_note
+             FROM enrollments e
+             JOIN students s ON s.id = e.student_id
+             LEFT JOIN streams st ON st.id = e.stream_id
+             WHERE e.class_id = ?1 AND e.academic_year_id = ?2 AND e.status = 'active'
+             ORDER BY s.full_name COLLATE NOCASE ASC",
+        )?;
+        let rows = stmt.query_map(params![request.class_id, year_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, Option<Vec<u8>>>(4)?,
+                row.get::<_, i64>(5)? != 0,
+                row.get::<_, Option<String>>(6)?,
+            ))
+        })?;
+        for row in rows {
+            let (id, full_name, reg_number, stream_name, photo, fees_blocked, fees_note) = row?;
+            if !request.student_ids.is_empty() && !request.student_ids.contains(&id) {
+                continue;
+            }
+            if fees_rule_on && fees_blocked {
+                blocked.push(BlockedLearner {
+                    student_id: id,
+                    full_name,
+                    reg_number,
+                    reason: fees_note.unwrap_or_else(|| "Fees not cleared".into()),
+                });
+                continue;
+            }
+            permits.push(ExamPermit {
+                serial: format!(
+                    "{}-{}-{}",
+                    exam_code,
+                    academic_year,
+                    reg_number.rsplit(['/', '-']).next().unwrap_or(&reg_number)
+                ),
+                student_id: id,
+                full_name,
+                reg_number,
+                stream_name,
+                photo_data_url: if photos_on { png_data_url(photo) } else { None },
+            });
+        }
+    }
+
+    audit::record(
+        &conn,
+        Some(&session),
+        "exam_permit.build",
+        "class",
+        &request.class_id,
+        format!(
+            "Built {} exam permits for {class_name}, {exam_name}{}",
+            permits.len(),
+            if blocked.is_empty() {
+                String::new()
+            } else {
+                format!(" ({} blocked on fees)", blocked.len())
+            }
+        ),
+    )?;
+
+    let batch = ExamPermitBatch {
+        exam_name,
+        term_name,
+        academic_year,
+        class_name,
+        exam_date,
+        subjects,
+        permits,
+        blocked,
+    };
+    envelope(&conn, "exam_permit", batch)
 }
 
 // ---------------------------------------------------------------------------
@@ -1780,6 +1980,7 @@ mod tests {
             total_max: 0.0,
             exam_totals: vec![],
             previous: None,
+            weekly: vec![],
             activities: vec![],
         }
     }

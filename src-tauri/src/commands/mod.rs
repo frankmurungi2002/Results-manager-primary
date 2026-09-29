@@ -1,5 +1,6 @@
 pub mod academics;
 pub mod auth;
+pub mod features;
 pub mod importer;
 pub mod insights;
 pub mod marks;

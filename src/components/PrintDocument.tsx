@@ -12,7 +12,7 @@
  * pipeline, so the component gives no bypass to use.
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import {
   Bath,
   BookOpen,
@@ -40,6 +40,8 @@ import type {
   Branding,
   ClassListBody,
   DocumentEnvelope,
+  ExamPermit,
+  ExamPermitBatch,
   Footer,
   IdCard,
   IdCardBatch,
@@ -175,38 +177,231 @@ export function ReportCardSheets({
   envelope: DocumentEnvelope<ReportCardBatch>;
 }) {
   const { branding, footer, body } = envelope;
-  const total = body.cards.length;
+  // FR-C12: a learner with weekly scores gets a back page, printed right
+  // after their card so double-sided printing puts it on the reverse.
+  const hasBack = (card: ReportCard) => body.weeklyWeeks > 0 && card.weekly.length > 0;
+  const total = body.cards.reduce((sum, card) => sum + (hasBack(card) ? 2 : 1), 0);
 
-  if (body.levelKind === "nursery") {
-    return (
-      <>
-        {body.cards.map((card, index) => (
-          <NurseryReportSheet
-            key={card.studentId}
-            branding={branding}
-            footer={footer}
-            batch={body}
-            card={card}
-            pageNumber={index + 1}
-            pageCount={total}
-          />
-        ))}
-      </>
-    );
+  let page = 0;
+  return (
+    <>
+      {body.cards.map((card) => {
+        page += 1;
+        const front = page;
+        const back = hasBack(card) ? ++page : null;
+        const Front = body.levelKind === "nursery" ? NurseryReportSheet : ReportCardSheet;
+        return (
+          <Fragment key={card.studentId}>
+            <Front
+              branding={branding}
+              footer={footer}
+              batch={body}
+              card={card}
+              pageNumber={front}
+              pageCount={total}
+            />
+            {back !== null && (
+              <WeeklyBackSheet
+                branding={branding}
+                footer={footer}
+                batch={body}
+                card={card}
+                pageNumber={back}
+                pageCount={total}
+              />
+            )}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/** FR-C12 — the back of the report card: every week's assignment score. */
+function WeeklyBackSheet({
+  branding,
+  footer,
+  batch,
+  card,
+  pageNumber,
+  pageCount,
+}: {
+  branding: Branding;
+  footer: Footer;
+  batch: ReportCardBatch;
+  card: ReportCard;
+  pageNumber: number;
+  pageCount: number;
+}) {
+  const weeks = Array.from({ length: batch.weeklyWeeks }, (_, index) => index + 1);
+  const means = card.weekly
+    .map((subject) => subject.meanPercentage)
+    .filter((value): value is number => value !== null);
+  const overall = means.length ? means.reduce((a, b) => a + b, 0) / means.length : null;
+  const done = card.weekly.reduce((sum, subject) => sum + subject.weeksDone, 0);
+  const set = card.weekly.reduce((sum, subject) => sum + subject.weeksSet, 0);
+
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      variant="compact"
+      landscape={weeks.length > 12}
+      title="Weekly Assignments"
+      subtitle={`${card.fullName}  •  ${card.className}  •  ${batch.termName} ${batch.academicYear}`}
+      pageNumber={pageNumber}
+      pageCount={pageCount}
+    >
+      <table className="wk-table">
+        <thead>
+          <tr>
+            <th className="left">Subject</th>
+            {weeks.map((week) => (
+              <th key={week}>W{week}</th>
+            ))}
+            <th>Done</th>
+            <th>Mean</th>
+          </tr>
+        </thead>
+        <tbody>
+          {card.weekly.map((subject) => (
+            <tr key={subject.subject}>
+              <td className="left wk-subject">{subject.subject}</td>
+              {weeks.map((week, index) => {
+                const score = subject.scores[index] ?? null;
+                return (
+                  <td key={week} className={score === null ? "wk-missed" : ""}>
+                    {score === null ? (index < subject.weeksSet ? "✕" : "") : Math.round(score)}
+                  </td>
+                );
+              })}
+              <td className="wk-strong">
+                {subject.weeksDone}/{subject.weeksSet}
+              </td>
+              <td className="wk-strong">
+                {subject.meanPercentage === null ? "—" : `${Math.round(subject.meanPercentage)}%`}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="wk-summary">
+        <div className="pr-tile">
+          <span>Assignments done</span>
+          <strong>
+            {done} of {set}
+          </strong>
+        </div>
+        <div className="pr-tile pr-tile-accent">
+          <span>Term mean</span>
+          <strong>{overall === null ? "—" : `${Math.round(overall)}%`}</strong>
+        </div>
+        <p className="wk-note">
+          Scores are percentages. ✕ marks an assignment that was set but not handed in.
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-D2 — examination permits
+// ---------------------------------------------------------------------------
+
+/** Four permits to an A4 page, two across and two down, for cutting. */
+const PERMITS_PER_SHEET = 4;
+
+export function ExamPermitSheets({ envelope }: { envelope: DocumentEnvelope<ExamPermitBatch> }) {
+  const { branding, footer, body } = envelope;
+  const pages: ExamPermit[][] = [];
+  for (let start = 0; start < body.permits.length; start += PERMITS_PER_SHEET) {
+    pages.push(body.permits.slice(start, start + PERMITS_PER_SHEET));
   }
+  const date = body.examDate ? formatDate(body.examDate) : null;
 
   return (
     <>
-      {body.cards.map((card, index) => (
-        <ReportCardSheet
-          key={card.studentId}
+      {pages.map((permits, index) => (
+        <Sheet
+          key={index}
           branding={branding}
           footer={footer}
-          batch={body}
-          card={card}
+          variant="compact"
+          title="Examination Permits"
+          subtitle={`${body.className}  •  ${body.examName}  •  Cut along the dashed lines`}
           pageNumber={index + 1}
-          pageCount={total}
-        />
+          pageCount={pages.length}
+        >
+          <div className="ep-grid" style={{ "--doc-accent": branding.accentColor } as CSSProperties}>
+            {permits.map((permit) => (
+              <section key={permit.studentId} className="ep-card">
+                <header className="ep-head">
+                  {branding.logoDataUrl ? (
+                    <img className="ep-logo" src={branding.logoDataUrl} alt="" />
+                  ) : (
+                    <span className="ep-logo ep-logo-blank">{initials(branding.institutionName)}</span>
+                  )}
+                  <div className="ep-school">
+                    <div className="ep-school-name">{branding.institutionName}</div>
+                    <div className="ep-kind">Examination permit</div>
+                  </div>
+                </header>
+
+                <div className="ep-exam">
+                  <strong>{body.examName}</strong>
+                  <span>
+                    {body.termName} {body.academicYear}
+                    {date ? `  •  ${date}` : ""}
+                  </span>
+                </div>
+
+                <div className="ep-person">
+                  {permit.photoDataUrl ? (
+                    <img className="ep-photo" src={permit.photoDataUrl} alt="" />
+                  ) : (
+                    <span className="ep-photo ep-photo-blank">{initials(permit.fullName)}</span>
+                  )}
+                  <dl className="ep-facts">
+                    <dt>Name</dt>
+                    <dd className="ep-name">{permit.fullName}</dd>
+                    <dt>Class</dt>
+                    <dd>
+                      {body.className}
+                      {permit.streamName ? ` — ${permit.streamName}` : ""}
+                    </dd>
+                    <dt>Reg. No.</dt>
+                    <dd className="ep-mono">{permit.regNumber}</dd>
+                    <dt>Permit</dt>
+                    <dd className="ep-mono">{permit.serial}</dd>
+                  </dl>
+                </div>
+
+                <table className="ep-subjects">
+                  <thead>
+                    <tr>
+                      <th className="left">Paper</th>
+                      <th>Invigilator</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {body.subjects.map((subject) => (
+                      <tr key={subject}>
+                        <td className="left">{subject}</td>
+                        <td />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <footer className="ep-foot">
+                  <span className="ep-cleared">✓ Cleared to sit</span>
+                  <span className="ep-sign">Headteacher's signature</span>
+                </footer>
+              </section>
+            ))}
+          </div>
+        </Sheet>
       ))}
     </>
   );

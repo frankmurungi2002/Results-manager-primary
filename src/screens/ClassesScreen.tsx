@@ -9,6 +9,7 @@ import { BookOpenCheck, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import type { ClassRow, ClassSubjectRow, GradingSystem, SubjectRow } from "../lib/types";
 import { useStore } from "../state/store";
+import { StreamsCard } from "../components/StreamsCard";
 import {
   Alert,
   Badge,
@@ -24,6 +25,7 @@ import {
 } from "../components/ui";
 
 export function ClassesScreen() {
+  const features = useStore((state) => state.features);
   const session = useStore((state) => state.session);
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
@@ -260,6 +262,10 @@ export function ClassesScreen() {
                     </div>
                   )}
                 </Card>
+              )}
+
+              {features.streams && selected && (
+                <StreamsCard classId={selected.id} className={selected.name} />
               )}
 
               <Alert tone="info" title="Which subjects count toward the aggregate">
