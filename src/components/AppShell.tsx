@@ -17,7 +17,6 @@ import {
   Sun,
   Users,
   UsersRound,
-  WifiOff,
   X,
 } from "lucide-react";
 
@@ -179,16 +178,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="sidebar-foot">
-          <div className="sidebar-note">
-            <span className="sidebar-note-icon">
-              <WifiOff size={15} />
-            </span>
-            <span className="sidebar-foot-text">
-              <span className="sidebar-note-title">Works offline</span>
-              <span className="sidebar-note-text">
-                Everything is saved on this computer. Version {appVersion}
-              </span>
-            </span>
+          <div className="sidebar-note" title={`Results Manager version ${appVersion}`}>
+            <span className="sidebar-version-full">Version {appVersion}</span>
+            <span className="sidebar-version-short">v{appVersion}</span>
           </div>
         </div>
       </nav>
