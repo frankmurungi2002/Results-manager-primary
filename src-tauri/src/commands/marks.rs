@@ -216,7 +216,7 @@ pub struct MarkWarning {
     pub reason: String,
 }
 
-/// How far a mark must sit from a learner's own average before RM says
+/// How far a mark must sit from a learner's own average before Phantom School Manager says
 /// anything. Deliberately wide: a warning system that cries wolf is a warning
 /// system teachers learn to click past, and then it protects nobody.
 const ANOMALY_THRESHOLD_PCT: f64 = 35.0;
@@ -230,7 +230,7 @@ const MIN_COMPARISON_SUBJECTS: usize = 3;
 /// This exists for one specific accident: a teacher types `8` instead of `80`.
 /// It is legal, it validates, it saves, and it prints — and the first anyone
 /// hears of it is a parent at the gate holding a report card that says their
-/// child failed Mathematics. RM has every other mark that learner scored this
+/// child failed Mathematics. Phantom School Manager has every other mark that learner scored this
 /// examination, so it can simply notice.
 ///
 /// Nothing is blocked. The marks are already saved; this only tells the teacher

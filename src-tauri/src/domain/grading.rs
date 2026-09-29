@@ -289,7 +289,7 @@ pub fn aggregate(marks: &[(bool, &GradedMark)]) -> Aggregate {
 /// best division first.
 ///
 /// Verify against the current UNEB circular before a school goes live; boards
-/// revise boundaries, and RM will print whatever is here without complaint.
+/// revise boundaries, and Phantom School Manager will print whatever is here without complaint.
 pub const PLE_DIVISIONS: &[(&str, i64, i64)] = &[
     ("Division 1", 4, 12),
     ("Division 2", 13, 23),
@@ -305,7 +305,7 @@ pub const PLE_CORE_SUBJECTS: usize = 4;
 ///
 /// Only computed for exactly four core subjects, because the published
 /// boundaries are defined for that and nothing else. With a different number of
-/// core subjects RM shows the aggregate and stays quiet about the division
+/// core subjects Phantom School Manager shows the aggregate and stays quiet about the division
 /// rather than inventing a boundary.
 pub fn division_for(total_points: f64, core_count: usize) -> Option<String> {
     if core_count != PLE_CORE_SUBJECTS {

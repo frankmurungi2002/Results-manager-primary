@@ -1,7 +1,7 @@
 /**
  * FR-G13 — onboarding import.
  *
- * Three steps, always in this order: choose a file, match its columns to RM's
+ * Three steps, always in this order: choose a file, match its columns to Phantom School Manager's
  * fields, then check every row before anything is written. The backend does
  * the reading and the validating (commands/importer.rs); this screen only
  * shows what it found and lets the School Admin decide.
@@ -238,7 +238,7 @@ export function ImportLearnersModal({
 
 const STEP_DESCRIPTIONS: Record<Step, string> = {
   file: "Step 1 of 3 — choose the file the school already has.",
-  map: "Step 2 of 3 — tell RM which column holds what.",
+  map: "Step 2 of 3 — tell Phantom School Manager which column holds what.",
   check: "Step 3 of 3 — nothing is saved until you press Import.",
   done: "Finished.",
 };
@@ -252,7 +252,7 @@ function FileStep({ busy, onChoose }: { busy: boolean; onChoose: () => void }) {
     <div className="stack">
       <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
         Excel (.xlsx, .xls), OpenDocument (.ods) or CSV. One row per learner,
-        with a heading row. Title rows above the headings are fine; RM finds
+        with a heading row. Title rows above the headings are fine; Phantom School Manager finds
         the headings itself.
       </p>
       <div className="row">
@@ -261,7 +261,7 @@ function FileStep({ busy, onChoose }: { busy: boolean; onChoose: () => void }) {
         </Button>
       </div>
       <Alert tone="info" title="Nothing changes yet">
-        RM reads the file and shows you every row with any problems it finds.
+        Phantom School Manager reads the file and shows you every row with any problems it finds.
         Learners are only added when you confirm.
       </Alert>
     </div>
@@ -364,7 +364,7 @@ function MapStep({
           hint={
             mapping.className === undefined
               ? "The file has no class column, so choose one."
-              : "Optional. Rows whose class RM cannot match go here."
+              : "Optional. Rows whose class Phantom School Manager cannot match go here."
           }
           value={defaultClassId}
           onChange={(event) => onDefaultClass(event.target.value)}

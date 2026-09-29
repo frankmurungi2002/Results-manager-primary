@@ -1,6 +1,6 @@
 //! Outputs and reporting.
 //!
-//! FR-D4 is the load-bearing requirement here: **every** document RM produces
+//! FR-D4 is the load-bearing requirement here: **every** document Phantom School Manager produces
 //! passes through one pipeline that stamps the institution's own name and logo
 //! and the fixed footer, and no requirement may bypass it. That is enforced
 //! structurally — the only way to get a printable document out of the backend
@@ -1949,7 +1949,7 @@ pub fn get_fees_rule(state: State<'_, AppState>) -> AppResult<bool> {
 // ---------------------------------------------------------------------------
 
 /// Minimal base64 encoder. A dependency-free few lines beats pulling a crate in
-/// for the one place RM needs it (inlining a logo or a photo into a document).
+/// for the one place Phantom School Manager needs it (inlining a logo or a photo into a document).
 pub(crate) fn base64_encode(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] =
         b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

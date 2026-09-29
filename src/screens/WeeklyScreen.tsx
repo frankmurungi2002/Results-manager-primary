@@ -1,6 +1,6 @@
 /**
  * FR-C12 — weekly assignments. The Subject Teacher records each learner's
- * assignment score for a week of the term. At term end RM summarises the
+ * assignment score for a week of the term. At term end Phantom School Manager summarises the
  * weeks on the back of the report card: each week's score, weeks done and a
  * term mean.
  */

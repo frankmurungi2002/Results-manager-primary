@@ -39,7 +39,7 @@ impl AppState {
 
 #[derive(Debug, Clone)]
 pub struct AppPaths {
-    /// Everything RM owns on this machine.
+    /// Everything Phantom School Manager owns on this machine.
     pub data_dir: PathBuf,
     /// The live database.
     pub db_file: PathBuf,

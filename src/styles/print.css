@@ -1,7 +1,7 @@
 /*
  * The global print pipeline's stylesheet (FR-D4).
  *
- * Every document RM produces is rendered by one component — `PrintDocument` —
+ * Every document Phantom School Manager produces is rendered by one component — `PrintDocument` —
  * and styled here. Nothing else in the application may define print output, so
  * the header, the footer and the branding cannot be bypassed.
  *

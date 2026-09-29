@@ -1,6 +1,6 @@
 //! FR-G8 — SMS to guardians, through a local outbox.
 //!
-//! RM is offline-first, so a message is never sent in the moment it is
+//! Phantom School Manager is offline-first, so a message is never sent in the moment it is
 //! written. It is written to `sms_outbox` first, in the same transaction as
 //! whatever caused it (a pass-out, a return), and a background sender drains
 //! the outbox whenever the school has internet. A message written with no
@@ -243,7 +243,7 @@ pub fn flush_in_background(app: AppHandle) {
     }
 }
 
-/// Retries the outbox every couple of minutes for as long as RM is open.
+/// Retries the outbox every couple of minutes for as long as Phantom School Manager is open.
 pub fn spawn_scheduler(app: AppHandle) {
     let spawned = std::thread::Builder::new()
         .name("rm-sms".into())

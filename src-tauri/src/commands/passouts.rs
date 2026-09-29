@@ -1,7 +1,7 @@
 //! FR-G22 — a learner leaving school during the day.
 //!
 //! The Class Teacher or School Admin records who is leaving, why, where to,
-//! with whom and for how long. RM prints a slip for the gate and texts the
+//! with whom and for how long. Phantom School Manager prints a slip for the gate and texts the
 //! guardian (FR-G8) so a parent always knows where their child is. When the
 //! learner comes back they are marked returned, and the guardian gets a second
 //! text. A learner still out after their expected time shows up on the

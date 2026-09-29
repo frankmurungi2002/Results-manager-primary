@@ -1,7 +1,7 @@
 //! FR-G13 — onboarding import.
 //!
 //! A school arriving with 400 learners already in a spreadsheet will not retype
-//! them, and if RM asks them to, RM does not get used. So RM reads whatever
+//! them, and if Phantom School Manager asks them to, Phantom School Manager does not get used. So Phantom School Manager reads whatever
 //! they have.
 //!
 //! The file is parsed **in Rust**, never in the webview: a spreadsheet from a
@@ -47,11 +47,11 @@ pub struct SpreadsheetPreview {
     pub rows: Vec<Vec<String>>,
     pub total_rows: usize,
     pub truncated: bool,
-    /// RM's guess at which column is which, by field name.
+    /// Phantom School Manager's guess at which column is which, by field name.
     pub suggested_mapping: HashMap<String, usize>,
 }
 
-/// Column headings RM recognises, in the words schools actually use.
+/// Column headings Phantom School Manager recognises, in the words schools actually use.
 const ALIASES: &[(&str, &[&str])] = &[
     ("fullName", &[
         "name", "names", "full name", "fullname", "student name", "learner name",
@@ -154,7 +154,7 @@ fn read_rows(path: &Path, sheet: Option<&str>) -> AppResult<(Vec<String>, Vec<Ve
     read_workbook(path, sheet)
 }
 
-/// The only calamine-facing code in RM.
+/// The only calamine-facing code in Phantom School Manager.
 fn read_workbook(
     path: &Path,
     sheet: Option<&str>,
@@ -320,7 +320,7 @@ pub struct ImportRequest {
     pub sheet: Option<String>,
     #[serde(default)]
     pub header_row: Option<usize>,
-    /// Field name to column index. Fields RM does not find are simply absent.
+    /// Field name to column index. Fields Phantom School Manager does not find are simply absent.
     pub mapping: HashMap<String, usize>,
     /// Used when the sheet has no class column, or a row's class is blank.
     #[serde(default)]
@@ -359,7 +359,7 @@ pub struct ImportRow {
     pub status: String,
     /// Why it cannot be imported. Empty when ready.
     pub problems: Vec<String>,
-    /// Things RM corrected or noticed but which do not block the row.
+    /// Things Phantom School Manager corrected or noticed but which do not block the row.
     pub notes: Vec<String>,
 }
 
@@ -513,12 +513,12 @@ pub fn import_learners(
         if let Some(reg) = &reg_number {
             let key = reg.to_lowercase();
             if existing_regs.contains(&key) {
-                problems.push(format!("{reg} is already used by a learner in RM."));
+                problems.push(format!("{reg} is already used by a learner in Phantom School Manager."));
             } else if !seen_regs.insert(key) {
                 problems.push(format!("{reg} appears more than once in this file."));
             }
         } else {
-            notes.push("RM will allocate a registration number.".to_string());
+            notes.push("Phantom School Manager will allocate a registration number.".to_string());
         }
 
         // --- Gender ---

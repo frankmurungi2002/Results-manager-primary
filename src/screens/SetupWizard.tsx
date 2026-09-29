@@ -253,7 +253,7 @@ export function SetupWizard() {
         {step === 0 && (
           <Card
             title="About your school"
-            subtitle="The name appears on every document RM prints. A logo is optional."
+            subtitle="The name appears on every document Phantom School Manager prints. A logo is optional."
           >
             <div className="grid-form">
               <TextInput
@@ -361,7 +361,7 @@ export function SetupWizard() {
 
             <Card
               title="Registration numbers"
-              subtitle="RM makes sure every learner's number is unique across the school."
+              subtitle="Phantom School Manager makes sure every learner's number is unique across the school."
             >
               <div className="grid-form">
                 <TextInput
@@ -505,7 +505,7 @@ export function SetupWizard() {
 
               <p className="field-hint" style={{ marginTop: "var(--space-3)" }}>
                 Weights total {exams.reduce((sum, exam) => sum + exam.weight, 0).toFixed(2)}.
-                They do not have to add up to 1 — RM divides by whatever is
+                They do not have to add up to 1 — Phantom School Manager divides by whatever is
                 actually entered, so a missing exam never drags a mark down.
               </p>
             </Card>
@@ -559,7 +559,7 @@ export function SetupWizard() {
             </div>
 
             <Alert tone="warning" title="There is no way to recover this password">
-              RM stores no copy of it and works offline, so nobody — not even
+              Phantom School Manager stores no copy of it and works offline, so nobody — not even
               the developer — can reset it for you. Write it down and keep it
               somewhere safe. You can add two more School Admins later.
             </Alert>

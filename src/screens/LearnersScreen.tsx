@@ -524,7 +524,7 @@ function StudentModal({
       title={isNew ? "Add a learner" : `Edit ${target.fullName}`}
       description={
         isNew
-          ? "Leave the registration number blank and RM will allocate the next one."
+          ? "Leave the registration number blank and Phantom School Manager will allocate the next one."
           : "Every change here is recorded against your name."
       }
       onClose={onClose}

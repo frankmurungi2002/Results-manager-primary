@@ -615,7 +615,7 @@ ALTER TABLE users ADD COLUMN photo_png BLOB;
 
 const M005_PASS_OUTS_AND_SMS: &str = r#"
 
--- Every message RM sends, written here first and sent when there is internet.
+-- Every message Phantom School Manager sends, written here first and sent when there is internet.
 CREATE TABLE sms_outbox (
     id           TEXT PRIMARY KEY,
     to_phone     TEXT NOT NULL,             -- +256XXXXXXXXX
