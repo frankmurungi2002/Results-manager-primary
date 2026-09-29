@@ -133,6 +133,61 @@ pub fn set_institution_logo(state: State<'_, AppState>, png: Option<Vec<u8>>) ->
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Sign-in pictures: the school's own photos for the sign-in screen
+// ---------------------------------------------------------------------------
+
+const LOGIN_IMAGE_SLOTS: usize = 4;
+const MAX_LOGIN_IMAGE_BYTES: u64 = 4 * 1024 * 1024;
+
+/// The four pictures the sign-in screen rotates through, as data URLs; None
+/// where the school has not chosen one and the built-in picture shows.
+/// Read before anyone signs in, so it needs no session.
+#[tauri::command]
+pub fn get_login_images(state: State<'_, AppState>) -> AppResult<Vec<Option<String>>> {
+    let conn = state.db.lock();
+    (1..=LOGIN_IMAGE_SLOTS)
+        .map(|slot| repo::get_setting(&conn, &format!("login.image.{slot}")))
+        .collect()
+}
+
+/// Sets one sign-in picture from a PNG or JPEG file, or clears it (`path`
+/// None) so the built-in picture shows again.
+#[tauri::command]
+pub fn set_login_image(state: State<'_, AppState>, slot: usize, path: Option<String>) -> AppResult<()> {
+    let session = state.sessions.require()?;
+    session.require_admin()?;
+    if !(1..=LOGIN_IMAGE_SLOTS).contains(&slot) {
+        return Err(AppError::validation("There are four sign-in pictures."));
+    }
+
+    let conn = state.db.lock();
+    let key = format!("login.image.{slot}");
+    let Some(path) = path else {
+        conn.execute("DELETE FROM settings WHERE key = ?1", params![key])?;
+        audit::record(&conn, Some(&session), "login.image", "setting", &key, "Removed a sign-in picture")?;
+        return Ok(());
+    };
+
+    let file = std::path::Path::new(&path);
+    let size = std::fs::metadata(file).map(|m| m.len()).map_err(|_| AppError::not_found("That file"))?;
+    if size > MAX_LOGIN_IMAGE_BYTES {
+        return Err(AppError::validation("That picture is larger than 4 MB. Please use a smaller one."));
+    }
+    let bytes = std::fs::read(file)?;
+    let mime = if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
+        "image/png"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else {
+        return Err(AppError::validation("That file is not a PNG or JPEG picture."));
+    };
+    let data_url = format!("data:{mime};base64,{}", crate::commands::reports::base64_encode(&bytes));
+    repo::set_setting(&conn, &key, &data_url)?;
+    audit::record(&conn, Some(&session), "login.image", "setting", &key, "Set a sign-in picture")?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_institution_logo(state: State<'_, AppState>) -> AppResult<Option<Vec<u8>>> {
     let conn = state.db.lock();

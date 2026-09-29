@@ -1,12 +1,12 @@
 /** FR-B1 — one login frame for every role, routed by the backend. */
 
 import { type FormEvent, useState } from "react";
-import { Eye, EyeOff, WifiOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 import { ApiError } from "../lib/api";
 import { useStore } from "../state/store";
 import { APP_NAME, BrandMark } from "../components/Logo";
-import { LoginIllustration } from "../components/LoginIllustration";
+import { LoginShowcase } from "../components/LoginShowcase";
 import { Alert, Button } from "../components/ui";
 
 export function LoginScreen() {
@@ -43,36 +43,18 @@ export function LoginScreen() {
 
   return (
     <div className="login-screen">
-      <div className="login-card">
-        <header className="login-bar">
-          <span className="login-brand">
+      <div className="login-split">
+        <section className="login-left">
+          <header className="login-brand">
             <span className="login-brand-mark">
-              <BrandMark size={34} />
+              <BrandMark size={32} />
             </span>
             {APP_NAME}
-          </span>
-          <span className="login-bar-title">{institutionName ?? "Welcome"}</span>
-          <span className="login-bar-end">
-            <span className="login-offline" title="Everything works without an internet connection">
-              <WifiOff size={13} />
-              Offline
-            </span>
-          </span>
-        </header>
+          </header>
 
-        <section className="login-hero">
-          <h1 className="login-headline">
-            Marks in. Reports out.
-            <br />
-            Even without the internet.
-          </h1>
-          <span className="login-pill">Version {appVersion}</span>
-        </section>
+          <div className="login-center">
+            {institutionName && <div className="login-school">{institutionName}</div>}
 
-        <div className="login-body">
-          <LoginIllustration className="login-illustration" />
-
-          <div className="login-side">
             <form className="login-panel" onSubmit={onSubmit} noValidate>
               <h2 className="login-title">Welcome back.</h2>
 
@@ -149,7 +131,11 @@ export function LoginScreen() {
 
             <p className="login-after">New staff? Your School Admin creates your account.</p>
           </div>
-        </div>
+
+          <footer className="login-foot">Version {appVersion}</footer>
+        </section>
+
+        <LoginShowcase />
       </div>
     </div>
   );
