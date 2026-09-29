@@ -881,6 +881,193 @@ pub fn build_class_list(
 }
 
 // ---------------------------------------------------------------------------
+// FR-G16 — student and staff ID cards
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IdCardBatch {
+    /// `student` or `staff`.
+    pub kind: String,
+    /// The academic year printed on every card, so an old card is visibly old.
+    pub academic_year: Option<String>,
+    /// The year's closing date (YYYY-MM-DD), when the school has set one.
+    pub valid_until: Option<String>,
+    pub cards: Vec<IdCard>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IdCard {
+    pub id: String,
+    pub full_name: String,
+    /// Registration number for a learner, username for staff.
+    pub number: String,
+    /// The class for a learner, the role for staff.
+    pub title: String,
+    /// Stream, or the class a teacher is Class Teacher of.
+    pub detail: Option<String>,
+    pub gender: Option<String>,
+    pub date_of_birth: Option<String>,
+    /// Who to call: the guardian for a learner, the staff member's own phone.
+    pub contact_label: String,
+    pub contact: Option<String>,
+    pub photo_data_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IdCardRequest {
+    /// `student` or `staff`.
+    pub kind: String,
+    /// Learners: the class to print. Ignored for staff.
+    #[serde(default)]
+    pub class_id: Option<String>,
+    /// Only these learners or staff. Empty means everyone in scope.
+    #[serde(default)]
+    pub ids: Vec<String>,
+}
+
+fn png_data_url(bytes: Option<Vec<u8>>) -> Option<String> {
+    bytes.map(|b| format!("data:image/png;base64,{}", base64_encode(&b)))
+}
+
+#[tauri::command]
+pub fn build_id_cards(
+    state: State<'_, AppState>,
+    request: IdCardRequest,
+) -> AppResult<DocumentEnvelope<IdCardBatch>> {
+    let session = state.sessions.require()?;
+    let conn = state.db.lock();
+
+    let year_id = repo::current_academic_year_id(&conn)?;
+    let (academic_year, valid_until): (Option<String>, Option<String>) = match &year_id {
+        Some(id) => conn.query_row(
+            "SELECT label, end_date FROM academic_years WHERE id = ?1",
+            params![id],
+            |row| Ok((Some(row.get(0)?), row.get(1)?)),
+        )?,
+        None => (None, None),
+    };
+    let photos_on = repo::feature_enabled(&conn, "student_photos")?;
+
+    let mut cards: Vec<IdCard> = match request.kind.as_str() {
+        "student" => {
+            let class_id = request
+                .class_id
+                .as_deref()
+                .ok_or_else(|| AppError::validation("Pick a class first."))?;
+            session.require_view_class(class_id)?;
+            let year_id = year_id
+                .as_deref()
+                .ok_or_else(|| AppError::validation("No academic year is active yet."))?;
+
+            let mut stmt = conn.prepare(
+                "SELECT s.id, s.full_name, s.reg_number, c.name, st.name, s.gender,
+                        s.date_of_birth, s.guardian_phone, s.photo_png
+                 FROM enrollments e
+                 JOIN students s ON s.id = e.student_id
+                 JOIN classes c ON c.id = e.class_id
+                 LEFT JOIN streams st ON st.id = e.stream_id
+                 WHERE e.class_id = ?1 AND e.academic_year_id = ?2 AND e.status = 'active'
+                 ORDER BY s.full_name COLLATE NOCASE ASC",
+            )?;
+            let collected = stmt
+                .query_map(params![class_id, year_id], |row| {
+                    Ok(IdCard {
+                        id: row.get(0)?,
+                        full_name: row.get(1)?,
+                        number: row.get(2)?,
+                        title: row.get(3)?,
+                        detail: row.get(4)?,
+                        gender: row.get(5)?,
+                        date_of_birth: row.get(6)?,
+                        contact_label: "Parent / guardian".into(),
+                        contact: row.get(7)?,
+                        photo_data_url: if photos_on {
+                            png_data_url(row.get(8)?)
+                        } else {
+                            None
+                        },
+                    })
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            collected
+        }
+        "staff" => {
+            session.require_admin()?;
+
+            let mut stmt = conn.prepare(
+                "SELECT u.id, u.full_name, u.username, u.role, u.phone, u.photo_png,
+                        (SELECT c.name FROM teacher_assignments ta
+                          JOIN classes c ON c.id = ta.class_id
+                          WHERE ta.user_id = u.id AND ta.role = 'class_teacher'
+                            AND ta.status = 'active' LIMIT 1)
+                 FROM users u
+                 WHERE u.status = 'active'
+                 ORDER BY u.full_name COLLATE NOCASE ASC",
+            )?;
+            let collected = stmt
+                .query_map([], |row| {
+                    let role: String = row.get(3)?;
+                    let class_of: Option<String> = row.get(6)?;
+                    Ok(IdCard {
+                        id: row.get(0)?,
+                        full_name: row.get(1)?,
+                        number: row.get(2)?,
+                        title: if role == "school_admin" {
+                            "Administrator".into()
+                        } else if class_of.is_some() {
+                            "Class Teacher".into()
+                        } else {
+                            "Teacher".into()
+                        },
+                        detail: class_of,
+                        gender: None,
+                        date_of_birth: None,
+                        contact_label: "Phone".into(),
+                        contact: row.get(4)?,
+                        photo_data_url: if photos_on {
+                            png_data_url(row.get(5)?)
+                        } else {
+                            None
+                        },
+                    })
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            collected
+        }
+        _ => return Err(AppError::validation("Unknown kind of ID card.")),
+    };
+
+    if !request.ids.is_empty() {
+        cards.retain(|card| request.ids.contains(&card.id));
+    }
+
+    audit::record(
+        &conn,
+        Some(&session),
+        "id_card.build",
+        &request.kind,
+        request.class_id.as_deref().unwrap_or("all"),
+        format!(
+            "Built {} {} ID card{}",
+            cards.len(),
+            request.kind,
+            if cards.len() == 1 { "" } else { "s" }
+        ),
+    )?;
+
+    let batch = IdCardBatch {
+        kind: request.kind,
+        academic_year,
+        valid_until,
+        cards,
+    };
+    envelope(&conn, "id_card", batch)
+}
+
+// ---------------------------------------------------------------------------
 // FR-G11 — comment bank
 // ---------------------------------------------------------------------------
 

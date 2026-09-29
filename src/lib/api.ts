@@ -32,6 +32,7 @@ import type {
   MarkEntry,
   MarksSheet,
   PleProjection,
+  IdCardBatch,
   ReportCardBatch,
   ReportCommentDetail,
   ReportSettings,
@@ -307,6 +308,21 @@ export const api = {
         examIds: request.examIds ?? [],
       },
     }),
+  buildIdCards: (request: {
+    kind: "student" | "staff";
+    classId?: string | null;
+    ids?: string[];
+  }) =>
+    call<DocumentEnvelope<IdCardBatch>>("build_id_cards", {
+      request: {
+        kind: request.kind,
+        classId: request.classId ?? null,
+        ids: request.ids ?? [],
+      },
+    }),
+  setStaffPhoto: (userId: string, png: number[] | null) =>
+    call<void>("set_staff_photo", { userId, png }),
+  getStaffPhoto: (userId: string) => call<number[] | null>("get_staff_photo", { userId }),
   buildClassList: (classId: string) =>
     call<DocumentEnvelope<ClassListBody>>("build_class_list", { classId }),
   listCommentBank: (scope: "class_teacher" | "head_teacher") =>

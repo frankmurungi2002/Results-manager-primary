@@ -170,7 +170,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G13 | Onboarding import of learners and staff | 🟡 | **M1** (staff) | Learner import done: Learners → Import spreadsheet (choose file, match columns, check every row, import). Missing: staff import, and offering it from the setup wizard |
 | FR-G14 | Discipline and conduct log | ⬜ | M3 | |
 | FR-G15 | Boarding module (toggle) | ⬜ | M4 | Only when a boarding school signs up |
-| FR-G16 | Student and staff ID cards | ⬜ | **M1** | A founding requirement; single and batch, PVC size and A4 sheet |
+| FR-G16 | Student and staff ID cards | ✅ | **M1** | Learners by class or selection, and staff; 8 per A4 sheet or CR80 card printer; photos when the toggle is on |
 | FR-G17 | Admissions pipeline | ⬜ | M2 | |
 | FR-G18 | Correspondence log | ⬜ | M4 | |
 | FR-G19 | Meeting minutes and action points | ⬜ | M4 | |

@@ -16,6 +16,73 @@ use crate::security::password;
 use crate::state::AppState;
 
 const MAX_SCHOOL_ADMINS: i64 = 3;
+const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
+
+/// A staff member's photo for their ID card (FR-G16). `None` removes it.
+#[tauri::command]
+pub fn set_staff_photo(
+    state: State<'_, AppState>,
+    user_id: String,
+    png: Option<Vec<u8>>,
+) -> AppResult<()> {
+    let session = state.sessions.require()?;
+    session.require_admin()?;
+
+    if let Some(bytes) = &png {
+        if bytes.len() > MAX_PHOTO_BYTES {
+            return Err(AppError::validation(
+                "That photo is larger than 2 MB. Please use a smaller one.",
+            ));
+        }
+        if !bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+            return Err(AppError::validation("That file is not a PNG image."));
+        }
+    }
+
+    let conn = state.db.lock();
+    let full_name: String = conn
+        .query_row(
+            "SELECT full_name FROM users WHERE id = ?1",
+            params![user_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| AppError::not_found("That staff member"))?;
+
+    conn.execute(
+        "UPDATE users SET photo_png = ?1, updated_at = ?2 WHERE id = ?3",
+        params![png, Utc::now().to_rfc3339(), user_id],
+    )?;
+
+    audit::record(
+        &conn,
+        Some(&session),
+        "staff.photo",
+        "user",
+        &user_id,
+        if png.is_some() {
+            format!("Updated {full_name}'s photo")
+        } else {
+            format!("Removed {full_name}'s photo")
+        },
+    )?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_staff_photo(state: State<'_, AppState>, user_id: String) -> AppResult<Option<Vec<u8>>> {
+    state.sessions.require()?;
+    let conn = state.db.lock();
+    Ok(conn
+        .query_row(
+            "SELECT photo_png FROM users WHERE id = ?1",
+            params![user_id],
+            |row| row.get::<_, Option<Vec<u8>>>(0),
+        )
+        .optional()?
+        .flatten())
+}
 
 #[tauri::command]
 pub fn list_staff(state: State<'_, AppState>) -> AppResult<Vec<UserSummary>> {

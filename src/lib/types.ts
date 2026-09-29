@@ -461,6 +461,26 @@ export interface ReportCardBatch {
   blocked: BlockedLearner[];
 }
 
+export interface IdCard {
+  id: string;
+  fullName: string;
+  number: string;
+  title: string;
+  detail: string | null;
+  gender: string | null;
+  dateOfBirth: string | null;
+  contactLabel: string;
+  contact: string | null;
+  photoDataUrl: string | null;
+}
+
+export interface IdCardBatch {
+  kind: "student" | "staff";
+  academicYear: string | null;
+  validUntil: string | null;
+  cards: IdCard[];
+}
+
 export interface ClassListRow {
   number: number;
   regNumber: string;

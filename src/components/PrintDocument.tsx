@@ -41,6 +41,8 @@ import type {
   ClassListBody,
   DocumentEnvelope,
   Footer,
+  IdCard,
+  IdCardBatch,
   ReportCard,
   Rating,
   ReportCardBatch,
@@ -58,7 +60,7 @@ interface SheetProps {
   subtitle?: ReactNode;
   landscape?: boolean;
   /** The nursery card's brighter layout. Branding and footer are unchanged. */
-  variant?: "standard" | "nursery";
+  variant?: "standard" | "nursery" | "compact";
   /** Drawn at the header's right edge, e.g. the learner's photo. */
   aside?: ReactNode;
   pageNumber: number;
@@ -86,6 +88,7 @@ function Sheet({
     "sheet",
     landscape && "sheet-landscape",
     variant === "nursery" && "sheet-nursery",
+    variant === "compact" && "sheet-compact",
   ]
     .filter(Boolean)
     .join(" ");
@@ -601,6 +604,169 @@ function Field({ label, value }: { label: string; value: string }) {
     <div className="rc-field">
       <span className="rc-field-label">{label}</span>
       <span className="rc-field-value">{value}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-G16 — student and staff ID cards
+// ---------------------------------------------------------------------------
+
+/** Eight cards to an A4 page: two across, four down, with room to cut. */
+const CARDS_PER_SHEET = 8;
+
+export type IdCardFormat = "sheet" | "printer";
+
+/**
+ * Every card carries the school's own name, logo, colour and contacts from
+ * the same branding envelope as every other document (FR-D4).
+ *
+ * `sheet` prints eight to an A4 page inside the usual header and footer, for
+ * cutting and laminating. `printer` prints one card per page at the standard
+ * 85.6 × 54 mm size for a PVC card printer; a card that size has no room for
+ * the A4 footer, so its only marks are the school's.
+ */
+export function IdCardSheets({
+  envelope,
+  format,
+}: {
+  envelope: DocumentEnvelope<IdCardBatch>;
+  format: IdCardFormat;
+}) {
+  const { branding, footer, body } = envelope;
+
+  if (format === "printer") {
+    return (
+      <>
+        <style>{"@page { size: 85.6mm 54mm; margin: 0; }"}</style>
+        <div className="idc-printer">
+          {body.cards.map((card) => (
+            <div key={card.id} className="idc-page">
+              <IdCardFace branding={branding} batch={body} card={card} />
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  const pages: IdCard[][] = [];
+  for (let start = 0; start < body.cards.length; start += CARDS_PER_SHEET) {
+    pages.push(body.cards.slice(start, start + CARDS_PER_SHEET));
+  }
+  const who = body.kind === "staff" ? "Staff" : "Learner";
+
+  return (
+    <>
+      {pages.map((cards, index) => (
+        <Sheet
+          key={index}
+          branding={branding}
+          footer={footer}
+          variant="compact"
+          title={`${who} ID cards`}
+          subtitle={[
+            body.kind === "student" ? cards[0]?.title : null,
+            body.academicYear,
+            "Cut along the dashed lines",
+          ]
+            .filter(Boolean)
+            .join("  •  ")}
+          pageNumber={index + 1}
+          pageCount={pages.length}
+        >
+          <div className="idc-grid">
+            {cards.map((card) => (
+              <div key={card.id} className="idc-cut">
+                <IdCardFace branding={branding} batch={body} card={card} />
+              </div>
+            ))}
+          </div>
+        </Sheet>
+      ))}
+    </>
+  );
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
+}
+
+function IdCardFace({
+  branding,
+  batch,
+  card,
+}: {
+  branding: Branding;
+  batch: IdCardBatch;
+  card: IdCard;
+}) {
+  const isStaff = batch.kind === "staff";
+  const contact = [branding.phone, branding.address].filter(Boolean).join("  •  ");
+  const validUntil = batch.validUntil ? formatDate(batch.validUntil) : null;
+
+  return (
+    <div
+      className="idc"
+      style={{ "--doc-accent": branding.accentColor } as CSSProperties}
+    >
+      <div className="idc-band">
+        {branding.logoDataUrl ? (
+          <img className="idc-logo" src={branding.logoDataUrl} alt="" />
+        ) : (
+          <span className="idc-logo idc-logo-blank">{initials(branding.institutionName)}</span>
+        )}
+        <div className="idc-school">
+          <div className="idc-school-name">{branding.institutionName}</div>
+          {branding.motto && <div className="idc-motto">“{branding.motto}”</div>}
+        </div>
+        <span className="idc-kind">{isStaff ? "Staff" : "Learner"}</span>
+      </div>
+
+      <div className="idc-body">
+        {card.photoDataUrl ? (
+          <img className="idc-photo" src={card.photoDataUrl} alt="" />
+        ) : (
+          <span className="idc-photo idc-photo-blank">{initials(card.fullName)}</span>
+        )}
+        <div className="idc-info">
+          <div className="idc-name">{card.fullName}</div>
+          <div className="idc-title">
+            {card.title}
+            {card.detail ? ` • ${card.detail}` : ""}
+          </div>
+          <dl className="idc-facts">
+            <dt>{isStaff ? "Staff ID" : "Reg. No."}</dt>
+            <dd className="idc-number">{card.number}</dd>
+            {card.dateOfBirth && (
+              <>
+                <dt>Born</dt>
+                <dd>{formatDate(card.dateOfBirth)}</dd>
+              </>
+            )}
+            {card.contact && (
+              <>
+                <dt>{isStaff ? "Phone" : "Guardian"}</dt>
+                <dd>{card.contact}</dd>
+              </>
+            )}
+          </dl>
+        </div>
+      </div>
+
+      <div className="idc-foot">
+        <span className="idc-contact">{contact}</span>
+        {batch.academicYear && (
+          <span className="idc-valid">
+            {validUntil ? `Valid until ${validUntil}` : `Valid ${batch.academicYear}`}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

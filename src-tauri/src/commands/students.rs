@@ -562,6 +562,9 @@ pub fn set_student_photo(
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
 
+    // An empty photo removes the one on file.
+    let remove = png.is_empty();
+
     if png.len() > MAX_PHOTO_BYTES {
         return Err(AppError::validation(
             "That photo is larger than 2 MB. Please use a smaller one.",
@@ -569,12 +572,12 @@ pub fn set_student_photo(
     }
     // Refuse anything that is not actually a PNG rather than storing whatever
     // bytes arrived and discovering it at print time.
-    if !png.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+    if !remove && !png.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
         return Err(AppError::validation("That file is not a PNG image."));
     }
 
     let conn = state.db.lock();
-    if !repo::feature_enabled(&conn, "student_photos")? {
+    if !remove && !repo::feature_enabled(&conn, "student_photos")? {
         return Err(AppError::conflict(
             "Student Photos is switched off. Turn it on in the Optional Features panel first.",
         ));
@@ -594,7 +597,7 @@ pub fn set_student_photo(
 
     conn.execute(
         "UPDATE students SET photo_png = ?1, updated_at = ?2 WHERE id = ?3",
-        params![png, Utc::now().to_rfc3339(), student_id],
+        params![(!remove).then_some(png), Utc::now().to_rfc3339(), student_id],
     )?;
 
     audit::record(
@@ -603,7 +606,11 @@ pub fn set_student_photo(
         "student.photo",
         "student",
         &student_id,
-        "Updated the learner's photo",
+        if remove {
+            "Removed the learner's photo"
+        } else {
+            "Updated the learner's photo"
+        },
     )?;
 
     Ok(())

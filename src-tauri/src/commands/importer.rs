@@ -688,8 +688,9 @@ pub fn import_learners(
 /// actually a PNG rather than trusting the extension.
 #[tauri::command]
 pub fn read_image_file(state: State<'_, AppState>, path: String) -> AppResult<Vec<u8>> {
-    let session = state.sessions.require()?;
-    session.require_admin()?;
+    // Any signed-in user: a Class Teacher may set a learner's photo, and the
+    // command only ever returns a PNG under 2 MB.
+    state.sessions.require()?;
 
     let file = Path::new(&path);
     if !file.is_file() {
