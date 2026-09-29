@@ -61,7 +61,7 @@ interface SheetProps {
   subtitle?: ReactNode;
   landscape?: boolean;
   /** The nursery card's brighter layout. Branding and footer are unchanged. */
-  variant?: "standard" | "nursery" | "compact";
+  variant?: "standard" | "nursery" | "primary" | "compact";
   /** Drawn at the header's right edge, e.g. the learner's photo. */
   aside?: ReactNode;
   pageNumber: number;
@@ -89,6 +89,7 @@ function Sheet({
     "sheet",
     landscape && "sheet-landscape",
     variant === "nursery" && "sheet-nursery",
+    variant === "primary" && "sheet-nursery sheet-primary",
     variant === "compact" && "sheet-compact",
   ]
     .filter(Boolean)
@@ -211,6 +212,58 @@ export function ReportCardSheets({
   );
 }
 
+/** Teacher initials for the "Initials" column: "Nakato Sarah" → "N.S." */
+function teacherInitials(name: string | null): string {
+  if (!name) return "";
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((part) => `${part[0]!.toUpperCase()}.`)
+    .join("");
+}
+
+function ageOn(dateOfBirth: string | null, on: Date): string {
+  if (!dateOfBirth) return "—";
+  const born = new Date(`${dateOfBirth.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(born.getTime())) return "—";
+  let years = on.getFullYear() - born.getFullYear();
+  const birthdayPassed =
+    on.getMonth() > born.getMonth() ||
+    (on.getMonth() === born.getMonth() && on.getDate() >= born.getDate());
+  if (!birthdayPassed) years -= 1;
+  return years >= 0 ? `${years} yrs` : "—";
+}
+
+/** 1 → "1st", 22 → "22nd". */
+function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
+/** A remark when the grading band has none of its own. */
+function remarkFor(points: number | null, percentage: number | null): string {
+  const score = points !== null ? 10 - points : percentage !== null ? percentage / 10 : null;
+  if (score === null) return "";
+  if (score >= 8) return "Excellent";
+  if (score >= 7) return "Very good";
+  if (score >= 5) return "Good";
+  if (score >= 3) return "Fair";
+  return "Needs more effort";
+}
+
+function show(value: number | null | undefined): string {
+  return value === null || value === undefined ? "—" : round(value);
+}
+
+/**
+ * The primary report card, merged from the cards Ugandan primary schools use:
+ * per-exam marks with their aggregates (BOT, MID, END), the term mark and
+ * grade, the learner's place in each subject, the four-subject aggregate and
+ * division, last term for comparison, the other subjects apart from the core
+ * four, comments with names and signatures, and a grading key.
+ */
 function ReportCardSheet({
   branding,
   footer,
@@ -226,116 +279,337 @@ function ReportCardSheet({
   pageNumber: number;
   pageCount: number;
 }) {
-  const title = batch.isFinal
-    ? "End of Term Report Card"
-    : "Progress Report Card";
+  const core = card.subjects.filter((subject) => subject.isCore);
+  const others = card.subjects.filter((subject) => !subject.isCore);
+  const exams = batch.examNames;
+  const className = card.streamName ? `${card.className} — ${card.streamName}` : card.className;
+  const coreTermMarks = core.filter((s) => s.termScore !== null).map((s) => s.termScore!);
+  const coreTotal = coreTermMarks.length ? coreTermMarks.reduce((a, b) => a + b, 0) : null;
+  const coreMax = core.reduce((sum, s) => sum + s.maxScore, 0);
 
-  const attendance =
-    card.daysPresent !== null && card.daysPossible !== null && card.daysPossible > 0
-      ? `${card.daysPresent} of ${card.daysPossible} days`
-      : "—";
+  const previous = card.previous;
+  // A lower aggregate is better; without points, a higher average is.
+  const trend =
+    previous === null
+      ? null
+      : previous.totalPoints !== null && card.totalPoints !== null
+        ? Math.sign(previous.totalPoints - card.totalPoints)
+        : previous.meanPercentage !== null && card.meanPercentage !== null
+          ? Math.sign(card.meanPercentage - previous.meanPercentage)
+          : null;
 
   return (
     <Sheet
       branding={branding}
       footer={footer}
-      title={title}
+      variant="primary"
+      title={batch.isFinal ? "End of Term Report Card" : "Progress Report Card"}
       subtitle={`${batch.termName}  •  ${batch.academicYear}`}
       pageNumber={pageNumber}
       pageCount={pageCount}
+      aside={
+        card.photoDataUrl ? (
+          <img className="nr-photo" src={card.photoDataUrl} alt="" />
+        ) : (
+          <div className="nr-photo nr-photo-empty">Photo</div>
+        )
+      }
     >
-      <div className="rc-learner">
-        {card.photoDataUrl && (
-          <img className="rc-photo" src={card.photoDataUrl} alt="" />
-        )}
-        <div className="rc-fields">
-          <Field label="Name" value={card.fullName} />
-          <Field label="Reg. No." value={card.regNumber} />
-          <Field
-            label="Class"
-            value={
-              card.streamName ? `${card.className} — ${card.streamName}` : card.className
-            }
-          />
-          <Field label="Sex" value={card.gender === "M" ? "Male" : card.gender === "F" ? "Female" : "—"} />
-          <Field label="Term" value={batch.termName} />
-          <Field label="Days present" value={attendance} />
+      <div className="nr-learner">
+        <NField label="Name" value={card.fullName} wide />
+        <NField label="Reg. No." value={card.regNumber} />
+        <NField label="Class" value={className} />
+        <NField
+          label="Sex"
+          value={card.gender === "M" ? "Male" : card.gender === "F" ? "Female" : "—"}
+        />
+        <NField label="Age" value={ageOn(card.dateOfBirth, new Date())} />
+        <NField
+          label="Position"
+          value={card.position === null ? "—" : `${ordinal(card.position)} of ${card.classSize}`}
+        />
+        <NField
+          label="Days present"
+          value={
+            card.daysPresent !== null && card.daysPossible
+              ? `${card.daysPresent} of ${card.daysPossible}`
+              : "—"
+          }
+        />
+      </div>
+
+      <section className="pr-block">
+        <h3 className="nr-heading">Performance in the core subjects</h3>
+        <table className="pr-table">
+          <thead>
+            <tr>
+              <th rowSpan={2} className="left">
+                Subject
+              </th>
+              {exams.map((exam) => (
+                <th key={exam} colSpan={2} className="pr-exam">
+                  {exam}
+                </th>
+              ))}
+              <th colSpan={2} className="pr-exam pr-term">
+                Term
+              </th>
+              <th rowSpan={2}>Pos.</th>
+              <th rowSpan={2} className="left">
+                Remark
+              </th>
+              <th rowSpan={2}>Initials</th>
+            </tr>
+            <tr>
+              {exams.map((exam) => (
+                <FragmentPair key={exam} a="Mark" b="Agg" />
+              ))}
+              <th className="pr-term">Mark</th>
+              <th className="pr-term">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {core.map((subject) => (
+              <tr key={subject.classSubjectId}>
+                <td className="left pr-subject">
+                  {subject.name}
+                  <span className="pr-outof"> /{subject.maxScore}</span>
+                </td>
+                {subject.examScores.map((score, index) => (
+                  <FragmentPair
+                    key={index}
+                    cell
+                    a={show(score)}
+                    b={
+                      subject.examPoints[index] !== null
+                        ? round(subject.examPoints[index]!)
+                        : (subject.examGrades[index] ?? "—")
+                    }
+                  />
+                ))}
+                <td className="pr-term pr-strong">{show(subject.termScore)}</td>
+                <td className="pr-term pr-grade">
+                  {subject.termScore === null ? "—" : subject.gradeLabel}
+                </td>
+                <td>{subject.position === null ? "—" : ordinal(subject.position)}</td>
+                <td className="left pr-remark">
+                  {subject.termScore === null
+                    ? ""
+                    : (subject.remark ??
+                      remarkFor(
+                        subject.points,
+                        (subject.termScore / subject.maxScore) * 100,
+                      ))}
+                </td>
+                <td className="pr-initials">{teacherInitials(subject.teacherName)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th className="left">Total marks</th>
+              {card.examTotals.map((total, index) => (
+                <FragmentPair key={index} cell a={show(total.marks)} b="" />
+              ))}
+              <td className="pr-term pr-strong">
+                {coreTotal === null ? "—" : `${round(coreTotal)}`}
+                <span className="pr-outof">/{coreMax}</span>
+              </td>
+              <td className="pr-term" />
+              <td colSpan={3} />
+            </tr>
+            <tr>
+              <th className="left">Aggregate</th>
+              {card.examTotals.map((total, index) => (
+                <FragmentPair key={index} cell a="" b={show(total.aggregate)} strongB />
+              ))}
+              <td className="pr-term" />
+              <td className="pr-term pr-strong">{show(card.totalPoints)}</td>
+              <td colSpan={3} />
+            </tr>
+            <tr>
+              <th className="left">Average</th>
+              {card.examTotals.map((total, index) => (
+                <td key={index} colSpan={2}>
+                  {total.average === null ? "—" : `${round(total.average)}%`}
+                </td>
+              ))}
+              <td colSpan={2} className="pr-term pr-strong">
+                {card.meanPercentage === null ? "—" : `${round(card.meanPercentage)}%`}
+              </td>
+              <td colSpan={3} />
+            </tr>
+            <tr className="pr-muted-row">
+              <th className="left">Class average</th>
+              {batch.examClassAverages.map((average, index) => (
+                <td key={index} colSpan={2}>
+                  {average === null ? "—" : `${round(average)}%`}
+                </td>
+              ))}
+              <td colSpan={2} className="pr-term">
+                {batch.classAverage === null ? "—" : `${round(batch.classAverage)}%`}
+              </td>
+              <td colSpan={3} />
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <div className="pr-summary">
+        <div className="pr-tile">
+          <span>Aggregate</span>
+          <strong>{show(card.totalPoints)}</strong>
+        </div>
+        <div className="pr-tile pr-tile-accent">
+          <span>Division</span>
+          <strong>{card.division ?? "—"}</strong>
+        </div>
+        <div className="pr-tile">
+          <span>Average</span>
+          <strong>{card.meanPercentage === null ? "—" : `${round(card.meanPercentage)}%`}</strong>
+        </div>
+        <div className="pr-tile">
+          <span>Position</span>
+          <strong>
+            {card.position === null ? "—" : `${ordinal(card.position)} / ${card.classSize}`}
+          </strong>
+        </div>
+        <div className="pr-tile pr-tile-wide">
+          <span>{previous ? `Compared with ${previous.termName}` : "Last term"}</span>
+          {previous ? (
+            <strong className="pr-trend">
+              {trend === 1 ? "▲ Improved" : trend === -1 ? "▼ Dropped" : "● Steady"}
+              <em>
+                {previous.totalPoints !== null ? `Agg ${round(previous.totalPoints)}` : ""}
+                {previous.division ? ` • ${previous.division}` : ""}
+                {previous.position !== null
+                  ? ` • ${ordinal(previous.position)} of ${previous.classSize}`
+                  : ""}
+              </em>
+            </strong>
+          ) : (
+            <strong className="pr-trend">
+              <em>No results for an earlier term this year</em>
+            </strong>
+          )}
         </div>
       </div>
 
-      <table className="rc-table">
-        <thead>
-          <tr>
-            <th className="left" style={{ width: "34%" }}>
-              Subject
-            </th>
-            {batch.examNames.map((name) => (
-              <th key={name}>{name}</th>
-            ))}
-            <th>Term</th>
-            <th>Out of</th>
-            <th>Grade</th>
-            <th className="left" style={{ width: "18%" }}>
-              Remark
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {card.subjects.map((subject) => (
-            <tr key={subject.classSubjectId} className={subject.isCore ? "" : "non-core"}>
-              <td className="subject">{subject.name}</td>
-              {subject.examScores.map((score, index) => (
-                <td key={index}>{score === null ? "—" : round(score)}</td>
+      {others.length > 0 && (
+        <section className="pr-block">
+          <h3 className="nr-heading">Other subjects</h3>
+          <table className="pr-table pr-table-other">
+            <thead>
+              <tr>
+                <th className="left">Subject</th>
+                <th>Mark</th>
+                <th>Grade</th>
+                <th>Pos.</th>
+                <th className="left">Remark</th>
+                <th>Initials</th>
+              </tr>
+            </thead>
+            <tbody>
+              {others.map((subject) => (
+                <tr key={subject.classSubjectId}>
+                  <td className="left pr-subject">{subject.name}</td>
+                  <td className="pr-strong">
+                    {show(subject.termScore)}
+                    <span className="pr-outof">/{subject.maxScore}</span>
+                  </td>
+                  <td className="pr-grade">
+                    {subject.termScore === null ? "—" : subject.gradeLabel}
+                  </td>
+                  <td>{subject.position === null ? "—" : ordinal(subject.position)}</td>
+                  <td className="left pr-remark">
+                    {subject.termScore === null
+                      ? ""
+                      : (subject.remark ??
+                        remarkFor(subject.points, (subject.termScore / subject.maxScore) * 100))}
+                  </td>
+                  <td className="pr-initials">{teacherInitials(subject.teacherName)}</td>
+                </tr>
               ))}
-              <td>{subject.termScore === null ? "—" : round(subject.termScore)}</td>
-              <td>{subject.maxScore}</td>
-              <td className="grade">{subject.gradeLabel}</td>
-              <td className="left">{subject.remark ?? ""}</td>
-            </tr>
-          ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      <table className="nr-comments">
+        <tbody>
+          <tr>
+            <th>Class Teacher's comment</th>
+            <td>{card.classTeacherComment ?? ""}</td>
+            <td className="nr-sign">
+              {card.classTeacherName ?? ""}
+              <span>Signature</span>
+            </td>
+          </tr>
+          <tr>
+            <th>Headteacher's comment</th>
+            <td>{card.headTeacherComment ?? ""}</td>
+            <td className="nr-sign">
+              {batch.headTeacherName ?? ""}
+              <span>Signature</span>
+            </td>
+          </tr>
         </tbody>
       </table>
 
-      <div className="rc-summary">
-        {card.totalPoints !== null && (
-          <div className="rc-summary-box">
-            <div className="rc-summary-label">Aggregate</div>
-            <div className="rc-summary-value">{round(card.totalPoints)}</div>
-          </div>
-        )}
-        {card.division && (
-          <div className="rc-summary-box">
-            <div className="rc-summary-label">Division</div>
-            <div className="rc-summary-value">{card.division}</div>
-          </div>
-        )}
-        <div className="rc-summary-box">
-          <div className="rc-summary-label">Average</div>
-          <div className="rc-summary-value">
-            {card.meanPercentage === null ? "—" : `${round(card.meanPercentage)}%`}
-          </div>
+      {batch.gradeKey.length > 1 && (
+        <div className="pr-key">
+          <span className="pr-key-title">Grading key</span>
+          {batch.gradeKey.map((band) => (
+            <span key={band.label} className="pr-key-band">
+              <strong>{band.label}</strong> {round(band.lower)}–{round(band.upper)}
+            </span>
+          ))}
         </div>
-        <div className="rc-summary-box">
-          <div className="rc-summary-label">Position</div>
-          <div className="rc-summary-value">
-            {card.position === null ? "—" : `${card.position} / ${card.classSize}`}
-          </div>
-        </div>
-      </div>
+      )}
 
-      <div className="rc-comments">
-        <div className="rc-comment">
-          <div className="rc-comment-label">Class Teacher's comment</div>
-          <div className="rc-comment-text">{card.classTeacherComment ?? ""}</div>
+      <div className="nr-foot">
+        <div className="nr-foot-facts">
+          <div>
+            <span>Date of issue</span>
+            <strong>{footer.printedOn}</strong>
+          </div>
+          <div>
+            <span>Next term begins</span>
+            <strong>{formatDate(batch.nextTermBegins) || "\u00a0"}</strong>
+          </div>
+          <div className="nr-requirements">
+            <span>School requirements</span>
+            <strong>{batch.requirements ?? "\u00a0"}</strong>
+          </div>
         </div>
-        <div className="rc-comment">
-          <div className="rc-comment-label">Headteacher's comment</div>
-          <div className="rc-comment-text">{card.headTeacherComment ?? ""}</div>
-        </div>
+        <div className="nr-stamp">School stamp</div>
       </div>
-
-      <div className="rc-signature">Headteacher's signature &amp; school stamp</div>
     </Sheet>
+  );
+}
+
+/** Two adjacent cells (or header cells) for an exam's Mark and Agg. */
+function FragmentPair({
+  a,
+  b,
+  cell = false,
+  strongB = false,
+}: {
+  a: string;
+  b: string;
+  cell?: boolean;
+  strongB?: boolean;
+}) {
+  return cell ? (
+    <>
+      <td className="pr-mark">{a}</td>
+      <td className={strongB ? "pr-agg pr-strong" : "pr-agg"}>{b}</td>
+    </>
+  ) : (
+    <>
+      <th className="pr-sub">{a}</th>
+      <th className="pr-sub">{b}</th>
+    </>
   );
 }
 
@@ -596,15 +870,6 @@ function NField({ label, value, wide }: { label: string; value: string; wide?: b
     <div className={wide ? "nr-field nr-field-wide" : "nr-field"}>
       <span className="nr-field-label">{label}</span>
       <span className="nr-field-value">{value}</span>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rc-field">
-      <span className="rc-field-label">{label}</span>
-      <span className="rc-field-value">{value}</span>
     </div>
   );
 }
