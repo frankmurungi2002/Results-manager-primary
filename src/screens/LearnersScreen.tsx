@@ -304,7 +304,7 @@ export function LearnersScreen() {
         {isAdmin && (
           <Card
             title="Fees block"
-            subtitle="FR-B8 — when this is on, learners you flag get no exam permit and no report card"
+            subtitle="When this is on, learners you flag get no exam permit and no report card"
           >
             <label className="row-between">
               <span>

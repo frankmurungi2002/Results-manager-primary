@@ -289,7 +289,7 @@ export function ReportsScreen() {
         <div className="grid grid-2">
           <Card
             title="Report cards"
-            subtitle="FR-D1 — front page with grades, aggregate, position and comments"
+            subtitle="Grades, aggregate, position and comments for each learner"
             footer={
               <div className="row-between">
                 <span className="field-hint">
@@ -374,7 +374,7 @@ export function ReportsScreen() {
           <div className="stack">
             <Card
               title="Class list"
-              subtitle="FR-D2 — every learner with guardian contacts, ready to post"
+              subtitle="Every learner with guardian contacts, ready to post"
               footer={
                 <Button
                   icon={<List size={15} />}
