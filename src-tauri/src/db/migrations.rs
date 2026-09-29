@@ -36,6 +36,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "nursery_report",
         sql: M003_NURSERY_REPORT,
     },
+    Migration {
+        version: 4,
+        name: "staff_photos",
+        sql: M004_STAFF_PHOTOS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -578,4 +583,13 @@ INSERT INTO comment_bank (id, scope, category, text, is_builtin, status, created
  ('cb_ct_n03', 'class_teacher', 'Nursery', 'Good progress this term. Needs more support with reading and writing.',            1, 'active', datetime('now'), datetime('now')),
  ('cb_ct_n04', 'class_teacher', 'Conduct', 'Improve on your personal hygiene.',                                                1, 'active', datetime('now'), datetime('now')),
  ('cb_ct_n05', 'class_teacher', 'Conduct', 'Always neat, polite and plays well with others.',                                  1, 'active', datetime('now'), datetime('now'));
+"#;
+
+// ---------------------------------------------------------------------------
+// 004 — staff photos, for staff ID cards (FR-G16)
+// ---------------------------------------------------------------------------
+
+const M004_STAFF_PHOTOS: &str = r#"
+
+ALTER TABLE users ADD COLUMN photo_png BLOB;
 "#;

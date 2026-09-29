@@ -4,9 +4,18 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { FileSpreadsheet, Search, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
+import {
+  Camera,
+  FileSpreadsheet,
+  Search,
+  UserMinus,
+  UserPlus,
+  UserRoundCheck,
+  Users,
+} from "lucide-react";
 
 import { ImportLearnersModal } from "../components/ImportLearnersModal";
+import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
 import type { ClassRow, StudentRow } from "../lib/types";
 import { useStore } from "../state/store";
@@ -41,6 +50,7 @@ export function LearnersScreen() {
 
   const [editing, setEditing] = useState<StudentRow | "new" | null>(null);
   const [dropping, setDropping] = useState<StudentRow | null>(null);
+  const [photoFor, setPhotoFor] = useState<StudentRow | null>(null);
   const [importing, setImporting] = useState(false);
 
   const isAdmin = session?.isAdmin ?? false;
@@ -266,6 +276,13 @@ export function LearnersScreen() {
                           >
                             Edit
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon={<Camera size={14} />}
+                            title="Photo"
+                            onClick={() => setPhotoFor(student)}
+                          />
                           {student.enrollmentStatus === "dropped" ? (
                             <Button
                               size="sm"
@@ -351,6 +368,18 @@ export function LearnersScreen() {
           setEditing(null);
           void loadRoster();
         }}
+      />
+
+      <PhotoModal
+        open={photoFor !== null}
+        name={photoFor?.fullName ?? ""}
+        load={() => (photoFor ? api.getStudentPhoto(photoFor.id) : Promise.resolve(null))}
+        save={async (png) => {
+          if (!photoFor) return;
+          await api.setStudentPhoto(photoFor.id, png ?? []);
+          void loadRoster();
+        }}
+        onClose={() => setPhotoFor(null)}
       />
 
       <DropModal

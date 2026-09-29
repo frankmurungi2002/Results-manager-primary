@@ -7,7 +7,14 @@
  */
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, FileText, List, MessageSquareText, Printer } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  IdCard as IdCardIcon,
+  List,
+  MessageSquareText,
+  Printer,
+} from "lucide-react";
 
 import { api } from "../lib/api";
 import type {
@@ -17,6 +24,7 @@ import type {
   ActivityRating,
   CommentBankEntry,
   DocumentEnvelope,
+  IdCardBatch,
   Rating,
   ReportCardBatch,
   StudentRow,
@@ -31,12 +39,15 @@ import {
   EmptyState,
   Loading,
   Modal,
+  Segmented,
   SelectInput,
   TextArea,
   cx,
 } from "../components/ui";
 import {
   ClassListSheet,
+  IdCardSheets,
+  type IdCardFormat,
   PrintPreview,
   ReportCardSheets,
 } from "../components/PrintDocument";
@@ -44,10 +55,12 @@ import {
 type Preview =
   | { kind: "report_cards"; envelope: DocumentEnvelope<ReportCardBatch> }
   | { kind: "class_list"; envelope: DocumentEnvelope<ClassListBody> }
+  | { kind: "id_cards"; envelope: DocumentEnvelope<IdCardBatch> }
   | null;
 
 export function ReportsScreen() {
   const reportError = useStore((state) => state.reportError);
+  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
 
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [years, setYears] = useState<AcademicYearRow[]>([]);
@@ -60,6 +73,8 @@ export function ReportsScreen() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentsFor, setCommentsFor] = useState<StudentRow | null>(null);
+  const [idFor, setIdFor] = useState<"student" | "staff">("student");
+  const [idFormat, setIdFormat] = useState<IdCardFormat>("sheet");
 
   useEffect(() => {
     Promise.all([api.listClasses(), api.listAcademicYears()])
@@ -107,6 +122,22 @@ export function ReportsScreen() {
         examIds,
       });
       setPreview({ kind: "report_cards", envelope });
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function buildIdCards() {
+    setBusy(true);
+    try {
+      const envelope = await api.buildIdCards(
+        idFor === "staff"
+          ? { kind: "staff" }
+          : { kind: "student", classId, ids: selected },
+      );
+      setPreview({ kind: "id_cards", envelope });
     } catch (error) {
       reportError(error);
     } finally {
@@ -162,6 +193,22 @@ export function ReportsScreen() {
               {blocked.length > 0 && (
                 <Badge tone="warning">{blocked.length} blocked on fees</Badge>
               )}
+              {preview.kind === "id_cards" && (
+                <>
+                  <Segmented
+                    value={idFormat}
+                    onChange={setIdFormat}
+                    options={[
+                      { value: "sheet", label: "A4 sheet" },
+                      { value: "printer", label: "Card printer" },
+                    ]}
+                  />
+                  <Badge tone="neutral">
+                    {preview.envelope.body.cards.length} card
+                    {preview.envelope.body.cards.length === 1 ? "" : "s"}
+                  </Badge>
+                </>
+              )}
             </>
           }
         >
@@ -179,7 +226,19 @@ export function ReportsScreen() {
             </div>
           )}
 
-          {preview.kind === "report_cards" ? (
+          {preview.kind === "id_cards" ? (
+            preview.envelope.body.cards.length === 0 ? (
+              <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto" }}>
+                <Card>
+                  <EmptyState icon={<IdCardIcon size={18} />} title="Nobody to print">
+                    There is nobody in this selection yet.
+                  </EmptyState>
+                </Card>
+              </div>
+            ) : (
+              <IdCardSheets envelope={preview.envelope} format={idFormat} />
+            )
+          ) : preview.kind === "report_cards" ? (
             preview.envelope.body.cards.length === 0 ? (
               <div
                 className="no-print"
@@ -400,11 +459,62 @@ export function ReportsScreen() {
               </p>
             </Card>
 
-            <Alert tone="info" title="Coming in the next phase">
-              Examination permits, mark sheets and registers use the same
-              pipeline and are next on the build plan, along with the
-              weekly-assignment back page.
-            </Alert>
+            <Card
+              title="ID cards"
+              subtitle="Photo, name, class or role, number and the year it is valid for"
+              footer={
+                <div className="row-between">
+                  <span className="field-hint">
+                    {idFor === "staff"
+                      ? "Every active staff member"
+                      : selected.length === 0
+                        ? `Whole class (${roster.length} learners)`
+                        : `${selected.length} selected`}
+                  </span>
+                  <Button
+                    variant="primary"
+                    icon={<IdCardIcon size={15} />}
+                    loading={busy}
+                    disabled={idFor === "student" && (!classId || roster.length === 0)}
+                    onClick={() => void buildIdCards()}
+                  >
+                    Build ID cards
+                  </Button>
+                </div>
+              }
+            >
+              <div className="stack" style={{ gap: "var(--space-3)" }}>
+                {isAdmin && (
+                  <div className="row-between">
+                    <span className="field-label">For</span>
+                    <Segmented
+                      value={idFor}
+                      onChange={setIdFor}
+                      options={[
+                        { value: "student", label: "Learners" },
+                        { value: "staff", label: "Staff" },
+                      ]}
+                    />
+                  </div>
+                )}
+                <div className="row-between">
+                  <span className="field-label">Print on</span>
+                  <Segmented
+                    value={idFormat}
+                    onChange={setIdFormat}
+                    options={[
+                      { value: "sheet", label: "A4 sheet (8 per page)" },
+                      { value: "printer", label: "Card printer" },
+                    ]}
+                  />
+                </div>
+                <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
+                  Photos print when Student Photos is on under Settings,
+                  Optional features. Add them from the Learners and Staff
+                  screens.
+                </p>
+              </div>
+            </Card>
           </div>
         </div>
       </div>

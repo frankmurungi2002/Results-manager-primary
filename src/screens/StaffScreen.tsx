@@ -4,8 +4,9 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Copy, KeyRound, UserPlus, UserX, UsersRound } from "lucide-react";
+import { Camera, Copy, KeyRound, UserPlus, UserX, UsersRound } from "lucide-react";
 
+import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
 import type {
   AssignmentRow,
@@ -46,6 +47,7 @@ export function StaffScreen() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [photoFor, setPhotoFor] = useState<UserSummary | null>(null);
   const [credentials, setCredentials] = useState<{
     name: string;
     username: string;
@@ -177,6 +179,13 @@ export function StaffScreen() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              icon={<Camera size={14} />}
+                              title="Photo"
+                              onClick={() => setPhotoFor(person)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               icon={<KeyRound size={14} />}
                               title="Reset password"
                               onClick={() => {
@@ -286,6 +295,14 @@ export function StaffScreen() {
           </Card>
         )}
       </div>
+
+      <PhotoModal
+        open={photoFor !== null}
+        name={photoFor?.fullName ?? ""}
+        load={() => (photoFor ? api.getStaffPhoto(photoFor.id) : Promise.resolve(null))}
+        save={(png) => (photoFor ? api.setStaffPhoto(photoFor.id, png) : Promise.resolve())}
+        onClose={() => setPhotoFor(null)}
+      />
 
       <AddStaffModal
         open={addOpen}

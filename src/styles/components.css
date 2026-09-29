@@ -739,3 +739,23 @@
 .rating-name {
   font-weight: var(--weight-medium);
 }
+
+/* A person's photo in the photo window */
+
+.photo-frame {
+  width: 120px;
+  height: 148px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-default);
+  background: var(--bg-inset);
+}
+
+.photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

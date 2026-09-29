@@ -349,6 +349,257 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* --- ID cards (FR-G16) ------------------------------------------------- *
+ * The standard CR80 card: 85.6 × 54 mm, landscape. Sized in millimetres so
+ * the A4 sheet and the card printer produce the same card. */
+
+.idc {
+  --doc-accent: #4f63d2;
+  width: 85.6mm;
+  height: 54mm;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 3mm;
+  background: #fff;
+  color: var(--ink);
+  font-size: 6.6pt;
+  line-height: 1.25;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.idc-band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  padding: 2mm 2.6mm;
+  background:
+    radial-gradient(circle at 92% -30%, rgba(255, 255, 255, 0.22) 0 11mm, transparent 11.2mm),
+    radial-gradient(circle at 70% 160%, rgba(255, 255, 255, 0.14) 0 9mm, transparent 9.2mm),
+    var(--doc-accent);
+  color: #fff;
+}
+
+.idc-logo {
+  width: 9mm;
+  height: 9mm;
+  flex: none;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  padding: 0.5mm;
+  box-sizing: border-box;
+}
+
+.idc-logo-blank {
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 7pt;
+  color: var(--doc-accent);
+}
+
+.idc-school {
+  flex: 1;
+  min-width: 0;
+}
+
+.idc-school-name {
+  font-size: 7.4pt;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.idc-motto {
+  margin-top: 0.3mm;
+  font-size: 5.6pt;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.idc-kind {
+  flex: none;
+  padding: 0.6mm 2mm;
+  border-radius: 99px;
+  background: #fff;
+  color: var(--doc-accent);
+  font-size: 5.6pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.idc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 2.6mm;
+  padding: 2.2mm 2.6mm 1.4mm;
+}
+
+.idc-photo {
+  width: 20mm;
+  height: 24.5mm;
+  flex: none;
+  object-fit: cover;
+  border-radius: 2mm;
+  border: 0.6mm solid var(--doc-accent);
+  box-sizing: border-box;
+}
+
+.idc-photo-blank {
+  display: grid;
+  place-items: center;
+  background: var(--band);
+  color: var(--ink-faint);
+  font-size: 13pt;
+  font-weight: 800;
+}
+
+.idc-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.idc-name {
+  font-size: 9pt;
+  font-weight: 800;
+  line-height: 1.12;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.idc-title {
+  margin-top: 0.4mm;
+  font-size: 6.8pt;
+  font-weight: 700;
+  color: var(--doc-accent);
+}
+
+.idc-facts {
+  margin: 1.6mm 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5mm 2mm;
+}
+
+.idc-facts dt {
+  font-size: 5.4pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  align-self: center;
+}
+
+.idc-facts dd {
+  margin: 0;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idc-number {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 700;
+}
+
+.idc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2mm;
+  padding: 1.2mm 2.6mm;
+  border-top: 0.3mm solid var(--rule-soft);
+  font-size: 5.4pt;
+  color: var(--ink-soft);
+}
+
+.idc-contact {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idc-valid {
+  flex: none;
+  padding: 0.4mm 1.6mm;
+  border-radius: 99px;
+  background: var(--band);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* A slimmer header for pages that are mostly cut-outs. */
+.sheet-compact .doc-head {
+  gap: 4mm;
+  padding-bottom: 2mm;
+}
+
+.sheet-compact .doc-logo,
+.sheet-compact .doc-logo-placeholder {
+  width: 13mm;
+  height: 13mm;
+}
+
+.sheet-compact .doc-institution {
+  font-size: 13pt;
+}
+
+.sheet-compact .doc-motto {
+  display: none;
+}
+
+.sheet-compact .doc-title {
+  margin-top: 2.5mm;
+  font-size: 10.5pt;
+}
+
+.sheet-compact .doc-body {
+  margin-top: 3mm;
+}
+
+.sheet-compact .doc-foot {
+  margin-top: 3mm;
+}
+
+/* A4 sheet: eight cards, each inside a dashed cutting line. */
+.idc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  gap: 2mm 4mm;
+}
+
+.idc-cut {
+  padding: 0.6mm;
+  border: 0.25mm dashed var(--rule);
+  border-radius: 4mm;
+}
+
+/* Card printer: one card per page, shown as a column on screen. */
+.idc-printer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.idc-page {
+  box-shadow: var(--shadow-lg);
+  border-radius: 3mm;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Print                                                                   */
 /* ---------------------------------------------------------------------- */
@@ -820,6 +1071,25 @@
 
   .sheet-nursery {
     padding-top: 9mm;
+  }
+
+  .idc-printer {
+    display: block;
+  }
+
+  .idc-page {
+    box-shadow: none;
+    border-radius: 0;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .idc-page .idc {
+    border-radius: 0;
+  }
+
+  .idc-cut {
+    break-inside: avoid;
   }
 
   .sheet:last-child {
