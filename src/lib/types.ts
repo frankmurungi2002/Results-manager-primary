@@ -484,6 +484,24 @@ export interface BackupResult {
   at: string;
 }
 
+export interface BackupFile {
+  path: string;
+  fileName: string;
+  location: "local" | "mirror";
+  bytes: number;
+  modifiedAt: string;
+}
+
+export interface BackupSummary {
+  path: string;
+  institutionName: string | null;
+  schemaVersion: number;
+  learners: number;
+  marks: number;
+  lastActivityAt: string | null;
+  compatible: boolean;
+}
+
 export interface DashboardSummary {
   institutionName: string;
   academicYear: string | null;

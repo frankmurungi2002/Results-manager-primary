@@ -95,19 +95,41 @@ fn suggest_mapping(headers: &[String]) -> HashMap<String, usize> {
     let mut mapping = HashMap::new();
     let cleaned: Vec<String> = headers.iter().map(|h| normalise(h)).collect();
 
+    // Exact matches first, for every field — "name" should not lose to
+    // "guardian name".
     for (field, aliases) in ALIASES {
-        // Exact match first — "name" should not lose to "guardian name".
-        let exact = cleaned.iter().position(|h| aliases.contains(&h.as_str()));
-        let found = exact.or_else(|| {
-            cleaned
-                .iter()
-                .position(|h| !h.is_empty() && aliases.iter().any(|a| h.contains(a)))
-        });
+        let exact = cleaned
+            .iter()
+            .enumerate()
+            .position(|(i, h)| aliases.contains(&h.as_str()) && !mapping.values().any(|t| *t == i));
+        if let Some(index) = exact {
+            mapping.insert((*field).to_string(), index);
+        }
+    }
 
-        if let Some(index) = found {
-            if !mapping.values().any(|taken| *taken == index) {
-                mapping.insert((*field).to_string(), index);
+    // Then partial matches, the most specific first: in "Parent Contact",
+    // "contact" (a phone) is a longer, better match than "parent" (a name).
+    // Ties go to the field listed first in ALIASES, then the leftmost column.
+    let mut candidates: Vec<(usize, usize, usize)> = Vec::new(); // (alias length, field order, column)
+    for (order, (field, aliases)) in ALIASES.iter().enumerate() {
+        if mapping.contains_key(*field) {
+            continue;
+        }
+        for (column, heading) in cleaned.iter().enumerate() {
+            if heading.is_empty() {
+                continue;
             }
+            if let Some(len) = aliases.iter().filter(|a| heading.contains(*a)).map(|a| a.len()).max() {
+                candidates.push((len, order, column));
+            }
+        }
+    }
+    candidates.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+
+    for (_, order, column) in candidates {
+        let field = ALIASES[order].0;
+        if !mapping.contains_key(field) && !mapping.values().any(|t| *t == column) {
+            mapping.insert(field.to_string(), column);
         }
     }
 
@@ -718,6 +740,18 @@ mod tests {
         let mapping = suggest_mapping(&headers);
         assert_eq!(mapping.get("fullName"), Some(&0));
         assert_eq!(mapping.get("guardianName"), Some(&1));
+    }
+
+    #[test]
+    fn a_partial_match_goes_to_the_most_specific_field() {
+        let headers: Vec<String> = ["Pupil's Full Name", "Parent/Guardian Names", "Parents Contact No."]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let mapping = suggest_mapping(&headers);
+        assert_eq!(mapping.get("fullName"), Some(&0));
+        assert_eq!(mapping.get("guardianName"), Some(&1));
+        assert_eq!(mapping.get("guardianPhone"), Some(&2));
     }
 
     #[test]

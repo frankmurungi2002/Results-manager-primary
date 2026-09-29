@@ -130,7 +130,7 @@ pub fn ple_projection(
     let exams: Vec<(String, f64, bool)> = {
         let mut stmt = conn.prepare(
             "SELECT id, weight, is_final FROM exams
-             WHERE term_id = ?1 AND kind = 'exam' ORDER BY seq ASC",
+             WHERE term_id = ?1 ORDER BY seq ASC",
         )?;
         let collected = stmt.query_map(params![term_id], |row| {
             Ok((row.get(0)?, row.get(1)?, row.get::<_, i64>(2)? != 0))

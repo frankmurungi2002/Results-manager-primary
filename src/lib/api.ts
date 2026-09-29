@@ -13,8 +13,10 @@ import type {
   AppError,
   AssignmentRow,
   AuditEntry,
+  BackupFile,
   BackupResult,
   BackupStatus,
+  BackupSummary,
   ClassListBody,
   ClassRow,
   ClassSubjectRow,
@@ -120,6 +122,9 @@ export const api = {
   backupStatus: () => call<BackupStatus>("backup_status"),
   setMirrorPath: (path: string | null) => call<void>("set_mirror_path", { path }),
   runBackup: () => call<BackupResult>("run_backup"),
+  listBackups: () => call<BackupFile[]>("list_backups"),
+  inspectBackup: (path: string) => call<BackupSummary>("inspect_backup", { path }),
+  restoreBackup: (path: string) => call<BackupSummary>("restore_backup", { path }),
   dashboardSummary: () => call<DashboardSummary>("dashboard_summary"),
 
   // --- Academic structure -------------------------------------------------

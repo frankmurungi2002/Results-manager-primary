@@ -1,6 +1,7 @@
 //! Process-wide state: the database handle, the session, and where files live.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::db::Database;
 use crate::error::{AppError, AppResult};
@@ -10,16 +11,29 @@ pub struct AppState {
     pub db: Database,
     pub sessions: SessionStore,
     pub paths: AppPaths,
+    /// The database's change counter when the last snapshot was taken; see
+    /// `backup::take_if_changed`.
+    backed_up_at_change: AtomicU64,
 }
 
 impl AppState {
     pub fn new(paths: AppPaths) -> AppResult<Self> {
         let db = Database::open(&paths.db_file)?;
+        let changes = db.total_changes();
         Ok(Self {
             db,
             sessions: SessionStore::new(),
             paths,
+            backed_up_at_change: AtomicU64::new(changes),
         })
+    }
+
+    pub fn mark_backed_up(&self, total_changes: u64) {
+        self.backed_up_at_change.store(total_changes, Ordering::SeqCst);
+    }
+
+    pub fn has_unbacked_changes(&self, total_changes: u64) -> bool {
+        total_changes != self.backed_up_at_change.load(Ordering::SeqCst)
     }
 }
 

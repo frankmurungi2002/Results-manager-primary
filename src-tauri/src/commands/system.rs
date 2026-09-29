@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::audit::{self, AuditEntry};
+use crate::backup::{self, BackupFile, BackupResult, BackupSummary, Trigger};
 use crate::domain::models::Institution;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
@@ -260,104 +261,38 @@ pub fn set_mirror_path(state: State<'_, AppState>, path: Option<String>) -> AppR
     Ok(())
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BackupResult {
-    pub local_path: String,
-    pub mirror_path: Option<String>,
-    pub bytes: u64,
-    pub at: String,
-}
-
 /// Takes a consistent snapshot of the live database, locally and — if a second
 /// drive is configured — onto that drive too.
 #[tauri::command]
 pub fn run_backup(state: State<'_, AppState>) -> AppResult<BackupResult> {
     let session = state.sessions.require()?;
     session.require_admin()?;
-
-    let stamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
-    let filename = format!("school-{stamp}.rmdb");
-
-    let local_path = state.paths.backup_dir.join(&filename);
-    state.db.backup_to(&local_path)?;
-    let bytes = std::fs::metadata(&local_path).map(|m| m.len()).unwrap_or(0);
-
-    let mirror_target = {
-        let conn = state.db.lock();
-        repo::get_setting(&conn, "backup.mirror_path")?
-    };
-
-    let mirror_path = match mirror_target {
-        Some(dir) => {
-            let target = std::path::Path::new(&dir).join("ResultsManager").join(&filename);
-            match state.db.backup_to(&target) {
-                Ok(()) => Some(target.display().to_string()),
-                Err(err) => {
-                    // A missing second drive is a warning, not a failed backup —
-                    // the local copy already succeeded.
-                    log::warn!("mirror backup failed: {err}");
-                    None
-                }
-            }
-        }
-        None => None,
-    };
-
-    let at = Utc::now().to_rfc3339();
-    {
-        let conn = state.db.lock();
-        repo::set_setting(&conn, "backup.last_at", &at)?;
-        repo::set_setting(&conn, "backup.last_path", &local_path.display().to_string())?;
-        audit::record(
-            &conn,
-            Some(&session),
-            "backup.run",
-            "backup",
-            &filename,
-            match &mirror_path {
-                Some(path) => format!("Backed up to {path} and the local folder"),
-                None => "Backed up to the local folder".to_string(),
-            },
-        )?;
-    }
-
-    prune_old_backups(&state.paths.backup_dir, 20);
-
-    Ok(BackupResult {
-        local_path: local_path.display().to_string(),
-        mirror_path,
-        bytes,
-        at,
-    })
+    backup::take(&state, Some(&session), Trigger::Manual)
 }
 
-/// Keeps the newest `keep` snapshots. Without this a school PC fills its disk
-/// over a couple of terms and RM becomes the reason marks cannot be saved.
-fn prune_old_backups(dir: &std::path::Path, keep: usize) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
+/// Every snapshot on this computer and on the second drive, newest first.
+#[tauri::command]
+pub fn list_backups(state: State<'_, AppState>) -> AppResult<Vec<BackupFile>> {
+    let session = state.sessions.require()?;
+    session.require_admin()?;
+    backup::list(&state)
+}
 
-    let mut files: Vec<(std::time::SystemTime, std::path::PathBuf)> = entries
-        .flatten()
-        .filter(|entry| {
-            entry
-                .path()
-                .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("rmdb"))
-        })
-        .filter_map(|entry| {
-            let modified = entry.metadata().ok()?.modified().ok()?;
-            Some((modified, entry.path()))
-        })
-        .collect();
+/// What a snapshot holds, shown before anyone restores it.
+#[tauri::command]
+pub fn inspect_backup(state: State<'_, AppState>, path: String) -> AppResult<BackupSummary> {
+    let session = state.sessions.require()?;
+    session.require_admin()?;
+    backup::inspect(std::path::Path::new(&path))
+}
 
-    files.sort_by(|a, b| b.0.cmp(&a.0));
-
-    for (_, path) in files.into_iter().skip(keep) {
-        let _ = std::fs::remove_file(path);
-    }
+/// Replaces the school's data with a snapshot. The current data is saved
+/// first, and everyone is signed out afterwards.
+#[tauri::command]
+pub fn restore_backup(state: State<'_, AppState>, path: String) -> AppResult<BackupSummary> {
+    let session = state.sessions.require()?;
+    session.require_admin()?;
+    backup::restore(&state, &session, std::path::Path::new(&path))
 }
 
 // ---------------------------------------------------------------------------

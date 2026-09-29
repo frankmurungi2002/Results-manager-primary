@@ -37,18 +37,26 @@ current state in this repository and the milestone it belongs to.
 
 ## M0 — Stabilise what exists
 
-These are defects and gaps in code that already exists. They come first
-because each one breaks something the README already lists as built.
+These were defects and gaps in code that already existed. They come first
+because each one broke something the README already listed as built.
 
-| # | Item | Where | Why it matters |
+| # | Item | Status | Where |
 | --- | --- | --- | --- |
-| M0.1 | `SessionView` is sent with snake_case fields, but the interface reads camelCase (`isAdmin`, `fullName`, `classIds`, ...) | `src-tauri/src/security/session.rs:117`; fix with `#[serde(rename_all = "camelCase")]` | After sign-in every role flag is `undefined`, so routing and permissions in the interface break. Caught by `verify.py` |
-| M0.2 | The PLE projection query filters on `exams.kind`, a column that does not exist | `src-tauri/src/commands/insights.rs:132` | The command fails at runtime. Caught by `verify.py` |
-| M0.3 | Backups only run when someone clicks the button; nothing schedules them | `commands/system.rs` `run_backup`, `db/mod.rs` `backup_to` | Simplified FR-B12 (SRS 16.1) promises a *scheduled* copy, every 15 minutes and on close |
-| M0.4 | There is no way to restore a backup | none | A backup that cannot be restored by a headteacher is not a backup. Needed for FR-E4 scenario 1 |
-| M0.5 | CI: run `verify.py`, `cargo test`, `npm run typecheck` and `cargo clippy` on every push | `.github/workflows/` (new) | M0.1 and M0.2 reached `main` because nothing runs these automatically |
-| M0.6 | README says onboarding import is not built, but its backend exists | `README.md` | Keep the "what is built" table honest |
-| M0.7 | A first real Windows build and install of the app, checked by hand | `npm run app:build` | Nothing has been proven outside a dev machine yet |
+| M0.1 | `SessionView` was sent with snake_case fields, but the interface reads camelCase, so every role flag was `undefined` after sign-in | ✅ Fixed | `src-tauri/src/security/session.rs` |
+| M0.2 | The PLE projection query filtered on `exams.kind`, a column that does not exist | ✅ Fixed | `src-tauri/src/commands/insights.rs` |
+| M0.3 | Backups only ran when someone clicked the button | ✅ Every 15 minutes while data changes, and on close. Retention: newest 20, then one per day for 30 days, on both drives | `src-tauri/src/backup.rs` |
+| M0.4 | There was no way to restore a backup | ✅ Settings → Backup: preview, then restore; the replaced data is saved first | `src-tauri/src/backup.rs`, `src/screens/SettingsScreen.tsx` |
+| M0.5 | Nothing ran the checks automatically | ✅ CI runs `verify.py`, typecheck + build, and `cargo test` on every pull request | `.github/workflows/ci.yml` |
+| M0.6 | README said onboarding import was not built, but its backend exists | ✅ Fixed | `README.md` |
+| M0.7 | A first real Windows build and install, checked by hand, including the restore screen | ⬜ Needs a Windows PC | `npm run app:build` |
+
+Found and fixed along the way:
+
+- `npm run typecheck` checked nothing: `tsconfig.node.json` combined `composite`
+  with `noEmit`. Fixed, with the two type errors it had hidden.
+- Onboarding import mapped a "Parent Contact" column to the guardian's name
+  instead of their phone. Exact heading matches now win first, then the most
+  specific partial match.
 
 ---
 
@@ -81,7 +89,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | ID | Requirement | Status | Milestone | Notes |
 | --- | --- | --- | --- | --- |
 | FR-B0 | Hardware binding (PC lock) | ⏸ | M4 | SRS 16.4: licence key tied to institution ID instead |
-| FR-B1 | One login frame, role-based routing | ✅ (blocked by M0.1) | M0 | |
+| FR-B1 | One login frame, role-based routing | ✅ | — | |
 | FR-B2 | Institution name, logo, accent colour | ✅ | — | |
 | FR-B3 | Academic calendar: 3 terms, BOT/MID/EOT | ✅ | — | Opening a term closes the others |
 | FR-B4 | Up to three School Admins | ✅ | — | Enforced in the backend |
@@ -92,7 +100,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-B9 | Light, dark and match-Windows themes | ✅ | — | |
 | FR-B10 | Backup status; cloud controls marked "coming soon" | ✅ | — | |
 | FR-B11 | Subscription tracker, 7-day grace, then read-only mode | ⬜ | **M2** | SRS 16.6: build as specified from day one of paid use. Needs an offline-verifiable signed expiry in the activation key |
-| FR-B12 | Backup to a second drive | 🟡 simplified | M0 (schedule + restore), M3 (full mirror) | See M0.3 and M0.4. The full checksummed dual-SSD mirror (SRS 13) is M3 |
+| FR-B12 | Backup to a second drive | ✅ simplified | M3 (full mirror) | Scheduled snapshots and restore done in M0. The full checksummed dual-SSD mirror (SRS 13) is M3 |
 | FR-B13 | Software update channel with rollback | ⏸ | M3 | Manual, support-assisted reinstall until then. Tauri's updater plugin is the natural route |
 | FR-B14 | In-app feedback | ⬜ | M2 (email/WhatsApp link), M3 (queued form + screenshot) | |
 
@@ -129,7 +137,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-E1 | Rank classes by learners gained and lost | ⬜ | M2 | The data exists in `enrollments`; this is a query and a dashboard card |
 | FR-E2 | Append-only audit log | ✅ | — | Enforced by triggers |
 | FR-E3 | Promotion up the ladder; sealed yearly records; graduates | ⬜ | **M2** | Schema allows `promoted` and `graduated`. Needs: new academic year creation, bulk promote with per-learner exceptions (repeat, leave), sealing the old year, PLE candidate list |
-| FR-E4 | Disaster recovery, three scenarios | 🟡 | M0 (scenario 1), M4 (2 and 3) | Scenario 1 needs restore (M0.4). Scenarios 2 and 3 depend on FR-W7 and FR-W8 |
+| FR-E4 | Disaster recovery, three scenarios | 🟡 | M4 (2 and 3) | Scenario 1 works: install on a new PC, then restore from the second drive. Scenarios 2 and 3 depend on FR-W7 and FR-W8 |
 | FR-E5 | Multi-year subject trends | ⬜ | M4 | Needs two or more sealed years to be meaningful |
 | FR-E6 | Multi-year weekly-assignment trends | ⬜ | M4 | Needs FR-C12 |
 
@@ -175,7 +183,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 
 | Item | Status | Milestone | Notes |
 | --- | --- | --- | --- |
-| PLE projection | 🔌, broken query (M0.2) | M1 | Useful sales-demo material for P7 classes |
+| PLE projection | 🔌 | M1 | Useful sales-demo material for P7 classes |
 | Subject heatmap | 🔌 | M1 | |
 
 ### Non-functional requirements (SRS 14)
@@ -185,7 +193,7 @@ These are standing requirements, not milestones. Each needs a way to check it.
 | Ref | Requirement | Status | How we will check it |
 | --- | --- | --- | --- |
 | 14.1 | All daily work runs with no internet | ✅ by design | The app makes no network calls; keep it that way until FR-B11/FR-B13/FR-G8 add deliberate, optional ones |
-| 14.2 | No single hardware failure destroys history | 🟡 | M0.3 + M0.4 make this true for the pilot; the full mirror in M3 |
+| 14.2 | No single hardware failure destroys history | ✅ for the pilot | Scheduled snapshots to a second drive plus restore; the full mirror in M3 |
 | 14.3 | Scoped access, hashed credentials, encryption | ✅ | Argon2id, session guard, optional SQLCipher (`docs/SECURITY.md`) |
 | 14.4 | A headteacher sets it up in a few hours without a technician | ⬜ untested | Manual (FR-W10) plus a timed first-run test with a non-technical person in M1 |
 | 14.5 | Every write audited; nothing hard-deleted | ✅ | `verify.py` guarantees; add a check that every new command writes an audit row |
@@ -218,7 +226,7 @@ or consciously rejected.
 
 | # | Need | Why | Suggested milestone |
 | --- | --- | --- | --- |
-| X1 | **Restore from backup** in the interface, with a preview of what the backup contains and its date | The SRS specifies backing up but never restoring | M0 |
+| X1 | **Restore from backup** in the interface, with a preview of what the backup contains and its date | The SRS specifies backing up but never restoring | ✅ Done in M0 |
 | X2 | **Admin locked out**: recovery when the only School Admin forgets their password | A second admin can reset (FR-B4), but a school with one admin has no path. Options: a recovery code printed at setup, or support-issued reset tied to the activation key | M1 |
 | X3 | **Start a new academic year** (years, terms, exams created from the previous year's pattern) | FR-B3 covers the first year; nothing covers the second | M2, with FR-E3 |
 | X4 | **Save as PDF** for every document, not only paper | Schools email and WhatsApp report cards | M1 |
@@ -256,7 +264,7 @@ These block or shape specific rows above.
 
 Dependencies first, then the highest daily-use value:
 
-1. M0 items (everything else depends on sign-in and backups working)
+1. M0.7: a first Windows build, installed and tried by hand
 2. FR-G13 onboarding import screen (the pilot's data goes in first)
 3. FR-G9 daily attendance (cheap, daily use, feeds the report card)
 4. FR-C3 Excel marks upload, both layouts
