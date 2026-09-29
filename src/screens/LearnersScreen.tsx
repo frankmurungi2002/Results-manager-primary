@@ -4,8 +4,9 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Search, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
+import { FileSpreadsheet, Search, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
 
+import { ImportLearnersModal } from "../components/ImportLearnersModal";
 import { api } from "../lib/api";
 import type { ClassRow, StudentRow } from "../lib/types";
 import { useStore } from "../state/store";
@@ -40,6 +41,7 @@ export function LearnersScreen() {
 
   const [editing, setEditing] = useState<StudentRow | "new" | null>(null);
   const [dropping, setDropping] = useState<StudentRow | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const isAdmin = session?.isAdmin ?? false;
 
@@ -100,6 +102,15 @@ export function LearnersScreen() {
             </p>
           </div>
           <div className="page-actions">
+            {isAdmin && (
+              <Button
+                icon={<FileSpreadsheet size={15} />}
+                onClick={() => setImporting(true)}
+                disabled={classes.length === 0}
+              >
+                Import spreadsheet
+              </Button>
+            )}
             <Button
               variant="primary"
               icon={<UserPlus size={15} />}
@@ -200,7 +211,9 @@ export function LearnersScreen() {
             >
               {results !== null
                 ? "Try part of a name or a registration number."
-                : "Add learners one at a time, or import a spreadsheet once that is available."}
+                : isAdmin
+                  ? "Add learners one at a time, or import the school's existing spreadsheet."
+                  : "Add learners one at a time."}
             </EmptyState>
           ) : (
             <div className="table-wrap" style={{ maxHeight: "60vh" }}>
@@ -318,6 +331,16 @@ export function LearnersScreen() {
           </Card>
         )}
       </div>
+
+      <ImportLearnersModal
+        open={importing}
+        classes={classes}
+        onClose={() => setImporting(false)}
+        onImported={() => {
+          void loadRoster();
+          api.listClasses().then(setClasses).catch(reportError);
+        }}
+      />
 
       <StudentModal
         target={editing}
