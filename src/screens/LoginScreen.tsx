@@ -5,7 +5,7 @@ import { Eye, EyeOff, WifiOff } from "lucide-react";
 
 import { ApiError } from "../lib/api";
 import { useStore } from "../state/store";
-import { SealMark } from "../components/Logo";
+import { APP_NAME, BrandMark } from "../components/Logo";
 import { LoginIllustration } from "../components/LoginIllustration";
 import { Alert, Button } from "../components/ui";
 
@@ -47,11 +47,11 @@ export function LoginScreen() {
         <header className="login-bar">
           <span className="login-brand">
             <span className="login-brand-mark">
-              <SealMark size={17} />
+              <BrandMark size={34} />
             </span>
-            Results Manager
+            {APP_NAME}
           </span>
-          <span className="login-bar-title">{institutionName ?? "School Results Manager"}</span>
+          <span className="login-bar-title">{institutionName ?? "Welcome"}</span>
           <span className="login-bar-end">
             <span className="login-offline" title="Everything works without an internet connection">
               <WifiOff size={13} />

@@ -1,6 +1,6 @@
 # Roadmap
 
-The complete requirement register for Results Manager, with every requirement's
+The complete requirement register for Phantom School Manager, with every requirement's
 current state in this repository and the milestone it belongs to.
 
 - The **source of truth for what a requirement means** is [`SRS.md`](SRS.md).

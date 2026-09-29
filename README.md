@@ -1,10 +1,10 @@
-# Results Manager
+# Phantom School Manager
 
 Offline-first school management for Ugandan nursery and primary schools.
 
 > Marks in. Reports out. Offline.
 
-A school pays once a term, installs Results Manager on one Windows PC, and
+A school pays once a term, installs Phantom School Manager on one Windows PC, and
 produces every printed output a parent or a PLE administrator expects —
 registration records, mark sheets, class lists, registers and report cards —
 without ever needing a reliable internet connection.
