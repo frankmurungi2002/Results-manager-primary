@@ -1,0 +1,328 @@
+/* The premium look, applied to every shared component so all screens match
+   the dashboard: softer, rounder surfaces, pill badges and tabs, roomier
+   fields, and tables with a tinted header row.
+
+   Loaded after components.css and layout.css, so it refines them rather than
+   replacing them. Every value still resolves to a token. */
+
+/* --- Page head: the same scale as the dashboard greeting --------------- */
+
+.page-head {
+  align-items: flex-end;
+}
+
+.page-title {
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+.page-description {
+  margin-top: 4px;
+}
+
+.page-inner {
+  gap: var(--space-5);
+}
+
+/* --- Buttons ------------------------------------------------------------ */
+
+.btn {
+  height: 38px;
+  padding: 0 var(--space-4);
+  border-radius: 12px;
+}
+
+.btn-sm {
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: 10px;
+}
+
+.btn-lg {
+  height: 44px;
+  padding: 0 var(--space-6);
+  border-radius: 14px;
+}
+
+.btn svg {
+  flex: none;
+}
+
+/* Icon-only buttons: square, no padding (declared after the size rules
+   above, which would otherwise squeeze the icon). */
+.btn-icon {
+  width: 38px;
+  padding: 0;
+}
+
+.btn-icon.btn-sm {
+  width: 30px;
+  padding: 0;
+}
+
+.btn-primary {
+  box-shadow: 0 6px 14px -6px var(--accent);
+}
+
+.btn-secondary {
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--border-default);
+}
+
+/* --- Fields ------------------------------------------------------------- */
+
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+
+.input,
+.select {
+  height: 40px;
+  border-radius: 12px;
+  background-color: var(--bg-inset);
+  border-color: var(--border-subtle);
+}
+
+.textarea {
+  border-radius: 12px;
+  background-color: var(--bg-inset);
+  border-color: var(--border-subtle);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  background-color: var(--bg-surface);
+}
+
+.checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Cards: the dashboard card, everywhere ------------------------------ */
+
+.card {
+  border-radius: 18px;
+  box-shadow: var(--shadow-xs);
+}
+
+.card-header {
+  padding: 20px 20px 0;
+  border-bottom: 0;
+}
+
+.card-title {
+  font-size: var(--text-md);
+  letter-spacing: -0.01em;
+}
+
+.card-body {
+  padding: 16px 20px 20px;
+}
+
+.card-body-flush {
+  padding: 12px 12px 12px;
+}
+
+.card-footer {
+  padding: 14px 20px;
+  background: transparent;
+  border-radius: 0 0 18px 18px;
+}
+
+/* A card with no header keeps its full top padding. */
+.card > .card-body:first-child {
+  padding-top: 20px;
+}
+
+/* --- Stat tiles: rounder, like the dashboard's ---------------------------- */
+
+.stat {
+  padding: 18px 20px;
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 1.75rem;
+}
+
+/* --- Badges: pills ------------------------------------------------------ */
+
+.badge {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  letter-spacing: 0.01em;
+}
+
+.badge-neutral,
+.badge-accent,
+.badge-success,
+.badge-warning,
+.badge-danger,
+.badge-info {
+  border-color: transparent;
+}
+
+/* --- Tables: a tinted, rounded header row and soft row hover ------------- */
+
+.table-wrap {
+  border-radius: 14px;
+}
+
+.table thead th {
+  background: var(--bg-sunken);
+  border-bottom: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+
+.table thead th:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.table thead th:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+.table tbody td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.table tbody tr:hover td {
+  background: var(--bg-selected);
+}
+
+.table-compact tbody td {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+/* --- Alerts, empty states, progress ---------------------------------------- */
+
+.alert {
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.progress {
+  height: 6px;
+}
+
+/* --- Modal -------------------------------------------------------------- */
+
+.modal-backdrop {
+  background: rgba(20, 16, 40, 0.42);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(20, 16, 40, 0.28);
+}
+
+.modal-header {
+  padding: 24px 24px 12px;
+}
+
+.modal-body {
+  padding: 4px 24px 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  background: transparent;
+  border-radius: 0 0 24px 24px;
+}
+
+/* --- Toasts --------------------------------------------------------------- */
+
+.toast {
+  border-radius: 14px;
+  border-color: var(--border-subtle);
+  padding: 12px 16px;
+}
+
+/* --- Tabs become pills; the segmented control matches ------------------- */
+
+.tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-bottom: 0;
+  border-radius: 14px;
+  background: var(--bg-sunken);
+}
+
+.tab {
+  padding: 8px 16px;
+  margin-bottom: 0;
+  border-bottom: 0;
+  border-radius: 10px;
+  font-size: var(--text-sm);
+}
+
+.tab.is-active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.segmented {
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.segmented button {
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: 9px;
+}
+
+/* --- List rows ------------------------------------------------------------ */
+
+.list-row {
+  border-radius: 12px;
+}
+
+/* In dark mode the sunken tone is near-black; the raised tone reads softer. */
+[data-theme="dark"] .table thead th {
+  background: var(--bg-raised);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .table thead th {
+    background: var(--bg-raised);
+  }
+}

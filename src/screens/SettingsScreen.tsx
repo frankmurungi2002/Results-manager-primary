@@ -329,7 +329,7 @@ function SchoolTab() {
         </div>
       </Card>
 
-      <Card title="Appearance" subtitle="FR-B9 — applies to this computer only">
+      <Card title="Appearance" subtitle="Applies to this computer only">
         <div className="row-between">
           <span>Theme</span>
           <Segmented
