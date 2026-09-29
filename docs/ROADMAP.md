@@ -167,7 +167,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G10 | Full data export to Excel/CSV | ⬜ | M2 | `rust_xlsxwriter` is already a dependency |
 | FR-G11 | Comment bank | ✅ | — | |
 | FR-G12 | Bulk print with skipped-learner summary | ✅ (class scope) | M2 adds stream and whole-school scope, with progress | |
-| FR-G13 | Onboarding import of learners and staff | 🔌 | **M1** | Learner import backend is built (two-pass, validated). Missing: the screen, and staff import |
+| FR-G13 | Onboarding import of learners and staff | 🟡 | **M1** (staff) | Learner import done: Learners → Import spreadsheet (choose file, match columns, check every row, import). Missing: staff import, and offering it from the setup wizard |
 | FR-G14 | Discipline and conduct log | ⬜ | M3 | |
 | FR-G15 | Boarding module (toggle) | ⬜ | M4 | Only when a boarding school signs up |
 | FR-G16 | Student and staff ID cards | ⬜ | **M1** | A founding requirement; single and batch, PVC size and A4 sheet |
@@ -265,7 +265,7 @@ These block or shape specific rows above.
 Dependencies first, then the highest daily-use value:
 
 1. M0.7: a first Windows build, installed and tried by hand
-2. FR-G13 onboarding import screen (the pilot's data goes in first)
+2. ~~FR-G13 learner import screen~~ (done); staff import still to do
 3. FR-G9 daily attendance (cheap, daily use, feeds the report card)
 4. FR-C3 Excel marks upload, both layouts
 5. X4/X5 PDF and print layout on real printers
