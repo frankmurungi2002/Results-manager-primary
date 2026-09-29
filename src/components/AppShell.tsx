@@ -23,7 +23,7 @@ import {
 
 import { api } from "../lib/api";
 import { type ScreenId, useStore } from "../state/store";
-import { SealMark } from "./Logo";
+import { APP_NAME, BrandMark } from "./Logo";
 import { Badge, Button, cx, initials } from "./ui";
 
 interface NavEntry {
@@ -140,14 +140,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="app-card">
       <nav className="sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-mark">
-            {logo ? <img src={logo} alt="" /> : <SealMark size={18} />}
+          <div className={logo ? "sidebar-mark" : "sidebar-mark sidebar-mark-brand"}>
+            {logo ? <img src={logo} alt="" /> : <BrandMark size={36} />}
           </div>
           <div className="sidebar-brand-text">
             <div className="sidebar-brand-name">
-              {institution?.name ?? "Results Manager"}
+              {institution?.name ?? APP_NAME}
             </div>
-            <div className="sidebar-brand-meta">Results Manager</div>
+            <div className="sidebar-brand-meta">{APP_NAME}</div>
           </div>
         </div>
 
@@ -181,7 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="sidebar-foot">
-          <div className="sidebar-note" title={`Results Manager version ${appVersion}`}>
+          <div className="sidebar-note" title={`${APP_NAME} version ${appVersion}`}>
             <span className="sidebar-version-full">Version {appVersion}</span>
             <span className="sidebar-version-short">v{appVersion}</span>
           </div>
@@ -289,7 +289,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Sign out
               </Button>
               <p className="subtle" style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>
-                Results Manager {appVersion}
+                {APP_NAME} {appVersion}
               </p>
             </div>
           </div>

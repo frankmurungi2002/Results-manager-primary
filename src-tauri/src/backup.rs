@@ -271,7 +271,7 @@ pub struct BackupSummary {
 
 pub fn inspect(path: &Path) -> AppResult<BackupSummary> {
     let not_a_backup = || {
-        AppError::validation("That file is not a Results Manager backup, or it is damaged.")
+        AppError::validation("That file is not a Phantom School Manager backup, or it is damaged.")
     };
 
     if !path.is_file() {
@@ -332,7 +332,7 @@ pub fn restore(state: &AppState, session: &Session, path: &Path) -> AppResult<Ba
     let summary = inspect(path)?;
     if !summary.compatible {
         return Err(AppError::validation(
-            "That backup was made by a newer version of Results Manager. Update RM on this computer first.",
+            "That backup was made by a newer version of Phantom School Manager. Update it on this computer first.",
         ));
     }
 

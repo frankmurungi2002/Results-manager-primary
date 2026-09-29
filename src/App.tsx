@@ -41,7 +41,7 @@ export default function App() {
   if (!booted) {
     return (
       <div className="auth-panel">
-        <Loading label="Starting Results Manager" />
+        <Loading label="Starting Phantom School Manager" />
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function App() {
     return (
       <div className="auth-panel">
         <div className="auth-form">
-          <Alert tone="danger" title="Results Manager could not start">
+          <Alert tone="danger" title="Phantom School Manager could not start">
             {bootError}
           </Alert>
           <Button variant="primary" block onClick={() => window.location.reload()}>

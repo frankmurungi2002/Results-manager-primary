@@ -1,4 +1,4 @@
-//! Results Manager — offline-first school management for Ugandan nursery and
+//! Phantom School Manager — offline-first school management for Ugandan nursery and
 //! primary schools.
 //!
 //! The backend owns everything that matters: the database, who is signed in,
@@ -144,7 +144,7 @@ pub fn run() {
             commands::reports::get_fees_rule,
         ])
         .build(tauri::generate_context!())
-        .expect("Results Manager failed to start")
+        .expect("Phantom School Manager failed to start")
         .run(|app, event| {
             // A last snapshot on the way out, if anything changed since the
             // scheduled one (SRS 16.1: every fifteen minutes and on close).

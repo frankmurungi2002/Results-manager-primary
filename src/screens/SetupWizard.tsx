@@ -221,7 +221,7 @@ export function SetupWizard() {
     <div style={{ height: "100%", overflowY: "auto", background: "var(--bg-canvas)" }}>
       <div className="wizard">
         <div>
-          <h1 className="page-title">Set up Results Manager</h1>
+          <h1 className="page-title">Set up Phantom School Manager</h1>
           <p className="page-description">
             Four short steps. Everything here can be changed later from
             Settings — nothing you choose now is permanent.

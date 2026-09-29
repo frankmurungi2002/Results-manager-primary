@@ -647,7 +647,7 @@ pub async fn send_test_sms(state: State<'_, AppState>, phone: String) -> AppResu
         let conn = state.db.lock();
         let settings = sms::load_settings(&conn)?;
         let body = format!(
-            "{}: this is a test message from Results Manager. SMS is working.",
+            "{}: this is a test message from Phantom School Manager. SMS is working.",
             sms::signature(&conn)?
         );
         (settings, body)

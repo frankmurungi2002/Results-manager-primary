@@ -935,7 +935,7 @@ function RestoreCard() {
   function chooseFile() {
     openDialog({
       multiple: false,
-      filters: [{ name: "Results Manager backup", extensions: ["rmdb"] }],
+      filters: [{ name: "Phantom School Manager backup", extensions: ["rmdb"] }],
     })
       .then((path) => {
         if (typeof path === "string") inspect(path);
@@ -1043,7 +1043,7 @@ function RestoreCard() {
         {preview && (
           <div className="stack">
             {!preview.compatible && (
-              <Alert tone="danger" title="Made by a newer version of Results Manager">
+              <Alert tone="danger" title="Made by a newer version of Phantom School Manager">
                 Update RM on this computer before restoring this backup.
               </Alert>
             )}

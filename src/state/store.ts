@@ -117,7 +117,7 @@ export const useStore = create<AppStore>((set, get) => ({
         bootError:
           error instanceof ApiError
             ? error.message
-            : "Results Manager could not start.",
+            : "Phantom School Manager could not start.",
       });
     }
   },

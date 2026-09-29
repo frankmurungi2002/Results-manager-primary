@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Goes to the dev console and, in a packaged build, to the webview log.
-    console.error("Results Manager hit an unrecoverable error:", error, info);
+    console.error("Phantom School Manager hit an unrecoverable error:", error, info);
     this.setState({ componentStack: info.componentStack ?? null });
   }
 
@@ -98,7 +98,7 @@ export class ErrorBoundary extends Component<Props, State> {
               icon={<RotateCcw size={15} />}
               onClick={() => window.location.reload()}
             >
-              Reload Results Manager
+              Reload Phantom School Manager
             </Button>
             <Button
               icon={<Copy size={15} />}
@@ -112,7 +112,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
           <p className="field-hint">
             Send the details above to whoever supports your school's copy of
-            Results Manager. They say exactly which screen failed and why.
+            Phantom School Manager. They say exactly which screen failed and why.
           </p>
         </div>
       </div>

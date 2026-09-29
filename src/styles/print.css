@@ -1446,7 +1446,9 @@
   border: 1.5px dashed var(--rule);
   border-radius: 50%;
   aspect-ratio: 1;
-  font-size: 7.5pt;
+  font-size: 7pt;
+  line-height: 1.3;
+  text-align: center;
   color: var(--ink-faint);
   text-transform: uppercase;
   letter-spacing: 0.08em;

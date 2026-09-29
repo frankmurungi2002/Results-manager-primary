@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Results Manager",
+  "productName": "Phantom School Manager",
   "version": "0.1.0",
   "identifier": "ug.resultsmanager.desktop",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Results Manager",
+        "title": "Phantom School Manager",
         "width": 1366,
         "height": 768,
         "minWidth": 1100,
@@ -36,11 +36,11 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
-    "publisher": "Results Manager",
-    "copyright": "Results Manager",
+    "publisher": "Phantom School Manager",
+    "copyright": "Phantom School Manager",
     "category": "Education",
     "shortDescription": "Offline school management for Ugandan schools",
-    "longDescription": "Results Manager registers learners and staff, captures marks, and produces every printed document a parent or a PLE administrator expects to see — without depending on an internet connection.",
+    "longDescription": "Phantom School Manager registers learners and staff, captures marks, and produces every printed document a parent or a PLE administrator expects to see — without depending on an internet connection.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
