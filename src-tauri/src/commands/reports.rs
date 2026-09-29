@@ -1950,7 +1950,7 @@ pub fn get_fees_rule(state: State<'_, AppState>) -> AppResult<bool> {
 
 /// Minimal base64 encoder. A dependency-free few lines beats pulling a crate in
 /// for the one place RM needs it (inlining a logo or a photo into a document).
-fn base64_encode(bytes: &[u8]) -> String {
+pub(crate) fn base64_encode(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] =
         b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

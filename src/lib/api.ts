@@ -141,6 +141,9 @@ export const api = {
   setInstitutionLogo: (png: number[] | null) =>
     call<void>("set_institution_logo", { png }),
   getInstitutionLogo: () => call<number[] | null>("get_institution_logo"),
+  getLoginImages: () => call<(string | null)[]>("get_login_images"),
+  setLoginImage: (slot: number, path: string | null) =>
+    call<void>("set_login_image", { slot, path }),
   getTheme: () => call<string>("get_theme"),
   setTheme: (theme: string) => call<void>("set_theme", { theme }),
   searchAuditLog: (query?: string, limit = 100, offset = 0) =>

@@ -338,6 +338,8 @@ function SchoolTab() {
         </div>
       </Card>
 
+      <LoginPicturesCard />
+
       <ReportSettingsCard />
 
       <Card title="Appearance" subtitle="Applies to this computer only">
@@ -355,6 +357,87 @@ function SchoolTab() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** The four pictures that rotate on the sign-in screen. */
+function LoginPicturesCard() {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+  const [photos, setPhotos] = useState<(string | null)[] | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const load = () => api.getLoginImages().then(setPhotos).catch(reportError);
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function choose(slot: number) {
+    try {
+      const path = await openDialog({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Picture", extensions: ["png", "jpg", "jpeg"] }],
+      });
+      if (typeof path !== "string") return;
+      setBusy(slot);
+      await api.setLoginImage(slot, path);
+      toast("success", "Sign-in picture saved.");
+      await load();
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!photos) return null;
+  const captions = [
+    "Every learner, every mark",
+    "Registers and timetables",
+    "From Baby Class to PLE",
+    "Report cards in minutes",
+  ];
+
+  return (
+    <Card
+      title="Sign-in pictures"
+      subtitle="Four pictures rotate on the sign-in screen. Use your own photos, or keep the built-in pictures."
+    >
+      <div className="login-pics">
+        {photos.map((photo, index) => (
+          <div key={index} className="login-pic">
+            <div className="login-pic-frame">
+              {photo ? <img src={photo} alt="" /> : <span>Built-in picture</span>}
+            </div>
+            <div className="login-pic-caption">{captions[index]}</div>
+            <div className="row" style={{ gap: 4 }}>
+              <Button size="sm" loading={busy === index + 1} onClick={() => void choose(index + 1)}>
+                {photo ? "Change" : "Choose photo"}
+              </Button>
+              {photo && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    api
+                      .setLoginImage(index + 1, null)
+                      .then(load)
+                      .catch(reportError)
+                  }
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="field-hint" style={{ marginTop: "var(--space-3)" }}>
+        PNG or JPEG up to 4 MB. A tall photo (portrait) fills the panel best.
+      </p>
+    </Card>
   );
 }
 

@@ -60,6 +60,8 @@ pub fn run() {
             commands::system::update_institution,
             commands::system::set_institution_logo,
             commands::system::get_institution_logo,
+            commands::system::get_login_images,
+            commands::system::set_login_image,
             commands::system::get_theme,
             commands::system::set_theme,
             commands::system::search_audit_log,
