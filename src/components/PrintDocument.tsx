@@ -12,8 +12,29 @@
  * pipeline, so the component gives no bypass to use.
  */
 
-import type { ReactNode } from "react";
-import { Printer } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import {
+  Bath,
+  BookOpen,
+  Calculator,
+  Ear,
+  HandHeart,
+  HeartPulse,
+  type LucideIcon,
+  MessageCircle,
+  Mic,
+  Music,
+  Palette,
+  PenLine,
+  Printer,
+  Puzzle,
+  Shapes,
+  Smile,
+  Star,
+  Toilet,
+  Users,
+  Volleyball,
+} from "lucide-react";
 
 import type {
   Branding,
@@ -21,6 +42,7 @@ import type {
   DocumentEnvelope,
   Footer,
   ReportCard,
+  Rating,
   ReportCardBatch,
 } from "../lib/types";
 import { Button } from "./ui";
@@ -35,6 +57,10 @@ interface SheetProps {
   title: string;
   subtitle?: ReactNode;
   landscape?: boolean;
+  /** The nursery card's brighter layout. Branding and footer are unchanged. */
+  variant?: "standard" | "nursery";
+  /** Drawn at the header's right edge, e.g. the learner's photo. */
+  aside?: ReactNode;
   pageNumber: number;
   pageCount: number;
   children: ReactNode;
@@ -46,6 +72,8 @@ function Sheet({
   title,
   subtitle,
   landscape = false,
+  variant = "standard",
+  aside,
   pageNumber,
   pageCount,
   children,
@@ -54,8 +82,19 @@ function Sheet({
     .filter(Boolean)
     .join("  •  ");
 
+  const className = [
+    "sheet",
+    landscape && "sheet-landscape",
+    variant === "nursery" && "sheet-nursery",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <article className={landscape ? "sheet sheet-landscape" : "sheet"}>
+    <article
+      className={className}
+      style={{ "--doc-accent": branding.accentColor } as CSSProperties}
+    >
       {/* --- Institution branding. Never anything else. --- */}
       <header className="doc-head">
         {branding.logoDataUrl ? (
@@ -70,8 +109,10 @@ function Sheet({
           {contact && <div className="doc-contact">{contact}</div>}
         </div>
 
-        {/* Balances the logo so the name stays optically centred. */}
-        <div className="doc-logo-placeholder" style={{ visibility: "hidden" }} />
+        {aside ?? (
+          // Balances the logo so the name stays optically centred.
+          <div className="doc-logo-placeholder" style={{ visibility: "hidden" }} />
+        )}
       </header>
 
       <div className="doc-title">{title}</div>
@@ -130,6 +171,24 @@ export function ReportCardSheets({
 }) {
   const { branding, footer, body } = envelope;
   const total = body.cards.length;
+
+  if (body.levelKind === "nursery") {
+    return (
+      <>
+        {body.cards.map((card, index) => (
+          <NurseryReportSheet
+            key={card.studentId}
+            branding={branding}
+            footer={footer}
+            batch={body}
+            card={card}
+            pageNumber={index + 1}
+            pageCount={total}
+          />
+        ))}
+      </>
+    );
+  }
 
   return (
     <>
@@ -273,6 +332,267 @@ function ReportCardSheet({
 
       <div className="rc-signature">Headteacher's signature &amp; school stamp</div>
     </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-D1 — the nursery report card
+// ---------------------------------------------------------------------------
+
+/** The five learning areas of the national ECCE framework. */
+const LEARNING_AREAS: Record<string, string> = {
+  "1": "Taking care of myself for proper growth and development",
+  "2": "Interacting, exploring, knowing and using my environment",
+  "3": "Relating with others in an acceptable way",
+  "4": "Developing and using my language appropriately",
+  "5": "Developing and using mathematical concepts in my day-to-day life",
+};
+
+function learningAreaNote(name: string): string | null {
+  const match = /learning\s*area\s*(\d)/i.exec(name);
+  return match ? LEARNING_AREAS[match[1]!] ?? null : null;
+}
+
+const RATING_LABEL: Record<Rating, string> = {
+  excellent: "Excellent",
+  very_good: "Very good",
+  good: "Good",
+  fair: "Fair",
+  needs_help: "Needs help",
+};
+
+const RATING_ORDER: Rating[] = ["excellent", "very_good", "good", "fair", "needs_help"];
+
+/** A picture for each activity, matched on its name. */
+const ACTIVITY_ICONS: [RegExp, LucideIcon][] = [
+  [/writ/i, PenLine],
+  [/listen/i, Ear],
+  [/read/i, BookOpen],
+  [/speak|talk|oral/i, MessageCircle],
+  [/draw|colou?r|paint|art/i, Palette],
+  [/game|sport|play|physical/i, Volleyball],
+  [/rhyme|stor|poem/i, Mic],
+  [/music|sing|song|danc/i, Music],
+  [/toilet/i, Toilet],
+  [/health|hygien|clean|bath/i, HeartPulse],
+  [/count|number|math/i, Calculator],
+  [/shar|friend|relat/i, HandHeart],
+  [/behav|conduct|manner/i, Smile],
+  [/attend/i, Users],
+  [/shape|puzzle|build/i, Puzzle],
+  [/wash/i, Bath],
+  [/craft|creat/i, Shapes],
+];
+
+function activityIcon(name: string): LucideIcon {
+  return ACTIVITY_ICONS.find(([pattern]) => pattern.test(name))?.[1] ?? Star;
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(`${iso.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function NurseryReportSheet({
+  branding,
+  footer,
+  batch,
+  card,
+  pageNumber,
+  pageCount,
+}: {
+  branding: Branding;
+  footer: Footer;
+  batch: ReportCardBatch;
+  card: ReportCard;
+  pageNumber: number;
+  pageCount: number;
+}) {
+  const ratings = new Map(card.activities.map((entry) => [entry.activity, entry.rating]));
+  const absent =
+    card.daysPresent !== null && card.daysPossible !== null
+      ? card.daysPossible - card.daysPresent
+      : null;
+  const className = card.streamName
+    ? `${card.className} — ${card.streamName}`
+    : card.className;
+
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      variant="nursery"
+      title={batch.isFinal ? "Learner's Assessment Report" : "Learner's Progress Report"}
+      subtitle={`${batch.termName}  •  ${batch.academicYear}`}
+      pageNumber={pageNumber}
+      pageCount={pageCount}
+      aside={
+        card.photoDataUrl ? (
+          <img className="nr-photo" src={card.photoDataUrl} alt="" />
+        ) : (
+          <div className="nr-photo nr-photo-empty">Photo</div>
+        )
+      }
+    >
+      <div className="nr-learner">
+        <NField label="Name" value={card.fullName} wide />
+        <NField label="Reg. No." value={card.regNumber} />
+        <NField label="Class" value={className} />
+        <NField
+          label="Sex"
+          value={card.gender === "M" ? "Male" : card.gender === "F" ? "Female" : "—"}
+        />
+        <NField label="Days attended" value={card.daysPresent?.toString() ?? "—"} />
+        <NField label="Days absent" value={absent?.toString() ?? "—"} />
+        <NField label="Days in term" value={card.daysPossible?.toString() ?? "—"} />
+      </div>
+
+      <div className="nr-columns">
+        <section className="nr-panel">
+          <h3 className="nr-heading">Achievement in the learning areas</h3>
+          <table className="nr-table">
+            <thead>
+              <tr>
+                <th className="left">Learning area</th>
+                <th>Score</th>
+                <th className="left">Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              {card.subjects.map((subject) => {
+                const note = learningAreaNote(subject.name);
+                return (
+                  <tr key={subject.classSubjectId}>
+                    <td className="left">
+                      <div className="nr-area">{subject.name}</div>
+                      {note && <div className="nr-area-note">{note}</div>}
+                    </td>
+                    <td className="nr-score">
+                      {subject.termScore === null ? "—" : round(subject.termScore)}
+                      <span className="nr-outof">/{subject.maxScore}</span>
+                    </td>
+                    <td className="left nr-remark">
+                      {subject.termScore === null ? "" : subject.gradeLabel}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div className="nr-totals">
+            <div>
+              <span>Total</span>
+              <strong>{round(card.totalMax)}</strong>
+            </div>
+            <div>
+              <span>Scored</span>
+              <strong>{card.totalScore === null ? "—" : round(card.totalScore)}</strong>
+            </div>
+            <div>
+              <span>Position</span>
+              <strong>
+                {card.position === null ? "—" : `${card.position} of ${card.classSize}`}
+              </strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="nr-panel">
+          <h3 className="nr-heading">Performance in learning activities</h3>
+          <ul className="nr-activities">
+            {batch.activityNames.map((activity, index) => {
+              const Icon = activityIcon(activity);
+              const rating = ratings.get(activity);
+              return (
+                <li key={activity} className="nr-activity">
+                  <span className={`nr-activity-icon tint-${index % 6}`}>
+                    <Icon size={15} strokeWidth={2.2} />
+                  </span>
+                  <span className="nr-activity-name">{activity}</span>
+                  {rating ? (
+                    <span className={`nr-rating rating-${rating}`}>
+                      <RatingStars rating={rating} />
+                      {RATING_LABEL[rating]}
+                    </span>
+                  ) : (
+                    <span className="nr-rating nr-rating-blank" />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
+
+      <table className="nr-comments">
+        <tbody>
+          <tr>
+            <th>Class Teacher's report</th>
+            <td>{card.classTeacherComment ?? ""}</td>
+            <td className="nr-sign">
+              {card.classTeacherName ?? ""}
+              <span>Signature</span>
+            </td>
+          </tr>
+          <tr>
+            <th>Behaviour and cleanliness</th>
+            <td colSpan={2}>{card.conductComment ?? ""}</td>
+          </tr>
+          <tr>
+            <th>Headteacher's comment</th>
+            <td>{card.headTeacherComment ?? ""}</td>
+            <td className="nr-sign">
+              {batch.headTeacherName ?? ""}
+              <span>Signature</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div className="nr-foot">
+        <div className="nr-foot-facts">
+          <div>
+            <span>Date of issue</span>
+            <strong>{footer.printedOn}</strong>
+          </div>
+          <div>
+            <span>Next term begins</span>
+            <strong>{formatDate(batch.nextTermBegins) || "\u00a0"}</strong>
+          </div>
+          <div className="nr-requirements">
+            <span>School requirements</span>
+            <strong>{batch.requirements ?? "\u00a0"}</strong>
+          </div>
+        </div>
+        <div className="nr-stamp">School stamp</div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Stars as well as a word, so a rating reads without colour. */
+function RatingStars({ rating }: { rating: Rating }) {
+  const filled = RATING_ORDER.length - RATING_ORDER.indexOf(rating);
+  return (
+    <span className="nr-stars" aria-hidden="true">
+      {"★".repeat(filled)}
+      <span className="nr-stars-empty">{"★".repeat(RATING_ORDER.length - filled)}</span>
+    </span>
+  );
+}
+
+function NField({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={wide ? "nr-field nr-field-wide" : "nr-field"}>
+      <span className="nr-field-label">{label}</span>
+      <span className="nr-field-value">{value}</span>
+    </div>
   );
 }
 

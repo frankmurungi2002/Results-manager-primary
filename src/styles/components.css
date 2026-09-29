@@ -719,3 +719,23 @@
   color: var(--text-primary);
   box-shadow: var(--shadow-xs);
 }
+
+/* Nursery activity ratings in the comments window */
+
+.rating-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.rating-name {
+  font-weight: var(--weight-medium);
+}

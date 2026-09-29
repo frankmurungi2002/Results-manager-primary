@@ -51,14 +51,12 @@ pub const DEFAULT_SUBJECTS: &[DefaultSubject] = &[
     DefaultSubject { code: "KIS",  name: "Kiswahili",         is_core: false, levels: &["primary"] },
     DefaultSubject { code: "COMP", name: "Computer Studies",  is_core: false, levels: &["primary"] },
     DefaultSubject { code: "PE",   name: "Physical Education", is_core: false, levels: &["primary"] },
-    // Nursery learning areas.
-    DefaultSubject { code: "LANG", name: "Language Development", is_core: true,  levels: &["nursery"] },
-    DefaultSubject { code: "NUM",  name: "Number Work",          is_core: true,  levels: &["nursery"] },
-    DefaultSubject { code: "READ", name: "Reading",              is_core: true,  levels: &["nursery"] },
-    DefaultSubject { code: "WRIT", name: "Writing",              is_core: true,  levels: &["nursery"] },
-    DefaultSubject { code: "ENV",  name: "Environment",          is_core: false, levels: &["nursery"] },
-    DefaultSubject { code: "ART",  name: "Art and Craft",        is_core: false, levels: &["nursery"] },
-    DefaultSubject { code: "MUS",  name: "Music and Movement",   is_core: false, levels: &["nursery"] },
+    // Nursery: the five learning areas of the national ECCE framework.
+    DefaultSubject { code: "LA1", name: "Learning Area 1", is_core: true, levels: &["nursery"] },
+    DefaultSubject { code: "LA2", name: "Learning Area 2", is_core: true, levels: &["nursery"] },
+    DefaultSubject { code: "LA3", name: "Learning Area 3", is_core: true, levels: &["nursery"] },
+    DefaultSubject { code: "LA4", name: "Learning Area 4", is_core: true, levels: &["nursery"] },
+    DefaultSubject { code: "LA5", name: "Learning Area 5", is_core: true, levels: &["nursery"] },
 ];
 
 /// FR-B3: three terms a year, with BOT / MID / EOT each term.
