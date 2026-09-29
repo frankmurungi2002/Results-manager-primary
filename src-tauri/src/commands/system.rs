@@ -315,6 +315,9 @@ pub struct DashboardSummary {
     pub marks_expected_this_term: i64,
     pub last_backup_at: Option<String>,
     pub recent_activity: Vec<AuditEntry>,
+    /// FR-G22: learners out on a pass-out right now, and those overdue.
+    pub pass_outs_out: i64,
+    pub overdue_pass_outs: Vec<crate::commands::passouts::OverduePassOut>,
 }
 
 #[tauri::command]
@@ -431,6 +434,12 @@ pub fn dashboard_summary(state: State<'_, AppState>) -> AppResult<DashboardSumma
         marks_expected_this_term: marks_expected,
         last_backup_at: repo::get_setting(&conn, "backup.last_at")?,
         recent_activity,
+        pass_outs_out: conn.query_row(
+            "SELECT COUNT(*) FROM pass_outs WHERE status = 'out'",
+            [],
+            |row| row.get(0),
+        )?,
+        overdue_pass_outs: crate::commands::passouts::overdue(&conn)?,
     })
 }
 

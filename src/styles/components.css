@@ -759,3 +759,104 @@
   height: 100%;
   object-fit: cover;
 }
+
+/* An input with a leading icon */
+
+.input-icon {
+  position: relative;
+}
+
+.input-icon > svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.input-icon > .input {
+  padding-left: 36px;
+}
+
+/* An inline text button, for a link inside a sentence */
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Pass-out window */
+
+.po-matches {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.po-match {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.po-match:first-child {
+  border-top: 0;
+}
+
+.po-match:hover {
+  background: var(--bg-selected);
+}
+
+.po-picked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+.po-sms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+}
+
+.po-preview {
+  display: flex;
+  gap: var(--space-3);
+  padding: 12px 14px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--bg-sunken);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.po-preview > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}

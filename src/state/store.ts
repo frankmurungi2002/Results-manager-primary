@@ -10,6 +10,7 @@ export type ScreenId =
   | "marks"
   | "classes"
   | "learners"
+  | "passouts"
   | "reports"
   | "staff"
   | "calendar"

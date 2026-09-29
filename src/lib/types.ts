@@ -568,6 +568,90 @@ export interface DashboardSummary {
   marksExpectedThisTerm: number;
   lastBackupAt: string | null;
   recentActivity: AuditEntry[];
+  passOutsOut: number;
+  overduePassOuts: OverduePassOut[];
+}
+
+// --- Pass-outs (FR-G22) and SMS (FR-G8) --------------------------------------
+
+export type PassOutReason = "sick" | "appointment" | "family" | "permission" | "other";
+export type SmsStatus = "queued" | "sent" | "failed";
+
+export interface PassOutRow {
+  id: string;
+  number: number;
+  studentId: string;
+  studentName: string;
+  regNumber: string;
+  className: string;
+  reasonKind: PassOutReason;
+  reason: string | null;
+  destination: string | null;
+  pickedUpBy: string | null;
+  pickedUpRelationship: string | null;
+  pickedUpPhone: string | null;
+  timeOut: string;
+  expectedBack: string | null;
+  returnedAt: string | null;
+  status: "out" | "returned";
+  guardianPhone: string | null;
+  smsStatus: SmsStatus | null;
+  smsError: string | null;
+  returnSmsStatus: SmsStatus | null;
+  issuedByName: string | null;
+  overdue: boolean;
+}
+
+export interface OverduePassOut {
+  id: string;
+  studentName: string;
+  className: string;
+  expectedBack: string;
+}
+
+export interface PassOutSlip {
+  number: number;
+  studentName: string;
+  regNumber: string;
+  className: string;
+  photoDataUrl: string | null;
+  reasonLabel: string;
+  reason: string | null;
+  destination: string | null;
+  pickedUpBy: string | null;
+  pickedUpRelationship: string | null;
+  pickedUpPhone: string | null;
+  timeOut: string;
+  expectedBack: string | null;
+  issuedByName: string | null;
+  guardianTexted: boolean;
+}
+
+export interface SmsSettings {
+  provider: "off" | "africastalking" | "egosms";
+  username: string;
+  apiKey: string;
+  senderId: string;
+  signature: string;
+}
+
+export interface SmsOutboxRow {
+  id: string;
+  toPhone: string;
+  body: string;
+  kind: string;
+  status: SmsStatus;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  sentAt: string | null;
+}
+
+export interface FlushResult {
+  sent: number;
+  failed: number;
+  stillQueued: number;
+  skippedReason: string | null;
 }
 
 // --- Mark anomaly detection ------------------------------------------------

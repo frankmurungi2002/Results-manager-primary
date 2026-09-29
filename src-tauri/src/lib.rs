@@ -13,6 +13,7 @@ pub mod db;
 pub mod domain;
 pub mod error;
 pub mod security;
+pub mod sms;
 pub mod state;
 
 use tauri::Manager;
@@ -39,6 +40,7 @@ pub fn run() {
 
             app.manage(state);
             backup::spawn_scheduler(app.handle().clone());
+            sms::spawn_scheduler(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -123,6 +125,16 @@ pub fn run() {
             commands::reports::save_report_comment,
             commands::reports::get_report_comment,
             commands::reports::build_id_cards,
+            commands::reports::build_pass_out_slip,
+            // --- Pass-outs (FR-G22) and SMS (FR-G8) ------------------------
+            commands::passouts::list_pass_outs,
+            commands::passouts::create_pass_out,
+            commands::passouts::mark_pass_out_returned,
+            commands::passouts::get_sms_settings,
+            commands::passouts::save_sms_settings,
+            commands::passouts::list_sms_outbox,
+            commands::passouts::send_queued_sms,
+            commands::passouts::send_test_sms,
             commands::teachers::set_staff_photo,
             commands::teachers::get_staff_photo,
             commands::reports::get_report_settings,

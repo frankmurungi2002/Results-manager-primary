@@ -24,6 +24,8 @@ import type {
   BackupSummary,
   FeatureFlags,
   Institution,
+  SmsOutboxRow,
+  SmsSettings,
 } from "../lib/types";
 import { useStore } from "../state/store";
 import {
@@ -34,6 +36,7 @@ import {
   Loading,
   Modal,
   Segmented,
+  SelectInput,
   Switch,
   TextArea,
   TextInput,
@@ -42,7 +45,7 @@ import {
   relativeTime,
 } from "../components/ui";
 
-type Tab = "school" | "features" | "backup" | "account";
+type Tab = "school" | "features" | "sms" | "backup" | "account";
 
 const ACCENTS = [
   "#4F63D2",
@@ -65,6 +68,7 @@ export function SettingsScreen() {
   const tabs: { id: Tab; label: string; adminOnly: boolean }[] = [
     { id: "school", label: "School", adminOnly: true },
     { id: "features", label: "Optional features", adminOnly: true },
+    { id: "sms", label: "SMS", adminOnly: true },
     { id: "backup", label: "Backup", adminOnly: true },
     { id: "account", label: "My account", adminOnly: false },
   ];
@@ -102,6 +106,7 @@ export function SettingsScreen() {
 
         {tab === "school" && isAdmin && <SchoolTab />}
         {tab === "features" && isAdmin && <FeaturesTab />}
+        {tab === "sms" && isAdmin && <SmsTab />}
         {tab === "backup" && isAdmin && <BackupTab />}
         {tab === "account" && <AccountTab />}
       </div>
@@ -429,6 +434,224 @@ function ReportSettingsCard() {
         />
       </div>
     </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-G8 — SMS to guardians
+// ---------------------------------------------------------------------------
+
+function SmsTab() {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+
+  const [settings, setSettings] = useState<SmsSettings | null>(null);
+  const [outbox, setOutbox] = useState<SmsOutboxRow[]>([]);
+  const [testPhone, setTestPhone] = useState("");
+  const [busy, setBusy] = useState<"save" | "test" | "send" | null>(null);
+
+  const loadOutbox = () => api.listSmsOutbox().then(setOutbox).catch(reportError);
+
+  useEffect(() => {
+    api.getSmsSettings().then(setSettings).catch(reportError);
+    void loadOutbox();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportError]);
+
+  if (!settings) return <Loading />;
+
+  const set = (patch: Partial<SmsSettings>) => setSettings({ ...settings, ...patch });
+  const isAt = settings.provider === "africastalking";
+  const waiting = outbox.filter((row) => row.status === "queued").length;
+  const failed = outbox.filter((row) => row.status === "failed").length;
+
+  return (
+    <div className="stack">
+      <Card
+        title="SMS provider"
+        subtitle="Texts to guardians go through a Ugandan SMS gateway. The school pays the gateway directly."
+        footer={
+          <div className="row-between">
+            <span className="field-hint">
+              Messages wait in the outbox when there is no internet and send
+              themselves when it comes back.
+            </span>
+            <Button
+              variant="primary"
+              loading={busy === "save"}
+              onClick={() => {
+                setBusy("save");
+                api
+                  .saveSmsSettings(settings)
+                  .then(() => {
+                    toast("success", "SMS settings saved.");
+                    window.setTimeout(() => void loadOutbox(), 4000);
+                  })
+                  .catch(reportError)
+                  .finally(() => setBusy(null));
+              }}
+            >
+              Save
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid-form">
+          <SelectInput
+            label="Provider"
+            value={settings.provider}
+            onChange={(event) =>
+              set({ provider: event.target.value as SmsSettings["provider"] })
+            }
+          >
+            <option value="off">Off — don't send texts</option>
+            <option value="africastalking">Africa's Talking</option>
+            <option value="egosms">EgoSMS</option>
+          </SelectInput>
+          {settings.provider !== "off" && (
+            <>
+              <TextInput
+                label="Username"
+                value={settings.username}
+                onChange={(event) => set({ username: event.target.value })}
+                hint={isAt ? "Use sandbox to try it out without sending real texts." : undefined}
+              />
+              <TextInput
+                label={isAt ? "API key" : "Password"}
+                type="password"
+                value={settings.apiKey}
+                onChange={(event) => set({ apiKey: event.target.value })}
+                onFocus={(event) => event.target.select()}
+              />
+              <TextInput
+                label="Sender ID"
+                value={settings.senderId}
+                onChange={(event) => set({ senderId: event.target.value })}
+                hint="The name texts come from, if the gateway has registered one for you."
+              />
+              <TextInput
+                label="Messages start with"
+                value={settings.signature}
+                onChange={(event) => set({ signature: event.target.value })}
+                placeholder="Your school name"
+                hint="A short name keeps each text to one SMS, e.g. RAINBOW N&P."
+              />
+            </>
+          )}
+        </div>
+      </Card>
+
+      {settings.provider !== "off" && (
+        <Card title="Send a test" subtitle="Save first, then send one text to your own phone">
+          <div className="row">
+            <TextInput
+              label="Phone number"
+              value={testPhone}
+              onChange={(event) => setTestPhone(event.target.value)}
+              placeholder="07XX XXX XXX"
+            />
+            <Button
+              style={{ alignSelf: "flex-end" }}
+              loading={busy === "test"}
+              disabled={testPhone.trim().length < 9}
+              onClick={() => {
+                setBusy("test");
+                api
+                  .sendTestSms(testPhone)
+                  .then((message) => toast("success", message))
+                  .catch(reportError)
+                  .finally(() => {
+                    setBusy(null);
+                    void loadOutbox();
+                  });
+              }}
+            >
+              Send test
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <Card
+        title="Outbox"
+        subtitle={`The last 100 texts${waiting ? `, ${waiting} waiting` : ""}${failed ? `, ${failed} failed` : ""}`}
+        actions={
+          <Button
+            size="sm"
+            loading={busy === "send"}
+            disabled={waiting + failed === 0}
+            onClick={() => {
+              setBusy("send");
+              api
+                .sendQueuedSms()
+                .then((result) => {
+                  toast(
+                    result.skippedReason ? "info" : "success",
+                    result.skippedReason ??
+                      `Sent ${result.sent}. ${result.stillQueued} still waiting, ${result.failed} failed.`,
+                  );
+                })
+                .catch(reportError)
+                .finally(() => {
+                  setBusy(null);
+                  void loadOutbox();
+                });
+            }}
+          >
+            Send waiting texts now
+          </Button>
+        }
+        flush
+      >
+        {outbox.length === 0 ? (
+          <p className="muted" style={{ padding: "var(--space-4)" }}>
+            No texts yet. Pass-outs send them automatically.
+          </p>
+        ) : (
+          <div className="table-wrap" style={{ maxHeight: 420 }}>
+            <table className="table table-compact">
+              <thead>
+                <tr>
+                  <th style={{ width: 120 }}>When</th>
+                  <th style={{ width: 140 }}>To</th>
+                  <th>Message</th>
+                  <th style={{ width: 100 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outbox.map((row) => (
+                  <tr key={row.id}>
+                    <td className="muted">{formatDateTime(row.createdAt)}</td>
+                    <td className="mono">{row.toPhone}</td>
+                    <td style={{ whiteSpace: "normal" }}>
+                      {row.body}
+                      {row.lastError && row.status !== "sent" && (
+                        <div className="subtle" style={{ fontSize: "var(--text-2xs)" }}>
+                          {row.lastError}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <Badge
+                        tone={
+                          row.status === "sent"
+                            ? "success"
+                            : row.status === "failed"
+                              ? "danger"
+                              : "warning"
+                        }
+                      >
+                        {row.status === "queued" ? "Waiting" : row.status === "sent" ? "Sent" : "Failed"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }
 

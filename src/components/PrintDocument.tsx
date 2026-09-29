@@ -43,6 +43,7 @@ import type {
   Footer,
   IdCard,
   IdCardBatch,
+  PassOutSlip,
   ReportCard,
   Rating,
   ReportCardBatch,
@@ -768,6 +769,137 @@ function IdCardFace({
         )}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-G22 — the pass-out slip
+// ---------------------------------------------------------------------------
+
+function slipTime(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Two copies on one A4 page, cut apart: the learner carries the gate copy out,
+ * the school keeps the other.
+ */
+export function PassOutSlipSheet({ envelope }: { envelope: DocumentEnvelope<PassOutSlip> }) {
+  const { branding, footer, body } = envelope;
+  const number = `PO-${String(body.number).padStart(4, "0")}`;
+  const date = new Date(body.timeOut).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      variant="compact"
+      title="Learner Pass-Out"
+      subtitle={`${number}  •  ${date}`}
+      pageNumber={1}
+      pageCount={1}
+    >
+      <div
+        className="po-sheet"
+        style={{ "--doc-accent": branding.accentColor } as CSSProperties}
+      >
+        <PassOutCopy slip={body} number={number} copy="Gate copy" note="Show this slip at the gate." />
+        <div className="po-cut">
+          <span>Cut here</span>
+        </div>
+        <PassOutCopy slip={body} number={number} copy="School copy" note="Keep in the pass-out file." />
+      </div>
+    </Sheet>
+  );
+}
+
+function PassOutCopy({
+  slip,
+  number,
+  copy,
+  note,
+}: {
+  slip: PassOutSlip;
+  number: string;
+  copy: string;
+  note: string;
+}) {
+  const withWhom = [
+    slip.pickedUpBy,
+    slip.pickedUpRelationship ? `(${slip.pickedUpRelationship})` : null,
+    slip.pickedUpPhone,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <section className="po-copy">
+      <header className="po-copy-head">
+        <span className="po-copy-kind">{copy}</span>
+        <span className="po-copy-number">{number}</span>
+      </header>
+
+      <div className="po-copy-body">
+        {slip.photoDataUrl ? (
+          <img className="po-photo" src={slip.photoDataUrl} alt="" />
+        ) : (
+          <span className="po-photo po-photo-blank">{initials(slip.studentName)}</span>
+        )}
+
+        <div className="po-details">
+          <div className="po-name">{slip.studentName}</div>
+          <div className="po-sub">
+            {slip.className}  •  {slip.regNumber}
+          </div>
+
+          <dl className="po-facts">
+            <dt>Reason</dt>
+            <dd>
+              {slip.reasonLabel}
+              {slip.reason ? ` — ${slip.reason}` : ""}
+            </dd>
+            <dt>Going to</dt>
+            <dd>{slip.destination ?? "—"}</dd>
+            <dt>With</dt>
+            <dd>{withWhom || "—"}</dd>
+          </dl>
+        </div>
+
+        <div className="po-times">
+          <div className="po-time">
+            <span>Time out</span>
+            <strong>{slipTime(slip.timeOut)}</strong>
+          </div>
+          <div className="po-time po-time-back">
+            <span>Expected back</span>
+            <strong>{slip.expectedBack ? slipTime(slip.expectedBack) : "Not today"}</strong>
+          </div>
+        </div>
+      </div>
+
+      <footer className="po-copy-foot">
+        <div className="po-sign">
+          {slip.issuedByName ?? ""}
+          <span>Issued by</span>
+        </div>
+        <div className="po-sign">
+          <span>Guardian's signature</span>
+        </div>
+        <div className="po-sign">
+          <span>Gate: time and guard's signature</span>
+        </div>
+      </footer>
+      <div className="po-note">
+        {note}
+        {slip.guardianTexted ? " The guardian has been sent an SMS." : ""}
+      </div>
+    </section>
   );
 }
 
