@@ -9,6 +9,8 @@ export type ScreenId =
   | "dashboard"
   | "marks"
   | "weekly"
+  | "attendance"
+  | "timetables"
   | "classes"
   | "learners"
   | "passouts"

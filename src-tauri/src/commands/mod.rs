@@ -1,4 +1,5 @@
 pub mod academics;
+pub mod attendance;
 pub mod auth;
 pub mod features;
 pub mod importer;
@@ -10,3 +11,4 @@ pub mod setup;
 pub mod students;
 pub mod system;
 pub mod teachers;
+pub mod timetable;

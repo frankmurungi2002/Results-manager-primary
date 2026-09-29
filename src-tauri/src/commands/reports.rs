@@ -118,7 +118,7 @@ fn footer() -> Footer {
 }
 
 /// Wraps a body in branding. Every document-producing command ends here.
-fn envelope<T>(conn: &Connection, kind: &str, body: T) -> AppResult<DocumentEnvelope<T>> {
+pub(crate) fn envelope<T>(conn: &Connection, kind: &str, body: T) -> AppResult<DocumentEnvelope<T>> {
     Ok(DocumentEnvelope {
         branding: load_branding(conn)?,
         footer: footer(),
@@ -1308,6 +1308,9 @@ pub struct ExamPermitBatch {
     pub exam_date: Option<String>,
     /// The subjects the permit admits the learner to, in timetable order.
     pub subjects: Vec<String>,
+    /// When each subject is sat, from the exam timetable (FR-G7), aligned
+    /// with `subjects`; None where it is not scheduled yet.
+    pub paper_times: Vec<Option<String>>,
     pub permits: Vec<ExamPermit>,
     /// FR-B8: who got no permit, and why.
     pub blocked: Vec<BlockedLearner>,
@@ -1385,6 +1388,9 @@ pub fn build_exam_permits(
             .collect::<rusqlite::Result<Vec<_>>>()?;
         collected
     };
+
+    let times = crate::commands::timetable::paper_times_for_class(&conn, &request.exam_id, &request.class_id)?;
+    let paper_times: Vec<Option<String>> = subjects.iter().map(|s| times.get(s).cloned()).collect();
 
     let photos_on = repo::feature_enabled(&conn, "student_photos")?;
     let fees_rule_on = repo::get_setting(&conn, "rule.fees_block")?.as_deref() == Some("on");
@@ -1465,10 +1471,31 @@ pub fn build_exam_permits(
         class_name,
         exam_date,
         subjects,
+        paper_times,
         permits,
         blocked,
     };
     envelope(&conn, "exam_permit", batch)
+}
+
+// ---------------------------------------------------------------------------
+// FR-G9 — the monthly attendance register
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn build_attendance_register(
+    state: State<'_, AppState>,
+    class_id: String,
+    stream_id: Option<String>,
+    year: i32,
+    month: u32,
+) -> AppResult<DocumentEnvelope<crate::commands::attendance::MonthRegister>> {
+    let session = state.sessions.require()?;
+    session.require_view_class(&class_id)?;
+    let conn = state.db.lock();
+    let register =
+        crate::commands::attendance::month_register(&conn, &class_id, stream_id.as_deref(), year, month)?;
+    envelope(&conn, "attendance_register", register)
 }
 
 // ---------------------------------------------------------------------------

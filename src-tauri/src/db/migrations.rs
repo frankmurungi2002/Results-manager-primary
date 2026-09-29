@@ -51,6 +51,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "weekly_assignments",
         sql: M006_WEEKLY_ASSIGNMENTS,
     },
+    Migration {
+        version: 7,
+        name: "timetables",
+        sql: M007_TIMETABLES,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -688,4 +693,88 @@ CREATE TABLE weekly_scores (
 
 CREATE INDEX idx_weekly_scores_sheet ON weekly_scores (class_subject_id, term_id, week);
 CREATE INDEX idx_weekly_scores_student ON weekly_scores (student_id, term_id);
+"#;
+
+// ---------------------------------------------------------------------------
+// 007 — class timetables (FR-G6) and exam timetables (FR-G7)
+// ---------------------------------------------------------------------------
+
+const M007_TIMETABLES: &str = r#"
+
+-- The school day: lessons, breaks, lunch, assembly, in order.
+CREATE TABLE timetable_periods (
+    id         TEXT PRIMARY KEY,
+    seq        INTEGER NOT NULL,
+    label      TEXT NOT NULL,
+    start_time TEXT NOT NULL,              -- HH:MM
+    end_time   TEXT NOT NULL,              -- HH:MM
+    kind       TEXT NOT NULL DEFAULT 'lesson'
+                    CHECK (kind IN ('lesson', 'break', 'lunch', 'assembly', 'games', 'prep')),
+    status     TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'retired')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+-- One lesson in a class's week. A NULL stream is the whole class.
+CREATE TABLE timetable_slots (
+    id         TEXT PRIMARY KEY,
+    class_id   TEXT NOT NULL REFERENCES classes (id),
+    stream_id  TEXT REFERENCES streams (id),
+    day        INTEGER NOT NULL CHECK (day BETWEEN 1 AND 6),   -- 1 = Monday
+    period_id  TEXT NOT NULL REFERENCES timetable_periods (id),
+    subject_id TEXT REFERENCES subjects (id),
+    teacher_id TEXT REFERENCES users (id),
+    room       TEXT,
+    note       TEXT,
+    updated_by TEXT REFERENCES users (id),
+    updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_timetable_slot_cell
+    ON timetable_slots (class_id, IFNULL(stream_id, '-'), day, period_id);
+CREATE INDEX idx_timetable_slot_teacher ON timetable_slots (teacher_id, day, period_id);
+
+-- How many lessons a subject gets each week, for the auto-fill.
+ALTER TABLE class_subjects ADD COLUMN lessons_per_week INTEGER NOT NULL DEFAULT 0;
+
+-- One sitting of an examination: a subject's paper on a date and time,
+-- sat by one or more classes.
+CREATE TABLE exam_papers (
+    id            TEXT PRIMARY KEY,
+    exam_id       TEXT NOT NULL REFERENCES exams (id),
+    subject_id    TEXT NOT NULL REFERENCES subjects (id),
+    paper_label   TEXT,                    -- "Paper 1", "Oral", ...
+    on_date       TEXT NOT NULL,           -- YYYY-MM-DD
+    start_time    TEXT NOT NULL,           -- HH:MM
+    end_time      TEXT NOT NULL,           -- HH:MM
+    venue         TEXT,
+    invigilator_id TEXT REFERENCES users (id),
+    note          TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    CHECK (end_time > start_time)
+);
+
+CREATE TABLE exam_paper_classes (
+    paper_id TEXT NOT NULL REFERENCES exam_papers (id) ON DELETE CASCADE,
+    class_id TEXT NOT NULL REFERENCES classes (id),
+    PRIMARY KEY (paper_id, class_id)
+);
+
+CREATE INDEX idx_exam_papers_exam ON exam_papers (exam_id, on_date, start_time);
+
+-- A sensible default school day, editable under Timetables.
+INSERT INTO timetable_periods (id, seq, label, start_time, end_time, kind, created_at, updated_at) VALUES
+ ('tp_01', 1,  'Assembly',  '08:00', '08:20', 'assembly', datetime('now'), datetime('now')),
+ ('tp_02', 2,  'Lesson 1',  '08:20', '09:00', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_03', 3,  'Lesson 2',  '09:00', '09:40', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_04', 4,  'Lesson 3',  '09:40', '10:20', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_05', 5,  'Break',     '10:20', '10:50', 'break',    datetime('now'), datetime('now')),
+ ('tp_06', 6,  'Lesson 4',  '10:50', '11:30', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_07', 7,  'Lesson 5',  '11:30', '12:10', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_08', 8,  'Lesson 6',  '12:10', '12:50', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_09', 9,  'Lunch',     '12:50', '14:00', 'lunch',    datetime('now'), datetime('now')),
+ ('tp_10', 10, 'Lesson 7',  '14:00', '14:40', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_11', 11, 'Lesson 8',  '14:40', '15:20', 'lesson',   datetime('now'), datetime('now')),
+ ('tp_12', 12, 'Games',     '15:20', '16:30', 'games',    datetime('now'), datetime('now'));
 "#;

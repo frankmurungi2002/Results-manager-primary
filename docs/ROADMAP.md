@@ -160,10 +160,10 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G3 | School overview dashboard | 🟡 | M4 | `dashboard_summary` exists; the full version waits for attendance, fees and staff data |
 | FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | ⬜ | M3 | |
 | FR-G5 | Fees ledger; drives the fees block automatically | ⬜ | **M2** | Fee per class per term, payments, running balance; FR-B8 then reads the balance |
-| FR-G6 | Timetable with double-booking check | ⬜ | M3 | |
-| FR-G7 | Shared exams and academic calendar | 🟡 | M3 | A calendar screen and `exams.scheduled_date` exist; holidays, events and per-subject exam times do not |
+| FR-G6 | Timetable | ✅ | M3 | School day (bell times, 5 or 6 days); class and stream grids edited cell by cell or auto-filled from lessons per week; a teacher is never double-booked; teacher timetables; print one class, one teacher, every class or every teacher |
+| FR-G7 | Shared exams and academic calendar | 🟡 | M3 | Exam timetable done: papers by date, time, classes, venue and invigilator, clash-checked, generated in one step, printed for the school or one class; the first paper dates the exam and permits show each paper's time. Holidays and school events are not built |
 | FR-G8 | SMS to parents (fees, results, absence) | 🟡 | M3 | Outbox, Africa's Talking and EgoSMS, test send and Settings → SMS are built and used by pass-outs; the fees, results and absence triggers remain |
-| FR-G9 | Daily attendance register | 🧱 | **M1** | `attendance` table exists; needs commands, a fast class register screen, the "days present" figure on the report card |
+| FR-G9 | Daily attendance register | ✅ | M2 | Mark by class or stream for any day (present, absent, late, excused, with a note); optional SMS to guardians of newly absent learners; whole-school view for a day; monthly register on screen and printed; feeds days present on report cards |
 | FR-G10 | Full data export to Excel/CSV | ⬜ | M2 | `rust_xlsxwriter` is already a dependency |
 | FR-G11 | Comment bank | ✅ | — | |
 | FR-G12 | Bulk print with skipped-learner summary | ✅ (class scope) | M2 adds stream and whole-school scope, with progress | |

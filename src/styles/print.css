@@ -1129,6 +1129,239 @@
   text-align: center;
 }
 
+/* --- Monthly attendance register (FR-G9) ----------------------------------- */
+
+.ar-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 7pt;
+  font-variant-numeric: tabular-nums;
+}
+
+.ar-table th,
+.ar-table td {
+  border: 1px solid var(--rule);
+  padding: 0.6mm 0;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ar-table thead th {
+  background: var(--band);
+  font-weight: 700;
+  color: var(--ink-soft);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ar-day span {
+  display: block;
+  font-size: 5.5pt;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+.ar-num {
+  width: 6mm;
+}
+
+.ar-name {
+  width: 42mm;
+  text-align: left !important;
+  padding-left: 1.5mm !important;
+  text-overflow: ellipsis;
+}
+
+.ar-total {
+  width: 7mm;
+  font-weight: 700;
+}
+
+.ar-A {
+  color: #c0304a;
+  font-weight: 800;
+}
+
+.ar-L {
+  color: #a86b00;
+  font-weight: 800;
+}
+
+.ar-E {
+  color: #1f6fb2;
+  font-weight: 700;
+}
+
+.ar-P {
+  color: #1d7a45;
+}
+
+.ar-table tfoot td {
+  font-weight: 700;
+  background: var(--band);
+}
+
+/* A real <tfoot> makes Chromium reserve a repeat of it on a phantom extra
+   page; as an ordinary row group the totals print once, at the end. */
+.ar-table tfoot {
+  display: table-row-group;
+}
+
+.ar-key {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3mm;
+  font-size: 7.5pt;
+  color: var(--ink-soft);
+}
+
+.ar-sign {
+  width: 60mm;
+  padding-top: 5mm;
+  border-bottom: 1px dotted var(--ink-faint);
+  text-align: right;
+  color: var(--ink-faint);
+}
+
+/* --- Printed timetables (FR-G6) and exam timetable (FR-G7) ------------------ */
+
+.ttp-grid {
+  --doc-accent: #4f63d2;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 8pt;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ttp-grid th,
+.ttp-grid td {
+  border: 1px solid var(--rule);
+  padding: 1.2mm 1.5mm;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.ttp-grid thead th {
+  background: var(--doc-accent);
+  color: #fff;
+  font-size: 8.5pt;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ttp-time {
+  width: 26mm;
+  text-align: left !important;
+  font-weight: 700;
+  background: var(--band);
+}
+
+.ttp-time span {
+  display: block;
+  font-size: 7pt;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.ttp-cell {
+  height: 11mm;
+}
+
+.ttp-cell strong {
+  display: block;
+  font-size: 8.5pt;
+}
+
+.ttp-cell span {
+  display: block;
+  font-size: 6.8pt;
+  color: var(--ink-soft);
+}
+
+.ttp-pause td {
+  background: var(--band);
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.etp {
+  --doc-accent: #4f63d2;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.etp-day {
+  break-inside: avoid;
+}
+
+.etp-day h3 {
+  margin: 0 0 1mm;
+  padding: 1.2mm 3mm;
+  border-radius: 2mm;
+  background: var(--doc-accent);
+  color: #fff;
+  font-size: 9.5pt;
+}
+
+.etp-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 8.5pt;
+}
+
+.etp-table td {
+  padding: 1.4mm 2mm;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.etp-time {
+  width: 26mm;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.etp-subject {
+  width: 52mm;
+  font-weight: 700;
+}
+
+.etp-venue {
+  width: 30mm;
+}
+
+.etp-invigilator {
+  width: 36mm;
+}
+
+.etp-classes,
+.etp-venue,
+.etp-invigilator {
+  color: var(--ink-soft);
+}
+
+.etp-note {
+  margin-top: 4mm;
+  font-size: 8pt;
+  color: var(--ink-soft);
+}
+
+.ep-when {
+  display: block;
+  font-size: 6.2pt;
+  color: var(--ink-soft);
+}
+
 /* --- Pass-out slip (FR-G22): two copies on one A4 page -------------------- */
 
 .po-sheet {
@@ -1328,6 +1561,17 @@
 @page {
   size: A4 portrait;
   margin: 0;
+}
+
+/* Landscape sheets (registers, timetables) print on landscape paper, even
+   in the same document as portrait ones. */
+@page landscape {
+  size: A4 landscape;
+  margin: 0;
+}
+
+.sheet-landscape {
+  page: landscape;
 }
 
 /* --- Nursery report card ---------------------------------------------- *
@@ -1816,6 +2060,7 @@
   }
 
   .ep-card,
+  .ar-table tr,
   .wk-table tr {
     break-inside: avoid;
   }
