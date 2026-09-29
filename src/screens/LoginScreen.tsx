@@ -1,12 +1,13 @@
 /** FR-B1 — one login frame for every role, routed by the backend. */
 
 import { type FormEvent, useState } from "react";
-import { HardDrive, Printer, ShieldCheck, WifiOff } from "lucide-react";
+import { Eye, EyeOff, WifiOff } from "lucide-react";
 
 import { ApiError } from "../lib/api";
 import { useStore } from "../state/store";
 import { SealMark } from "../components/Logo";
-import { Alert, Button, TextInput } from "../components/ui";
+import { LoginIllustration } from "../components/LoginIllustration";
+import { Alert, Button } from "../components/ui";
 
 export function LoginScreen() {
   const signIn = useStore((state) => state.signIn);
@@ -15,6 +16,8 @@ export function LoginScreen() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,100 +42,115 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="auth-screen">
-      <aside className="auth-aside">
-        <div className="auth-wordmark">
-          <span className="auth-wordmark-mark">
-            <SealMark size={21} />
+    <div className="login-screen">
+      <div className="login-card">
+        <header className="login-bar">
+          <span className="login-brand">
+            <span className="login-brand-mark">
+              <SealMark size={17} />
+            </span>
+            Results Manager
           </span>
-          Results Manager
-        </div>
+          <span className="login-bar-title">{institutionName ?? "School Results Manager"}</span>
+          <span className="login-bar-end">
+            <span className="login-offline" title="Everything works without an internet connection">
+              <WifiOff size={13} />
+              Offline
+            </span>
+          </span>
+        </header>
 
-        <div>
-          <h1 className="auth-pitch">
-            Marks in.
+        <section className="login-hero">
+          <h1 className="login-headline">
+            Marks in. Reports out.
             <br />
-            Reports out.
-            <br />
-            <em>Offline.</em>
+            Even without the internet.
           </h1>
-          <p className="auth-sub">
-            Every register, mark sheet and report card your school needs —
-            without depending on an internet connection.
-          </p>
+          <span className="login-pill">Version {appVersion}</span>
+        </section>
 
-          <div className="auth-points">
-            <div className="auth-point">
-              <WifiOff size={16} />
-              Works with no internet, all day, every day
-            </div>
-            <div className="auth-point">
-              <Printer size={16} />
-              Report cards, class lists and registers, ready to print
-            </div>
-            <div className="auth-point">
-              <HardDrive size={16} />
-              Backed up to a second drive on a schedule
-            </div>
-            <div className="auth-point">
-              <ShieldCheck size={16} />
-              Every change recorded, nothing ever deleted
-            </div>
+        <div className="login-body">
+          <LoginIllustration className="login-illustration" />
+
+          <div className="login-side">
+            <form className="login-panel" onSubmit={onSubmit} noValidate>
+              <h2 className="login-title">Welcome back.</h2>
+
+              <div className="login-tabs" role="presentation">
+                <span className="login-tab is-active">Username &amp; password</span>
+              </div>
+
+              {error && <Alert tone="danger">{error}</Alert>}
+
+              <label className="login-field">
+                <span className="visually-hidden">Username</span>
+                <input
+                  className="login-input"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  autoComplete="username"
+                  autoFocus
+                  spellCheck={false}
+                  required
+                />
+              </label>
+
+              <label className="login-field">
+                <span className="visually-hidden">Password</span>
+                <input
+                  className="login-input login-input-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <span className="login-field-actions">
+                  <button
+                    type="button"
+                    className="login-eye"
+                    onClick={() => setShowPassword((shown) => !shown)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                  <button
+                    type="button"
+                    className="login-link"
+                    onClick={() => setShowHelp((open) => !open)}
+                    aria-expanded={showHelp}
+                  >
+                    Forgot?
+                  </button>
+                </span>
+              </label>
+
+              {showHelp && (
+                <p className="login-help">
+                  A School Admin can set a new password for you from the Staff
+                  screen.
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                block
+                loading={busy}
+                disabled={!username.trim() || !password}
+                className="login-submit"
+              >
+                Login
+              </Button>
+            </form>
+
+            <p className="login-after">New staff? Your School Admin creates your account.</p>
           </div>
         </div>
-
-        <div className="auth-foot">Version {appVersion}</div>
-      </aside>
-
-      <main className="auth-panel">
-        <form className="auth-form" onSubmit={onSubmit}>
-          <div>
-            <h2 className="auth-title">Sign in</h2>
-            <p className="auth-note">
-              {institutionName
-                ? `Welcome back to ${institutionName}.`
-                : "Use the credentials your School Admin gave you."}
-            </p>
-          </div>
-
-          {error && <Alert tone="danger">{error}</Alert>}
-
-          <TextInput
-            label="Username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            autoFocus
-            required
-            spellCheck={false}
-          />
-
-          <TextInput
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            required
-          />
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            block
-            loading={busy}
-            disabled={!username.trim() || !password}
-          >
-            Sign in
-          </Button>
-
-          <p className="field-hint" style={{ textAlign: "center" }}>
-            Forgotten your password? A School Admin can reset it for you from
-            the Staff screen.
-          </p>
-        </form>
-      </main>
+      </div>
     </div>
   );
 }
