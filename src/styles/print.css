@@ -388,6 +388,17 @@
     display: block;
     height: auto;
     overflow: visible;
+    padding: 0;
+    background: none;
+  }
+
+  .app-card {
+    display: block;
+    height: auto;
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
   }
 
   .main {

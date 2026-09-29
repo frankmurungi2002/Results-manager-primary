@@ -17,6 +17,7 @@ import {
   Sun,
   Users,
   UsersRound,
+  WifiOff,
   X,
 } from "lucide-react";
 
@@ -134,6 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app">
+      <div className="app-card">
       <nav className="sidebar">
         <div className="sidebar-brand">
           <div className="sidebar-mark">
@@ -177,14 +179,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="sidebar-foot">
-          <button className="sidebar-user" onClick={() => setUserMenuOpen(true)}>
-            <span className="avatar">{initials(displayName)}</span>
-            <span className="sidebar-foot-text grow">
-              <span className="sidebar-user-name">{displayName}</span>
-              <span className="sidebar-user-role">{roleLabel}</span>
+          <div className="sidebar-note">
+            <span className="sidebar-note-icon">
+              <WifiOff size={15} />
             </span>
-            <ChevronDown size={14} className="subtle" />
-          </button>
+            <span className="sidebar-foot-text">
+              <span className="sidebar-note-title">Works offline</span>
+              <span className="sidebar-note-text">
+                Everything is saved on this computer. Version {appVersion}
+              </span>
+            </span>
+          </div>
         </div>
       </nav>
 
@@ -211,17 +216,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <TeacherModeSwitch />
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            <button
+              type="button"
+              className="topbar-icon"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               title={theme === "dark" ? "Switch to light" : "Switch to dark"}
-            />
+              aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            <button type="button" className="topbar-user" onClick={() => setUserMenuOpen(true)}>
+              <span className="avatar">{initials(displayName)}</span>
+              <span className="topbar-user-text">
+                <span className="topbar-user-name">{displayName}</span>
+                <span className="topbar-user-role">{roleLabel}</span>
+              </span>
+              <ChevronDown size={14} className="subtle" />
+            </button>
           </div>
         </header>
 
         {children}
+      </div>
       </div>
 
       {userMenuOpen && (
