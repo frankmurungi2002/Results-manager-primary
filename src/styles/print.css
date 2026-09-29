@@ -600,6 +600,265 @@
   border-radius: 3mm;
 }
 
+/* --- Primary report card ----------------------------------------------- *
+ * Shares the nursery card's header, learner strip, comments and foot
+ * (.sheet-nursery), and adds the marks table, summary tiles and key. */
+
+.sheet-primary {
+  font-size: 9pt;
+}
+
+/* Tighter than the nursery card: the marks table is longer. */
+.sheet-primary .doc-body {
+  gap: 2mm;
+  margin-top: 2mm;
+}
+
+.sheet-primary .doc-institution {
+  font-size: 16pt;
+}
+
+.sheet-primary .doc-title {
+  margin-top: 2mm;
+  padding: 1.6mm 4mm;
+}
+
+.sheet-primary .nr-photo {
+  width: 20mm;
+  height: 24mm;
+}
+
+.sheet-primary .doc-logo {
+  width: 20mm;
+  height: 20mm;
+}
+
+.sheet-primary .nr-learner {
+  padding: 1.6mm 3.5mm;
+  gap: 1.2mm 4mm;
+}
+
+.sheet-primary .nr-heading {
+  margin-bottom: 1.2mm;
+}
+
+.sheet-primary .nr-comments th,
+.sheet-primary .nr-comments td {
+  padding: 1.4mm 3mm;
+}
+
+.sheet-primary .nr-sign span {
+  margin-top: 2.5mm;
+}
+
+.sheet-primary .nr-stamp {
+  width: 22mm;
+}
+
+.pr-block {
+  break-inside: avoid;
+}
+
+.pr-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--rule-soft);
+  border-radius: 3mm;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-table th,
+.pr-table td {
+  padding: 0.85mm 1.4mm;
+  text-align: center;
+  vertical-align: middle;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.pr-table thead th {
+  border-top: 0;
+  background: var(--band);
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.pr-table thead tr + tr th {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.pr-table .left {
+  text-align: left;
+}
+
+.pr-table th.pr-exam {
+  color: var(--doc-accent);
+  border-left: 1px solid var(--rule-soft);
+}
+
+.pr-table th.pr-sub {
+  font-size: 6.5pt;
+  font-weight: 600;
+}
+
+.pr-table .pr-mark {
+  border-left: 1px solid var(--rule-soft);
+}
+
+.pr-table .pr-agg {
+  color: var(--ink-soft);
+}
+
+.pr-table .pr-term {
+  background: color-mix(in srgb, var(--doc-accent) 7%, #fff);
+}
+
+.pr-table thead .pr-term {
+  background: color-mix(in srgb, var(--doc-accent) 14%, #fff);
+  color: var(--doc-accent);
+}
+
+.pr-table th.pr-term.pr-exam {
+  border-left: 1px solid var(--rule-soft);
+}
+
+.pr-subject {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pr-outof {
+  font-weight: 500;
+  font-size: 7pt;
+  color: var(--ink-faint);
+}
+
+.pr-strong {
+  font-weight: 800;
+}
+
+.pr-grade {
+  font-weight: 800;
+  color: var(--doc-accent);
+}
+
+.pr-remark {
+  font-style: italic;
+  font-size: 8pt;
+}
+
+.pr-initials {
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.pr-table tfoot th,
+.pr-table tfoot td {
+  border-top: 1px solid var(--rule);
+  font-size: 8.5pt;
+}
+
+.pr-table tfoot tr + tr th,
+.pr-table tfoot tr + tr td {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.pr-table tfoot th {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.pr-muted-row td,
+.pr-muted-row th {
+  color: var(--ink-faint);
+}
+
+.pr-summary {
+  display: grid;
+  grid-template-columns: 0.8fr 1.25fr 0.9fr 0.9fr 2fr;
+  gap: 2mm;
+  break-inside: avoid;
+}
+
+.pr-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5mm 3mm;
+  border-radius: 2.5mm;
+  background: var(--band);
+  min-width: 0;
+}
+
+.pr-tile span {
+  font-size: 6.8pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.pr-tile strong {
+  font-size: 12pt;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+
+.pr-tile-accent {
+  background: var(--doc-accent);
+}
+
+.pr-tile-accent span,
+.pr-tile-accent strong {
+  color: #fff;
+}
+
+.pr-trend {
+  display: flex;
+  flex-direction: column;
+  white-space: normal !important;
+  font-size: 10.5pt !important;
+}
+
+.pr-trend em {
+  font-style: normal;
+  font-size: 8pt;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.pr-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.2mm 3mm;
+  padding: 1.6mm 3mm;
+  border-radius: 2.5mm;
+  border: 1px dashed var(--rule);
+  font-size: 7.5pt;
+  color: var(--ink-soft);
+}
+
+.pr-key-title {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 6.8pt;
+  color: var(--ink-faint);
+}
+
+.pr-key-band strong {
+  color: var(--doc-accent);
+}
+
 /* --- Pass-out slip (FR-G22): two copies on one A4 page -------------------- */
 
 .po-sheet {

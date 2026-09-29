@@ -150,6 +150,11 @@ pub struct ReportCardBatch {
     /// What learners bring next term, as the school wrote it.
     pub requirements: Option<String>,
     pub head_teacher_name: Option<String>,
+    /// Mean of every learner's average, and the same per exam.
+    pub class_average: Option<f64>,
+    pub exam_class_averages: Vec<Option<f64>>,
+    /// The grading scale, printed as a key at the foot.
+    pub grade_key: Vec<GradeKeyBand>,
     /// FR-B8: who was left out, and why. Never silently dropped.
     pub blocked: Vec<BlockedLearner>,
 }
@@ -170,6 +175,7 @@ pub struct ReportCard {
     pub full_name: String,
     pub reg_number: String,
     pub gender: Option<String>,
+    pub date_of_birth: Option<String>,
     pub photo_data_url: Option<String>,
     pub class_name: String,
     pub stream_name: Option<String>,
@@ -189,7 +195,40 @@ pub struct ReportCard {
     /// Sum of the term marks, and of the maxima they are out of.
     pub total_score: Option<f64>,
     pub total_max: f64,
+    /// One per exam, over the core subjects.
+    pub exam_totals: Vec<ExamTotal>,
+    /// The term before, in the same year, for the progress line.
+    pub previous: Option<PreviousTerm>,
     pub activities: Vec<ActivityRating>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExamTotal {
+    pub marks: Option<f64>,
+    pub aggregate: Option<f64>,
+    /// Mean percentage across the core subjects sat.
+    pub average: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviousTerm {
+    pub term_name: String,
+    pub total_points: Option<f64>,
+    pub division: Option<String>,
+    pub mean_percentage: Option<f64>,
+    pub position: Option<i64>,
+    pub class_size: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GradeKeyBand {
+    pub label: String,
+    pub lower: f64,
+    pub upper: f64,
+    pub points: Option<f64>,
 }
 
 /// One learning activity and how the learner did in it.
@@ -243,6 +282,11 @@ pub struct ReportCardSubject {
     pub max_score: f64,
     /// One entry per exam in the term, in calendar order.
     pub exam_scores: Vec<Option<f64>>,
+    /// Each exam graded on its own (e.g. D1), and its points.
+    pub exam_grades: Vec<Option<String>>,
+    pub exam_points: Vec<Option<f64>>,
+    /// This learner's place in the class for this subject.
+    pub position: Option<i64>,
     /// The weighted term mark.
     pub term_score: Option<f64>,
     pub grade_label: String,
@@ -274,6 +318,55 @@ pub fn build_report_cards(
     session.require_view_class(&request.class_id)?;
 
     let conn = state.db.lock();
+    let mut batch = compute_report_cards(
+        &conn,
+        &request.class_id,
+        &request.term_id,
+        &request.exam_ids,
+        false,
+    )?;
+
+    // A single-learner or partial request still ranks against the whole class —
+    // a position is only meaningful relative to everyone.
+    if !request.student_ids.is_empty() {
+        batch
+            .cards
+            .retain(|card| request.student_ids.contains(&card.student_id));
+    }
+
+    audit::record(
+        &conn,
+        Some(&session),
+        "report_card.build",
+        "class",
+        &request.class_id,
+        format!(
+            "Built {} report cards for {}, {}{}",
+            batch.cards.len(),
+            batch.class_name,
+            batch.term_name,
+            if batch.blocked.is_empty() {
+                String::new()
+            } else {
+                format!(" ({} blocked on fees)", batch.blocked.len())
+            }
+        ),
+    )?;
+
+    envelope(&conn, "report_card", batch)
+}
+
+/// Every learner's card for one class and term, ranked.
+///
+/// `history` computes an earlier term only to compare against: it ignores
+/// the fees block and does not look further back.
+fn compute_report_cards(
+    conn: &Connection,
+    class_id: &str,
+    term_id: &str,
+    exam_ids: &[String],
+    history: bool,
+) -> AppResult<ReportCardBatch> {
     let year_id = repo::current_academic_year_id(&conn)?
         .ok_or_else(|| AppError::validation("No academic year is active yet."))?;
 
@@ -290,7 +383,7 @@ pub fn build_report_cards(
          CROSS JOIN terms t
          JOIN academic_years y ON y.id = t.academic_year_id
          WHERE c.id = ?1 AND t.id = ?2",
-        params![request.class_id, request.term_id],
+        params![class_id, term_id],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
     )?;
 
@@ -315,7 +408,7 @@ pub fn build_report_cards(
             "SELECT id, name, weight, is_final FROM exams WHERE term_id = ?1 ORDER BY seq ASC",
         )?;
         let all: Vec<(String, String, f64, bool)> = stmt
-            .query_map(params![request.term_id], |row| {
+            .query_map(params![term_id], |row| {
                 Ok((
                     row.get(0)?,
                     row.get(1)?,
@@ -325,11 +418,11 @@ pub fn build_report_cards(
             })?
             .collect::<rusqlite::Result<_>>()?;
 
-        if request.exam_ids.is_empty() {
+        if exam_ids.is_empty() {
             all
         } else {
             all.into_iter()
-                .filter(|(id, _, _, _)| request.exam_ids.contains(id))
+                .filter(|(id, _, _, _)| exam_ids.contains(id))
                 .collect()
         }
     };
@@ -350,8 +443,7 @@ pub fn build_report_cards(
         })
         .collect();
 
-    let is_final = exams.iter().any(|(_, _, _, final_flag)| *final_flag)
-        && request.exam_ids.is_empty();
+    let is_final = exams.iter().any(|(_, _, _, final_flag)| *final_flag) && exam_ids.is_empty();
 
     // --- Subjects -----------------------------------------------------------
     struct SubjectMeta {
@@ -382,7 +474,7 @@ pub fn build_report_cards(
              WHERE cs.class_id = ?1 AND cs.status = 'active'
              ORDER BY cs.is_core DESC, cs.position ASC",
         )?;
-        let collected = stmt.query_map(params![request.class_id], |row| {
+        let collected = stmt.query_map(params![class_id], |row| {
             Ok(SubjectMeta {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -413,6 +505,7 @@ pub fn build_report_cards(
         gender: Option<String>,
         photo: Option<Vec<u8>>,
         stream_id: Option<String>,
+        date_of_birth: Option<String>,
         stream_name: Option<String>,
         fees_blocked: bool,
         fees_note: Option<String>,
@@ -421,14 +514,15 @@ pub fn build_report_cards(
     let learners: Vec<Learner> = {
         let mut stmt = conn.prepare(
             "SELECT s.id, s.full_name, s.reg_number, s.gender, s.photo_png,
-                    st.name AS stream_name, s.fees_blocked, s.fees_note, e.stream_id
+                    st.name AS stream_name, s.fees_blocked, s.fees_note, e.stream_id,
+                    s.date_of_birth
              FROM enrollments e
              JOIN students s ON s.id = e.student_id
              LEFT JOIN streams st ON st.id = e.stream_id
              WHERE e.class_id = ?1 AND e.academic_year_id = ?2 AND e.status = 'active'
              ORDER BY s.full_name COLLATE NOCASE ASC",
         )?;
-        let collected = stmt.query_map(params![request.class_id, year_id], |row| {
+        let collected = stmt.query_map(params![class_id, year_id], |row| {
             Ok(Learner {
                 id: row.get(0)?,
                 full_name: row.get(1)?,
@@ -436,6 +530,7 @@ pub fn build_report_cards(
                 gender: row.get(3)?,
                 photo: row.get(4)?,
                 stream_id: row.get(8)?,
+                date_of_birth: row.get(9)?,
                 stream_name: row.get(5)?,
                 fees_blocked: row.get::<_, i64>(6)? != 0,
                 fees_note: row.get(7)?,
@@ -460,7 +555,7 @@ pub fn build_report_cards(
              JOIN class_subjects cs ON cs.id = m.class_subject_id
              WHERE cs.class_id = ?1",
         )?;
-        let rows = stmt.query_map(params![request.class_id], |row| {
+        let rows = stmt.query_map(params![class_id], |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
@@ -486,7 +581,7 @@ pub fn build_report_cards(
              FROM attendance WHERE term_id = ?1 AND class_id = ?2
              GROUP BY student_id",
         )?;
-        let collected = stmt.query_map(params![request.term_id, request.class_id], |row| {
+        let collected = stmt.query_map(params![term_id, class_id], |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 (row.get::<_, i64>(1)?, row.get::<_, i64>(2)?),
@@ -503,7 +598,7 @@ pub fn build_report_cards(
             "SELECT student_id, class_teacher_comment, head_teacher_comment, conduct_comment
              FROM report_comments WHERE term_id = ?1",
         )?;
-        let collected = stmt.query_map(params![request.term_id], |row| {
+        let collected = stmt.query_map(params![term_id], |row| {
             Ok((row.get::<_, String>(0)?, (row.get(1)?, row.get(2)?, row.get(3)?)))
         })?
         .collect::<rusqlite::Result<_>>()?;
@@ -518,7 +613,7 @@ pub fn build_report_cards(
             "SELECT student_id, activity, rating
              FROM learning_activity_ratings WHERE term_id = ?1",
         )?;
-        let rows = stmt.query_map(params![request.term_id], |row| {
+        let rows = stmt.query_map(params![term_id], |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 ActivityRating {
@@ -542,7 +637,7 @@ pub fn build_report_cards(
              WHERE ta.class_id = ?1 AND ta.role = 'class_teacher' AND ta.status = 'active'",
         )?;
         let collected = stmt
-            .query_map(params![request.class_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .query_map(params![class_id], |row| Ok((row.get(0)?, row.get(1)?)))?
             .collect::<rusqlite::Result<_>>()?;
         collected
     };
@@ -563,7 +658,7 @@ pub fn build_report_cards(
     let mut blocked = Vec::new();
 
     for learner in &learners {
-        if fees_rule_on && learner.fees_blocked {
+        if fees_rule_on && learner.fees_blocked && !history {
             blocked.push(BlockedLearner {
                 student_id: learner.id.clone(),
                 full_name: learner.full_name.clone(),
@@ -585,6 +680,8 @@ pub fn build_report_cards(
                 .ok_or_else(|| AppError::internal("grading system missing"))?;
 
             let mut exam_scores = Vec::new();
+            let mut exam_grades = Vec::new();
+            let mut exam_points = Vec::new();
             let mut any_absent = false;
 
             for (exam_id, _, _, _) in &exams {
@@ -595,9 +692,14 @@ pub fn build_report_cards(
                 ));
 
                 let score = entry.and_then(|(score, absent)| if *absent { None } else { *score });
-                if entry.map(|(_, absent)| *absent).unwrap_or(false) {
+                let absent = entry.map(|(_, absent)| *absent).unwrap_or(false);
+                if absent {
                     any_absent = true;
                 }
+                // Each exam graded on its own, for the per-exam aggregate columns.
+                let graded = system.grade(score, absent, subject.max_score, Some(subject.pass_mark));
+                exam_grades.push((score.is_some() || absent).then(|| graded.grade_label.clone()));
+                exam_points.push(graded.points.filter(|_| score.is_some()));
                 exam_scores.push(score);
             }
 
@@ -616,6 +718,9 @@ pub fn build_report_cards(
                 is_core: subject.is_core,
                 max_score: subject.max_score,
                 exam_scores,
+                exam_grades,
+                exam_points,
+                position: None,
                 term_score: term_score.map(|s| (s * 100.0).round() / 100.0),
                 grade_label: graded.grade_label.clone(),
                 points: graded.points,
@@ -647,11 +752,32 @@ pub fn build_report_cards(
             .then(|| (scored.iter().sum::<f64>() * 100.0).round() / 100.0);
         let total_max = card_subjects.iter().map(|s| s.max_score).sum();
 
+        // Per-exam totals over the core subjects: marks, aggregate, average.
+        let exam_totals: Vec<ExamTotal> = (0..exams.len())
+            .map(|index| {
+                let core = card_subjects.iter().filter(|s| s.is_core);
+                let scored: Vec<(f64, f64)> = core
+                    .clone()
+                    .filter_map(|s| s.exam_scores[index].map(|score| (score, s.max_score)))
+                    .collect();
+                let points: Vec<f64> = core.filter_map(|s| s.exam_points[index]).collect();
+                ExamTotal {
+                    marks: (!scored.is_empty()).then(|| scored.iter().map(|(v, _)| v).sum()),
+                    aggregate: (!points.is_empty()).then(|| points.iter().sum()),
+                    average: (!scored.is_empty()).then(|| {
+                        let pct: f64 = scored.iter().map(|(v, max)| v / max * 100.0).sum();
+                        (pct / scored.len() as f64 * 10.0).round() / 10.0
+                    }),
+                }
+            })
+            .collect();
+
         cards.push(ReportCard {
             student_id: learner.id.clone(),
             full_name: learner.full_name.clone(),
             reg_number: learner.reg_number.clone(),
             gender: learner.gender.clone(),
+            date_of_birth: learner.date_of_birth.clone(),
             photo_data_url: if photos_on {
                 learner
                     .photo
@@ -676,42 +802,99 @@ pub fn build_report_cards(
             class_teacher_name: class_teacher_for(&learner.stream_id),
             total_score,
             total_max,
+            exam_totals,
+            previous: None,
             activities: ratings.remove(&learner.id).unwrap_or_default(),
         });
     }
 
     rank(&mut cards);
+    rank_subjects(&mut cards);
 
-    // A single-learner or partial request still ranks against the whole class —
-    // a position is only meaningful relative to everyone.
-    if !request.student_ids.is_empty() {
-        cards.retain(|card| request.student_ids.contains(&card.student_id));
+    // --- Previous term, for the progress line ---------------------------------
+    if !history {
+        let previous_term: Option<(String, String)> = conn
+            .query_row(
+                "SELECT id, name FROM terms
+                 WHERE academic_year_id = (SELECT academic_year_id FROM terms WHERE id = ?1)
+                   AND seq < ?2
+                 ORDER BY seq DESC LIMIT 1",
+                params![term_id, term_seq],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        if let Some((previous_id, previous_name)) = previous_term {
+            if let Ok(earlier) = compute_report_cards(conn, class_id, &previous_id, &[], true) {
+                let by_student: HashMap<&str, &ReportCard> = earlier
+                    .cards
+                    .iter()
+                    .map(|card| (card.student_id.as_str(), card))
+                    .collect();
+                for card in &mut cards {
+                    if let Some(before) = by_student.get(card.student_id.as_str()) {
+                        if before.mean_percentage.is_some() {
+                            card.previous = Some(PreviousTerm {
+                                term_name: previous_name.clone(),
+                                total_points: before.total_points,
+                                division: before.division.clone(),
+                                mean_percentage: before.mean_percentage,
+                                position: before.position,
+                                class_size: before.class_size,
+                            });
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    audit::record(
-        &conn,
-        Some(&session),
-        "report_card.build",
-        "class",
-        &request.class_id,
-        format!(
-            "Built {} report cards for {class_name}, {term_name}{}",
-            cards.len(),
-            if blocked.is_empty() {
-                String::new()
-            } else {
-                format!(" ({} blocked on fees)", blocked.len())
-            }
-        ),
-    )?;
+    // --- Class averages -------------------------------------------------------
+    let mean_of = |values: Vec<f64>| -> Option<f64> {
+        (!values.is_empty())
+            .then(|| (values.iter().sum::<f64>() / values.len() as f64 * 10.0).round() / 10.0)
+    };
+    let class_average = mean_of(cards.iter().filter_map(|c| c.mean_percentage).collect());
+    let exam_class_averages: Vec<Option<f64>> = (0..exams.len())
+        .map(|index| {
+            mean_of(
+                cards
+                    .iter()
+                    .filter_map(|c| c.exam_totals.get(index).and_then(|t| t.average))
+                    .collect(),
+            )
+        })
+        .collect();
 
-    let batch = ReportCardBatch {
+    // The key printed at the foot: the class's own grading scale.
+    let grade_key: Vec<GradeKeyBand> = subjects
+        .iter()
+        .find(|subject| subject.is_core)
+        .or_else(|| subjects.first())
+        .and_then(|subject| systems.get(&subject.grading_system_id))
+        .map(|system| {
+            system
+                .bands
+                .iter()
+                .map(|band| GradeKeyBand {
+                    label: band.label.clone(),
+                    lower: band.lower_bound,
+                    upper: band.upper_bound,
+                    points: band.points,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(ReportCardBatch {
         class_name,
         level_kind,
         activity_names,
         next_term_begins,
         requirements,
         head_teacher_name,
+        class_average,
+        exam_class_averages,
+        grade_key,
         stream_name: None,
         term_name,
         academic_year,
@@ -719,9 +902,30 @@ pub fn build_report_cards(
         is_final,
         cards,
         blocked,
-    };
+    })
+}
 
-    envelope(&conn, "report_card", batch)
+
+/// Each learner's place in the class for each subject, by term mark.
+fn rank_subjects(cards: &mut [ReportCard]) {
+    let Some(subject_count) = cards.first().map(|card| card.subjects.len()) else {
+        return;
+    };
+    for index in 0..subject_count {
+        let mut scores: Vec<f64> = cards
+            .iter()
+            .filter_map(|card| card.subjects.get(index).and_then(|s| s.term_score))
+            .collect();
+        scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+        for card in cards.iter_mut() {
+            if let Some(subject) = card.subjects.get_mut(index) {
+                subject.position = subject.term_score.map(|mine| {
+                    // 1 + how many did strictly better: ties share a place.
+                    1 + scores.iter().filter(|&&other| other > mine).count() as i64
+                });
+            }
+        }
+    }
 }
 
 /// Class position.
@@ -1556,6 +1760,7 @@ mod tests {
             full_name: "Learner".into(),
             reg_number: "R1".into(),
             gender: None,
+            date_of_birth: None,
             photo_data_url: None,
             class_name: "P5".into(),
             stream_name: None,
@@ -1573,6 +1778,8 @@ mod tests {
             class_teacher_name: None,
             total_score: None,
             total_max: 0.0,
+            exam_totals: vec![],
+            previous: None,
             activities: vec![],
         }
     }
@@ -1609,6 +1816,37 @@ mod tests {
         rank(&mut cards);
         assert_eq!(cards[1].position, Some(1));
         assert_eq!(cards[0].position, Some(2));
+    }
+
+    #[test]
+    fn subject_positions_share_ties() {
+        let subject = |score: Option<f64>| ReportCardSubject {
+            class_subject_id: "cs".into(),
+            name: "English".into(),
+            is_core: true,
+            max_score: 100.0,
+            exam_scores: vec![],
+            exam_grades: vec![],
+            exam_points: vec![],
+            position: None,
+            term_score: score,
+            grade_label: String::new(),
+            points: None,
+            remark: None,
+            teacher_name: None,
+        };
+        let mut cards: Vec<ReportCard> = [Some(70.0), Some(90.0), Some(70.0), None]
+            .into_iter()
+            .map(|score| {
+                let mut c = card(None, None);
+                c.subjects = vec![subject(score)];
+                c
+            })
+            .collect();
+        rank_subjects(&mut cards);
+        let positions: Vec<Option<i64>> =
+            cards.iter().map(|c| c.subjects[0].position).collect();
+        assert_eq!(positions, vec![Some(2), Some(1), Some(2), None]);
     }
 
     #[test]

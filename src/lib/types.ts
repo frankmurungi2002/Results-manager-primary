@@ -384,6 +384,9 @@ export interface ReportCardSubject {
   isCore: boolean;
   maxScore: number;
   examScores: (number | null)[];
+  examGrades: (string | null)[];
+  examPoints: (number | null)[];
+  position: number | null;
   termScore: number | null;
   gradeLabel: string;
   points: number | null;
@@ -396,6 +399,7 @@ export interface ReportCard {
   fullName: string;
   regNumber: string;
   gender: string | null;
+  dateOfBirth: string | null;
   photoDataUrl: string | null;
   className: string;
   streamName: string | null;
@@ -414,7 +418,31 @@ export interface ReportCard {
   classTeacherName: string | null;
   totalScore: number | null;
   totalMax: number;
+  examTotals: ExamTotal[];
+  previous: PreviousTerm | null;
   activities: ActivityRating[];
+}
+
+export interface ExamTotal {
+  marks: number | null;
+  aggregate: number | null;
+  average: number | null;
+}
+
+export interface PreviousTerm {
+  termName: string;
+  totalPoints: number | null;
+  division: string | null;
+  meanPercentage: number | null;
+  position: number | null;
+  classSize: number;
+}
+
+export interface GradeKeyBand {
+  label: string;
+  lower: number;
+  upper: number;
+  points: number | null;
 }
 
 export type Rating = "excellent" | "very_good" | "good" | "fair" | "needs_help";
@@ -452,6 +480,9 @@ export interface ReportCardBatch {
   nextTermBegins: string | null;
   requirements: string | null;
   headTeacherName: string | null;
+  classAverage: number | null;
+  examClassAverages: (number | null)[];
+  gradeKey: GradeKeyBand[];
   streamName: string | null;
   termName: string;
   academicYear: string;
