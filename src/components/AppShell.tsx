@@ -93,6 +93,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     term: null,
   });
 
+  // Re-read on every refresh of the institution, so a replaced logo shows at
+  // once rather than after a restart.
   useEffect(() => {
     if (!institution?.hasLogo) {
       setLogo(null);
@@ -110,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [institution?.hasLogo]);
+  }, [institution]);
 
   useEffect(() => {
     api
@@ -140,14 +142,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="app-card">
       <nav className="sidebar">
         <div className="sidebar-brand">
-          <div className={logo ? "sidebar-mark" : "sidebar-mark sidebar-mark-brand"}>
-            {logo ? <img src={logo} alt="" /> : <BrandMark size={36} />}
-          </div>
+          {/* The school's own logo. Until one is uploaded, its initials. */}
+          {logo ? (
+            <div className="sidebar-mark">
+              <img src={logo} alt="" />
+            </div>
+          ) : session.isAdmin ? (
+            <button
+              className="sidebar-mark sidebar-mark-empty"
+              title="Add your school's logo"
+              onClick={() => navigate("settings", { tab: "school" })}
+            >
+              {initials(institution?.name ?? "School")}
+            </button>
+          ) : (
+            <div className="sidebar-mark sidebar-mark-empty">
+              {initials(institution?.name ?? "School")}
+            </div>
+          )}
           <div className="sidebar-brand-text">
             <div className="sidebar-brand-name">
               {institution?.name ?? APP_NAME}
             </div>
-            <div className="sidebar-brand-meta">{APP_NAME}</div>
+            <div className="sidebar-brand-meta">
+              <BrandMark size={12} />
+              {APP_NAME}
+            </div>
           </div>
         </div>
 
