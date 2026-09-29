@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
 
-/// How long a session survives with no activity before RM locks itself.
+/// How long a session survives with no activity before Phantom School Manager locks itself.
 /// A school PC sits on a desk in a shared office; an unattended, signed-in
 /// session is a real exposure.
 const IDLE_TIMEOUT_MINUTES: i64 = 30;

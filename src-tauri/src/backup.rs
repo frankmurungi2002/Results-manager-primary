@@ -3,7 +3,7 @@
 //! A consistent snapshot of the live database goes to the local backups folder
 //! and, when one is set, to a folder on a second drive. Snapshots are taken
 //! when someone asks, every fifteen minutes while the database is changing,
-//! and when RM closes. A snapshot of an unchanged database is skipped.
+//! and when Phantom School Manager closes. A snapshot of an unchanged database is skipped.
 //!
 //! Restore copies a snapshot back into the live database in place. What it
 //! replaces is snapshotted first, so a restore can itself be undone.
@@ -215,7 +215,7 @@ pub struct BackupFile {
     pub modified_at: String,
 }
 
-/// Every snapshot RM can see, newest first: the local folder, then the second
+/// Every snapshot Phantom School Manager can see, newest first: the local folder, then the second
 /// drive if it is plugged in.
 pub fn list(state: &AppState) -> AppResult<Vec<BackupFile>> {
     let mirror_dir = {
@@ -265,7 +265,7 @@ pub struct BackupSummary {
     pub learners: i64,
     pub marks: i64,
     pub last_activity_at: Option<String>,
-    /// False when the snapshot was made by a newer version of RM than this one.
+    /// False when the snapshot was made by a newer version of Phantom School Manager than this one.
     pub compatible: bool,
 }
 

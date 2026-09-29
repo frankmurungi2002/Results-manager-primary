@@ -268,7 +268,7 @@ pub fn save_student(
                 .ok_or_else(|| AppError::validation("No academic year is active yet."))?;
 
             // A supplied number is honoured (a school migrating its own
-            // numbering); otherwise RM allocates the next one (FR-B5).
+            // numbering); otherwise Phantom School Manager allocates the next one (FR-B5).
             let reg_number = match blank_to_none(request.reg_number.as_deref()) {
                 Some(supplied) => {
                     let taken: i64 = tx.query_row(

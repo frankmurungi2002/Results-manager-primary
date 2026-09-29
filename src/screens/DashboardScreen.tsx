@@ -672,13 +672,13 @@ function RecentActivity({
 
       {entries.length === 0 ? (
         <EmptyState icon={<TriangleAlert size={18} />} title="Nothing recorded yet">
-          Activity appears here as soon as people start using RM.
+          Activity appears here as soon as people start using Phantom School Manager.
         </EmptyState>
       ) : (
         <ul className="activity">
           {entries.map((entry) => (
             <li key={entry.id}>
-              <span className="activity-avatar">{entry.actor_name ? initials(entry.actor_name) : "RM"}</span>
+              <span className="activity-avatar">{entry.actor_name ? initials(entry.actor_name) : "PS"}</span>
               <span className="grow">
                 <span className="activity-text">{entry.summary}</span>
                 <span className="activity-meta">

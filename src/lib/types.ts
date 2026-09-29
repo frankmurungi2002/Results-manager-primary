@@ -1078,7 +1078,7 @@ export interface ImportResult {
   rows: ImportRow[];
 }
 
-/** The RM fields an import can fill, in the order the mapping screen shows them. */
+/** The Phantom School Manager fields an import can fill, in the order the mapping screen shows them. */
 export const IMPORT_FIELDS = [
   { key: "fullName", label: "Learner's name", required: true },
   { key: "className", label: "Class", required: false },

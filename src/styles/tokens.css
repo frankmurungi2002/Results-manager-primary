@@ -3,7 +3,7 @@
  *
  * SRS 14.6 asks for "one consistent colour palette, one font system, and
  * consistent spacing and iconography throughout" and warns against a
- * default-form-builder look. Everything visual in RM resolves to a token
+ * default-form-builder look. Everything visual in Phantom School Manager resolves to a token
  * defined here — no component invents its own colour or spacing.
  *
  * The dark theme is defined independently rather than by inverting the light

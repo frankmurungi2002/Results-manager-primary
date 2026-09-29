@@ -1,6 +1,6 @@
 //! Database handle, connection pragmas, and key management.
 //!
-//! There is exactly one connection, guarded by a mutex. A school runs RM on one
+//! There is exactly one connection, guarded by a mutex. A school runs Phantom School Manager on one
 //! PC with at most a handful of concurrent operations, so a pool buys nothing
 //! and a single connection makes transaction boundaries obvious.
 

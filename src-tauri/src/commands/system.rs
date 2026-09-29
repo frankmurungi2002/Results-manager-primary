@@ -271,7 +271,7 @@ pub fn backup_status(state: State<'_, AppState>) -> AppResult<BackupStatus> {
     })
 }
 
-/// Points RM at the second drive. SRS 16.1 replaces the transactional mirror
+/// Points Phantom School Manager at the second drive. SRS 16.1 replaces the transactional mirror
 /// with a scheduled copy for the pilot; this is where that copy goes.
 #[tauri::command]
 pub fn set_mirror_path(state: State<'_, AppState>, path: Option<String>) -> AppResult<()> {

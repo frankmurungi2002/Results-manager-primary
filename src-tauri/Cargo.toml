@@ -2,7 +2,7 @@
 name = "results-manager"
 version = "0.1.0"
 description = "Offline-first school management for Ugandan nursery and primary schools"
-authors = ["Results Manager"]
+authors = ["Phantom School Manager"]
 edition = "2021"
 rust-version = "1.77"
 

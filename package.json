@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Results Manager — offline-first school management for Ugandan nursery and primary schools",
+  "description": "Phantom School Manager — offline-first school management for Ugandan nursery and primary schools",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

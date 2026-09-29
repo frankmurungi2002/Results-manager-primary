@@ -169,7 +169,7 @@ export function GradingScreen() {
                 <Alert tone="warning" title="Check the thresholds before you go live">
                   Examination boards revise their boundaries from time to time.
                   Compare these against the current circular, and if they differ,
-                  duplicate this system and correct it — RM will not stop you
+                  duplicate this system and correct it — Phantom School Manager will not stop you
                   printing with the wrong ones.
                 </Alert>
               )}

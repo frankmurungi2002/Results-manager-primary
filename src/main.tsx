@@ -6,8 +6,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./styles/index.css";
 
 // A desktop application, not a web page: the browser context menu belongs to a
-// browser, not to RM. In development it stays, because right-click → Inspect is
-// how anyone working on RM reaches the console.
+// browser, not to Phantom School Manager. In development it stays, because right-click → Inspect is
+// how anyone working on Phantom School Manager reaches the console.
 if (import.meta.env.PROD) {
   document.addEventListener("contextmenu", (event) => {
     const target = event.target as HTMLElement;

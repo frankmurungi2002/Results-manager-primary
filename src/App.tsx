@@ -61,7 +61,7 @@ export default function App() {
           </Button>
           <p className="field-hint">
             If this keeps happening, your data is still safe on disk. Take a
-            copy of the RM data folder before reinstalling.
+            copy of the Phantom School Manager data folder before reinstalling.
           </p>
         </div>
         <ToastRegion />
