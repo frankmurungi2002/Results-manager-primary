@@ -624,11 +624,13 @@ pub async fn send_queued_sms(state: State<'_, AppState>) -> AppResult<FlushResul
     let session = state.sessions.require()?;
     session.require_admin()?;
     {
-        // Give failed messages another chance when someone asks explicitly.
+        // Give failed messages another chance when someone asks explicitly,
+        // except those that are out of date: a late pass-out text helps nobody.
         let conn = state.db.lock();
         conn.execute(
-            "UPDATE sms_outbox SET status = 'queued', attempts = 0 WHERE status = 'failed'",
-            [],
+            "UPDATE sms_outbox SET status = 'queued', attempts = 0
+             WHERE status = 'failed' AND (expires_at IS NULL OR expires_at > ?1)",
+            params![sms::stamp(Utc::now())],
         )?;
     }
     sms::flush(&state)

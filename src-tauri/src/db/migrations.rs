@@ -56,6 +56,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "timetables",
         sql: M007_TIMETABLES,
     },
+    Migration {
+        version: 8,
+        name: "sms_outbox_reliability",
+        sql: M008_SMS_OUTBOX_RELIABILITY,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -777,4 +782,46 @@ INSERT INTO timetable_periods (id, seq, label, start_time, end_time, kind, creat
  ('tp_10', 10, 'Lesson 7',  '14:00', '14:40', 'lesson',   datetime('now'), datetime('now')),
  ('tp_11', 11, 'Lesson 8',  '14:40', '15:20', 'lesson',   datetime('now'), datetime('now')),
  ('tp_12', 12, 'Games',     '15:20', '16:30', 'games',    datetime('now'), datetime('now'));
+"#;
+
+// ---------------------------------------------------------------------------
+// 008 — SMS outbox reliability
+// ---------------------------------------------------------------------------
+//
+// Three changes to how queued messages wait:
+//
+// * `attempts` now counts only answers from the gateway. A message that could
+//   not reach the gateway (no internet) used to spend an attempt each time, so
+//   about sixteen minutes offline left it stuck forever: too many attempts to
+//   be tried again, still marked queued, never sent and never failed.
+// * `expires_at` lets a message say when it stops being worth sending. A
+//   pass-out text that arrives the next morning tells a parent nothing true.
+// * `priority` puts urgent messages ahead of bulk ones, so a pass-out written
+//   while 800 "school reopens Monday" messages are going out goes next.
+
+const M008_SMS_OUTBOX_RELIABILITY: &str = r#"
+ALTER TABLE sms_outbox ADD COLUMN priority INTEGER NOT NULL DEFAULT 1;  -- 0 urgent, 1 normal, 2 bulk
+ALTER TABLE sms_outbox ADD COLUMN expires_at TEXT;                     -- UTC, YYYY-MM-DDTHH:MM:SSZ; NULL never expires
+ALTER TABLE sms_outbox ADD COLUMN last_attempt_at TEXT;
+
+DROP INDEX idx_sms_outbox_status;
+CREATE INDEX idx_sms_outbox_queue ON sms_outbox (status, priority, created_at);
+
+-- Pass-outs and absences are about today.
+UPDATE sms_outbox SET priority = 0 WHERE kind IN ('pass_out', 'pass_out_return', 'absence', 'test');
+
+UPDATE sms_outbox
+   SET expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', created_at, '+12 hours')
+ WHERE kind IN ('pass_out', 'pass_out_return', 'absence');
+
+-- Rescue messages the old retry rule left stranded. Anything already out of
+-- date is closed with a plain reason instead of being sent late.
+UPDATE sms_outbox
+   SET status = 'failed',
+       last_error = 'Not sent: by the time it could be sent, this message was out of date.'
+ WHERE status = 'queued'
+   AND expires_at IS NOT NULL
+   AND expires_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now');
+
+UPDATE sms_outbox SET attempts = 0 WHERE status = 'queued';
 "#;

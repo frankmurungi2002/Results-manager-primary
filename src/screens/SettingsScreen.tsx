@@ -671,7 +671,8 @@ function SmsTab() {
                   toast(
                     result.skippedReason ? "info" : "success",
                     result.skippedReason ??
-                      `Sent ${result.sent}. ${result.stillQueued} still waiting, ${result.failed} failed.`,
+                      `Sent ${result.sent}. ${result.stillQueued} still waiting, ${result.failed} failed.` +
+                        (result.expired > 0 ? ` ${result.expired} were out of date and not sent.` : ""),
                   );
                 })
                 .catch(reportError)

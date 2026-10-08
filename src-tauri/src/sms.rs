@@ -9,6 +9,7 @@
 //! Two Ugandan gateways are supported: Africa's Talking and EgoSMS. The school
 //! picks one in Settings and pays the gateway directly.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use chrono::Utc;
@@ -16,6 +17,7 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+use crate::db::Database;
 use crate::domain::ids::new_id;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
@@ -23,8 +25,6 @@ use crate::state::AppState;
 
 /// How often the background sender looks for queued messages.
 const INTERVAL: Duration = Duration::from_secs(120);
-/// A message that has failed this many times on the network stops retrying.
-const MAX_ATTEMPTS: i64 = 8;
 const TIMEOUT: Duration = Duration::from_secs(20);
 
 pub const ID_PREFIX: &str = "sms";
@@ -124,6 +124,34 @@ pub fn segments(body: &str) -> usize {
 // The outbox
 // ---------------------------------------------------------------------------
 
+/// Urgent messages (pass-outs, absences) go before anything else.
+pub const PRIORITY_URGENT: i64 = 0;
+pub const PRIORITY_NORMAL: i64 = 1;
+/// Bulk messages go last, so a pass-out never waits behind a broadcast.
+pub const PRIORITY_BULK: i64 = 2;
+
+/// How urgent each kind of message is, and how long it stays worth sending.
+///
+/// A pass-out or absence text is about today. Delivered the next morning it
+/// says something that is no longer true, and alarms a parent for nothing, so
+/// it expires twelve hours after it was written. Everything else waits for as
+/// long as it takes.
+pub fn policy(kind: &str) -> (i64, Option<chrono::Duration>) {
+    match kind {
+        "pass_out" | "pass_out_return" | "absence" => {
+            (PRIORITY_URGENT, Some(chrono::Duration::hours(12)))
+        }
+        "test" => (PRIORITY_URGENT, None),
+        "bulk" => (PRIORITY_BULK, None),
+        _ => (PRIORITY_NORMAL, None),
+    }
+}
+
+/// UTC to the second with a `Z`, the one format `expires_at` is compared in.
+pub fn stamp(at: chrono::DateTime<Utc>) -> String {
+    at.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
 /// Writes a message to the outbox. Call it inside the same transaction as the
 /// change that caused it. Returns the outbox id, or `None` (and queues
 /// nothing) when the phone number is missing or unusable.
@@ -138,93 +166,220 @@ pub fn queue(
     let Some(to) = phone.and_then(normalize_phone) else {
         return Ok(None);
     };
-    let id = new_id(ID_PREFIX);
-    conn.execute(
-        "INSERT INTO sms_outbox (id, to_phone, body, kind, related_id, status, attempts, created_by, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, 'queued', 0, ?6, ?7)",
-        params![id, to, body, kind, related_id, created_by, Utc::now().to_rfc3339()],
-    )?;
-    Ok(Some(id))
+    Ok(Some(insert(conn, &to, body, kind, Some(related_id), created_by)?))
 }
 
-#[derive(Debug, Serialize)]
+/// Inserts one message for a number already normalised by [`normalize_phone`].
+pub fn insert(
+    conn: &Connection,
+    to: &str,
+    body: &str,
+    kind: &str,
+    related_id: Option<&str>,
+    created_by: Option<&str>,
+) -> AppResult<String> {
+    let (priority, lifetime) = policy(kind);
+    let now = Utc::now();
+    let id = new_id(ID_PREFIX);
+    conn.execute(
+        "INSERT INTO sms_outbox (id, to_phone, body, kind, related_id, status, attempts,
+                                 priority, expires_at, created_by, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'queued', 0, ?6, ?7, ?8, ?9)",
+        params![
+            id,
+            to,
+            body,
+            kind,
+            related_id,
+            priority,
+            lifetime.map(|life| stamp(now + life)),
+            created_by,
+            now.to_rfc3339(),
+        ],
+    )?;
+    Ok(id)
+}
+
+#[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FlushResult {
     pub sent: usize,
     pub failed: usize,
     pub still_queued: usize,
-    /// Why nothing was attempted, e.g. SMS is switched off.
+    /// Closed unsent because they were out of date by the time they could go.
+    pub expired: usize,
+    /// Why nothing (or not everything) was attempted, e.g. SMS is switched off.
     pub skipped_reason: Option<String>,
 }
 
-/// Sends everything queued. The database lock is held only to read the queue
-/// and to record each result, never across a network call.
-pub fn flush(state: &AppState) -> AppResult<FlushResult> {
-    let (settings, batch) = {
-        let conn = state.db.lock();
-        let settings = load_settings(&conn)?;
-        let mut stmt = conn.prepare(
-            "SELECT id, to_phone, body FROM sms_outbox
-             WHERE status = 'queued' AND attempts < ?1
-             ORDER BY created_at ASC LIMIT 50",
-        )?;
-        let batch: Vec<(String, String, String)> = stmt
-            .query_map(params![MAX_ATTEMPTS], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
-            .collect::<rusqlite::Result<_>>()?;
-        (settings, batch)
-    };
+const EXPIRED_REASON: &str =
+    "Not sent: by the time it could be sent, this message was out of date.";
 
-    let mut result = FlushResult {
-        sent: 0,
-        failed: 0,
-        still_queued: 0,
-        skipped_reason: None,
-    };
+/// Messages read from the queue per round. The queue is read again between
+/// rounds, so an urgent message written mid-broadcast goes next.
+const BATCH: usize = 50;
 
-    if batch.is_empty() {
-        return Ok(result);
-    }
-    if settings.provider == "off" || settings.username.is_empty() || settings.api_key.is_empty() {
-        result.still_queued = batch.len();
-        result.skipped_reason =
-            Some("SMS is not set up yet. Messages are waiting in the outbox.".into());
-        return Ok(result);
-    }
+/// Lets only one sender run at a time. Two at once would both read the same
+/// queued rows and send each message twice: two texts to one parent, and the
+/// school pays for both.
+pub struct Gate {
+    running: AtomicBool,
+    /// Set by a caller that found a sender running: look again before stopping.
+    rerun: AtomicBool,
+}
 
-    for (id, to, body) in batch {
-        let outcome = send(&settings, &to, &body);
-        let conn = state.db.lock();
-        let now = Utc::now().to_rfc3339();
-        match outcome {
-            Ok(reference) => {
-                conn.execute(
-                    "UPDATE sms_outbox SET status = 'sent', attempts = attempts + 1,
-                            provider_ref = ?1, last_error = NULL, sent_at = ?2
-                     WHERE id = ?3",
-                    params![reference, now, id],
-                )?;
-                result.sent += 1;
-            }
-            Err(SendError::Offline(reason)) => {
-                // No internet, or the gateway is unreachable: try again later.
-                conn.execute(
-                    "UPDATE sms_outbox SET attempts = attempts + 1, last_error = ?1 WHERE id = ?2",
-                    params![reason, id],
-                )?;
-                result.still_queued += 1;
-            }
-            Err(SendError::Rejected(reason)) => {
-                conn.execute(
-                    "UPDATE sms_outbox SET status = 'failed', attempts = attempts + 1, last_error = ?1
-                     WHERE id = ?2",
-                    params![reason, id],
-                )?;
-                result.failed += 1;
-            }
+impl Gate {
+    pub const fn new() -> Self {
+        Self {
+            running: AtomicBool::new(false),
+            rerun: AtomicBool::new(false),
         }
     }
+}
 
-    Ok(result)
+impl Default for Gate {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// The gate every real send goes through.
+static GATE: Gate = Gate::new();
+
+/// Clears `running` even if sending panics, so one bad message cannot
+/// silence SMS until the application is restarted.
+struct RunningGuard<'a>(&'a Gate);
+
+impl Drop for RunningGuard<'_> {
+    fn drop(&mut self) {
+        self.0.running.store(false, Ordering::SeqCst);
+    }
+}
+
+/// Anything that can deliver one message: the real gateways, or a stand-in
+/// in tests.
+pub type Deliver<'a> = dyn Fn(&SmsSettings, &str, &str) -> Result<String, SendError> + Sync + 'a;
+
+/// Sends everything queued, most urgent first. Only one sender ever runs at
+/// a time; a call that finds one running asks it to go round again and
+/// returns at once, so nothing waits for the next scheduled round.
+pub fn flush(state: &AppState) -> AppResult<FlushResult> {
+    flush_with(&GATE, &state.db, &send)
+}
+
+pub fn flush_with(gate: &Gate, db: &Database, deliver: &Deliver<'_>) -> AppResult<FlushResult> {
+    let mut total = FlushResult::default();
+    loop {
+        if gate.running.swap(true, Ordering::SeqCst) {
+            gate.rerun.store(true, Ordering::SeqCst);
+            // The running sender may have checked `rerun` and stopped between
+            // our two steps. If it has, the job is ours.
+            if gate.running.swap(true, Ordering::SeqCst) {
+                total
+                    .skipped_reason
+                    .get_or_insert_with(|| "Already sending. New messages go in this round.".into());
+                return Ok(total);
+            }
+        }
+        let guard = RunningGuard(gate);
+        gate.rerun.store(false, Ordering::SeqCst);
+        let outcome = drain(db, &mut total, deliver);
+        drop(guard);
+        outcome?;
+        if !gate.rerun.swap(false, Ordering::SeqCst) {
+            return Ok(total);
+        }
+    }
+}
+
+/// One sender's work. The database lock is held only to read the queue and
+/// to record each result, never across a network call.
+fn drain(db: &Database, total: &mut FlushResult, deliver: &Deliver<'_>) -> AppResult<()> {
+    let settings = {
+        let conn = db.lock();
+        total.expired += conn.execute(
+            "UPDATE sms_outbox SET status = 'failed', last_error = ?1
+             WHERE status = 'queued' AND expires_at IS NOT NULL AND expires_at <= ?2",
+            params![EXPIRED_REASON, stamp(Utc::now())],
+        )?;
+        load_settings(&conn)?
+    };
+
+    let configured =
+        settings.provider != "off" && !settings.username.is_empty() && !settings.api_key.is_empty();
+
+    if configured {
+        'rounds: loop {
+            let batch: Vec<(String, String, String)> = {
+                let conn = db.lock();
+                let mut stmt = conn.prepare(
+                    "SELECT id, to_phone, body FROM sms_outbox
+                     WHERE status = 'queued' AND (expires_at IS NULL OR expires_at > ?1)
+                     ORDER BY priority ASC, created_at ASC
+                     LIMIT ?2",
+                )?;
+                let rows = stmt
+                    .query_map(params![stamp(Utc::now()), BATCH as i64], |row| {
+                        Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+                    })?
+                    .collect::<rusqlite::Result<_>>()?;
+                rows
+            };
+            let full = batch.len() == BATCH;
+
+            for (id, to, body) in batch {
+                let outcome = deliver(&settings, &to, &body);
+                let conn = db.lock();
+                let now = Utc::now().to_rfc3339();
+                match outcome {
+                    Ok(reference) => {
+                        conn.execute(
+                            "UPDATE sms_outbox SET status = 'sent', attempts = attempts + 1,
+                                    provider_ref = ?1, last_error = NULL,
+                                    last_attempt_at = ?2, sent_at = ?2
+                             WHERE id = ?3",
+                            params![reference, now, id],
+                        )?;
+                        total.sent += 1;
+                    }
+                    Err(SendError::Offline(reason)) => {
+                        // No internet or the gateway is down. The message keeps
+                        // its place and spends no attempt; trying the rest now
+                        // would only wait out the same timeout for each one.
+                        conn.execute(
+                            "UPDATE sms_outbox SET last_error = ?1, last_attempt_at = ?2 WHERE id = ?3",
+                            params![reason, now, id],
+                        )?;
+                        break 'rounds;
+                    }
+                    Err(SendError::Rejected(reason)) => {
+                        conn.execute(
+                            "UPDATE sms_outbox SET status = 'failed', attempts = attempts + 1,
+                                    last_error = ?1, last_attempt_at = ?2
+                             WHERE id = ?3",
+                            params![reason, now, id],
+                        )?;
+                        total.failed += 1;
+                    }
+                }
+            }
+
+            if !full {
+                break;
+            }
+        }
+    } else {
+        total.skipped_reason =
+            Some("SMS is not set up yet. Messages are waiting in the outbox.".into());
+    }
+
+    let conn = db.lock();
+    total.still_queued = conn.query_row(
+        "SELECT COUNT(*) FROM sms_outbox WHERE status = 'queued'",
+        [],
+        |row| row.get::<_, i64>(0),
+    )? as usize;
+    Ok(())
 }
 
 /// Sends queued messages on a background thread, so a screen never waits on
@@ -380,6 +535,7 @@ fn send_egosms(settings: &SmsSettings, to: &str, body: &str) -> Result<String, S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::AtomicUsize;
 
     #[test]
     fn ugandan_numbers_in_every_common_shape() {
@@ -402,6 +558,230 @@ mod tests {
         assert_eq!(normalize_phone(""), None);
         assert_eq!(normalize_phone("n/a"), None);
         assert_eq!(normalize_phone("0772 12"), None);
+    }
+
+    // --- The outbox and the sender -----------------------------------------
+
+    use std::collections::HashMap;
+    use std::sync::{mpsc, Arc, Mutex};
+
+    fn configured_db() -> Database {
+        let db = Database::open_in_memory().expect("open");
+        {
+            let conn = db.lock();
+            repo::set_setting(&conn, "sms.provider", "africastalking").unwrap();
+            repo::set_setting(&conn, "sms.username", "school").unwrap();
+            repo::set_setting(&conn, "sms.api_key", "key").unwrap();
+        }
+        db
+    }
+
+    fn put(db: &Database, to: &str, kind: &str) -> String {
+        insert(&db.lock(), to, "hello", kind, None, None).unwrap()
+    }
+
+    fn row(db: &Database, id: &str) -> (String, i64, Option<String>) {
+        db.lock()
+            .query_row(
+                "SELECT status, attempts, last_error FROM sms_outbox WHERE id = ?1",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap()
+    }
+
+    fn offline(_: &SmsSettings, _: &str, _: &str) -> Result<String, SendError> {
+        Err(SendError::Offline("no internet".into()))
+    }
+
+    fn delivered(_: &SmsSettings, _: &str, _: &str) -> Result<String, SendError> {
+        Ok("ref".into())
+    }
+
+    #[test]
+    fn a_long_outage_never_strands_a_message() {
+        // The old rule gave up silently after eight offline tries, about
+        // sixteen minutes. A school is often offline for a whole morning.
+        let gate = Gate::new();
+        let db = configured_db();
+        let id = put(&db, "+256772000001", "bulk");
+
+        for _ in 0..200 {
+            let result = flush_with(&gate, &db, &offline).unwrap();
+            assert_eq!(result.still_queued, 1);
+        }
+        let (status, attempts, error) = row(&db, &id);
+        assert_eq!((status.as_str(), attempts), ("queued", 0), "offline spends no attempt");
+        assert_eq!(error.as_deref(), Some("no internet"));
+
+        let result = flush_with(&gate, &db, &delivered).unwrap();
+        assert_eq!((result.sent, result.still_queued), (1, 0));
+        assert_eq!(row(&db, &id).0, "sent");
+    }
+
+    #[test]
+    fn being_offline_stops_the_round_at_the_first_message() {
+        // Otherwise 800 queued messages each wait out the network timeout.
+        let gate = Gate::new();
+        let db = configured_db();
+        for n in 0..5 {
+            put(&db, &format!("+25677200000{n}"), "bulk");
+        }
+        let calls = AtomicUsize::new(0);
+        let counting = |_: &SmsSettings, _: &str, _: &str| -> Result<String, SendError> {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Err(SendError::Offline("no internet".into()))
+        };
+        let result = flush_with(&gate, &db, &counting).unwrap();
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(result.still_queued, 5);
+    }
+
+    #[test]
+    fn a_rejected_message_fails_for_good_and_the_rest_still_go() {
+        let gate = Gate::new();
+        let db = configured_db();
+        let bad = put(&db, "+256772000001", "bulk");
+        let good = put(&db, "+256772000002", "bulk");
+        let picky = |_: &SmsSettings, to: &str, _: &str| -> Result<String, SendError> {
+            if to.ends_with('1') {
+                Err(SendError::Rejected("invalid number".into()))
+            } else {
+                Ok("ref".into())
+            }
+        };
+        let result = flush_with(&gate, &db, &picky).unwrap();
+        assert_eq!((result.sent, result.failed), (1, 1));
+        assert_eq!(row(&db, &bad).0, "failed");
+        assert_eq!(row(&db, &good).0, "sent");
+    }
+
+    #[test]
+    fn urgent_messages_jump_the_bulk_queue() {
+        let gate = Gate::new();
+        let db = configured_db();
+        for n in 0..3 {
+            put(&db, &format!("+25677200000{n}"), "bulk");
+        }
+        put(&db, "+256772999999", "pass_out");
+
+        let order = Mutex::new(Vec::new());
+        let recording = |_: &SmsSettings, to: &str, _: &str| -> Result<String, SendError> {
+            order.lock().unwrap().push(to.to_string());
+            Ok("ref".into())
+        };
+        flush_with(&gate, &db, &recording).unwrap();
+        assert_eq!(order.lock().unwrap()[0], "+256772999999");
+    }
+
+    #[test]
+    fn a_big_broadcast_goes_out_in_one_flush() {
+        // Batches of 50 used to mean one batch per two-minute round.
+        let gate = Gate::new();
+        let db = configured_db();
+        for n in 0..(BATCH * 2 + 7) {
+            put(&db, &format!("+256772{n:06}"), "bulk");
+        }
+        let result = flush_with(&gate, &db, &delivered).unwrap();
+        assert_eq!((result.sent, result.still_queued), (BATCH * 2 + 7, 0));
+    }
+
+    #[test]
+    fn an_out_of_date_message_is_closed_not_sent() {
+        let gate = Gate::new();
+        let db = configured_db();
+        let id = put(&db, "+256772000001", "pass_out");
+        db.lock()
+            .execute(
+                "UPDATE sms_outbox SET expires_at = '2000-01-01T00:00:00Z' WHERE id = ?1",
+                [&id],
+            )
+            .unwrap();
+
+        let result = flush_with(&gate, &db, &delivered).unwrap();
+        assert_eq!((result.sent, result.expired), (0, 1));
+        let (status, _, error) = row(&db, &id);
+        assert_eq!(status, "failed");
+        assert!(error.unwrap().contains("out of date"));
+    }
+
+    #[test]
+    fn pass_outs_expire_and_broadcasts_do_not() {
+        assert_eq!(policy("pass_out"), (PRIORITY_URGENT, Some(chrono::Duration::hours(12))));
+        assert_eq!(policy("absence").1, Some(chrono::Duration::hours(12)));
+        assert_eq!(policy("bulk"), (PRIORITY_BULK, None));
+    }
+
+    #[test]
+    fn nothing_is_sent_until_sms_is_set_up() {
+        let gate = Gate::new();
+        let db = Database::open_in_memory().unwrap();
+        put(&db, "+256772000001", "bulk");
+        let result = flush_with(&gate, &db, &delivered).unwrap();
+        assert_eq!((result.sent, result.still_queued), (0, 1));
+        assert!(result.skipped_reason.is_some());
+    }
+
+    #[test]
+    fn two_senders_never_text_a_parent_twice() {
+        // A pass-out starts a sender while another is mid-way through the
+        // queue. Before the gate, both read the same rows.
+        let gate = Arc::new(Gate::new());
+        let db = Arc::new(configured_db());
+        put(&db, "+256772000001", "pass_out");
+
+        let sends: Arc<Mutex<HashMap<String, usize>>> = Arc::default();
+        let (entered_tx, entered_rx) = mpsc::channel::<()>();
+        let (release_tx, release_rx) = mpsc::channel::<()>();
+        let release_rx = Mutex::new(release_rx);
+        let entered_tx = Mutex::new(entered_tx);
+
+        let first = {
+            let (gate, db, sends) = (gate.clone(), db.clone(), sends.clone());
+            std::thread::spawn(move || {
+                let slow = |_: &SmsSettings, to: &str, _: &str| -> Result<String, SendError> {
+                    *sends.lock().unwrap().entry(to.to_string()).or_default() += 1;
+                    let _ = entered_tx.lock().unwrap().send(());
+                    let _ = release_rx.lock().unwrap().recv();
+                    Ok("ref".into())
+                };
+                flush_with(&gate, &db, &slow).unwrap()
+            })
+        };
+
+        // The first sender is now inside a network call. A second pass-out
+        // arrives and starts its own sender.
+        entered_rx.recv().unwrap();
+        put(&db, "+256772000002", "pass_out");
+        let second = flush_with(&gate, &db, &delivered).unwrap();
+        assert_eq!(second.sent, 0, "the second sender must not run alongside");
+        assert!(second.skipped_reason.is_some());
+
+        // Release the first sender; it must go round again for the newcomer.
+        release_tx.send(()).unwrap();
+        release_tx.send(()).unwrap();
+        let first = first.join().unwrap();
+        assert_eq!(first.sent, 2);
+
+        let sends = sends.lock().unwrap();
+        assert_eq!(sends.get("+256772000001"), Some(&1));
+        assert_eq!(sends.get("+256772000002"), Some(&1));
+    }
+
+    #[test]
+    fn a_panicking_sender_does_not_silence_sms() {
+        let gate = Gate::new();
+        let db = configured_db();
+        put(&db, "+256772000001", "bulk");
+        let boom = |_: &SmsSettings, _: &str, _: &str| -> Result<String, SendError> {
+            panic!("gateway library bug")
+        };
+        let crashed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            flush_with(&gate, &db, &boom)
+        }));
+        assert!(crashed.is_err());
+        let result = flush_with(&gate, &db, &delivered).unwrap();
+        assert_eq!(result.sent, 1, "the gate was released by the panic");
     }
 
     #[test]

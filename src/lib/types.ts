@@ -961,6 +961,8 @@ export interface FlushResult {
   sent: number;
   failed: number;
   stillQueued: number;
+  /** Closed unsent because they were out of date by the time they could go. */
+  expired: number;
   skippedReason: string | null;
 }
 
