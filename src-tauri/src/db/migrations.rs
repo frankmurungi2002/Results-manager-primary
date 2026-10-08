@@ -81,6 +81,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "audit_seal",
         sql: M012_AUDIT_SEAL,
     },
+    Migration {
+        version: 13,
+        name: "licence_school_code",
+        sql: M013_LICENCE_SCHOOL_CODE,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -966,4 +971,15 @@ BEFORE DELETE ON audit_seal
 BEGIN
     SELECT RAISE(ABORT, 'audit_seal is append-only');
 END;
+"#;
+
+// ---------------------------------------------------------------------------
+// 013 — the school code a licence key is issued for (FR-B11)
+// ---------------------------------------------------------------------------
+
+const M013_LICENCE_SCHOOL_CODE: &str = r#"
+-- Ten random hex characters, made once per installation. The school sends it
+-- when it pays; the key the owner sends back works only here.
+INSERT OR IGNORE INTO settings (key, value, updated_at)
+VALUES ('licence.school_code', upper(hex(randomblob(5))), datetime('now'));
 "#;

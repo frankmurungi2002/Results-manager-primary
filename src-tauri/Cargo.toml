@@ -22,7 +22,7 @@ serde_json = "1"
 
 # Storage. `bundled` compiles SQLite into the binary so a school PC needs
 # no system SQLite. The `encrypted-db` feature below swaps this for SQLCipher.
-rusqlite = { version = "0.32", features = ["bundled", "chrono", "serde_json", "backup", "functions"] }
+rusqlite = { version = "0.32", features = ["bundled", "chrono", "serde_json", "backup", "functions", "hooks"] }
 
 # Password hashing. Argon2id is the current OWASP recommendation.
 argon2 = { version = "0.5", features = ["std"] }
@@ -53,6 +53,12 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 # SHA-256 for the audit log's hash chain: each entry seals the one before,
 # so any change, deletion or insertion outside the application is detectable.
 sha2 = "0.10"
+
+# Subscription keys (FR-B11) are Ed25519-signed by the owner and verified
+# here, offline. Only verification is compiled in; the private key and the
+# issuing tool live outside this crate (tools/phantom-licence).
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+base64 = "0.22"
 
 # OS-keychain storage for the database key, used only by `encrypted-db`.
 keyring = { version = "3", optional = true }

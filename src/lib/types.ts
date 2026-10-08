@@ -1314,3 +1314,23 @@ export const IMPORT_FIELDS = [
   { key: "guardianPhone", label: "Guardian's phone", required: false },
   { key: "guardianRelationship", label: "Relationship", required: false },
 ] as const;
+
+// --- Subscription (FR-B11) ------------------------------------------------------
+
+export type LicenceState = "pilot" | "trial" | "active" | "grace" | "expired";
+
+export interface LicenceStatus {
+  state: LicenceState;
+  /** What the school sends the owner when it pays. */
+  schoolCode: string;
+  /** Past the grace days: everything can be read, printed and backed up; nothing changed. */
+  readOnly: boolean;
+  plan: string | null;
+  nameOnKey: string | null;
+  keyId: string | null;
+  /** The last day of full use. */
+  until: string | null;
+  daysLeft: number | null;
+  clockRolledBack: boolean;
+}
+

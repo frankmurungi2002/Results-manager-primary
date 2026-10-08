@@ -99,7 +99,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-B8 | Fees-block rule at print time | ✅ (manual flag) | M2 reads from the Fees Ledger | |
 | FR-B9 | Light, dark and match-Windows themes | ✅ | — | |
 | FR-B10 | Backup status; cloud controls marked "coming soon" | ✅ | — | |
-| FR-B11 | Subscription tracker, 7-day grace, then read-only mode | ⬜ | **M2** | SRS 16.6: build as specified from day one of paid use. Needs an offline-verifiable signed expiry in the activation key |
+| FR-B11 | Subscription tracker, 7-day grace, then read-only mode | ✅ | **M2** | Ed25519-signed keys, verified offline and bound to the school's code; termly (120 days) or yearly (365); 30-day trial; 7 days' grace then read-only, enforced by an SQLite authorizer; clock rollback ignored. The owner issues keys with `tools/phantom-licence`. Off until the owner's public key is compiled in; see [`LICENSING.md`](LICENSING.md) |
 | FR-B12 | Backup to a second drive | ✅ simplified | M3 (full mirror) | Scheduled snapshots and restore done in M0. The full checksummed dual-SSD mirror (SRS 13) is M3 |
 | FR-B13 | Software update channel with rollback | ⏸ | M3 | Manual, support-assisted reinstall until then. Tauri's updater plugin is the natural route |
 | FR-B14 | In-app feedback | ⬜ | M2 (email/WhatsApp link), M3 (queued form + screenshot) | |
@@ -255,7 +255,7 @@ or consciously rejected.
 These block or shape specific rows above.
 
 1. **Streams at the pilot school**: SRS 16.5 puts streams in Phase 1 (M2). If Rainbow Nursery and Primary School runs streams (e.g. P5 East / P5 West), streams move into M1. To confirm with the school.
-2. **Activation and subscription (FR-B11)**: format of the offline activation key, and who issues it during M2.
+2. ~~**Activation and subscription (FR-B11)**~~: decided 2026-10-08, see `LICENSING.md`. Still to set: the prices, and when the owner's key is compiled in (that switches subscriptions on).
 3. **SMS gateway (FR-G8)**: Africa's Talking or EgoSMS, and who pays for messages.
 4. **Report card layout**: does the pilot school want position per subject, A4 or A5, and a photo on the card?
 5. **X2 admin recovery**: recovery code or support-issued reset.

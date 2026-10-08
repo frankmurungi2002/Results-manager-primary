@@ -378,6 +378,41 @@ pub fn verify_audit_code(state: State<'_, AppState>, code: String) -> AppResult<
 }
 
 // ---------------------------------------------------------------------------
+// FR-B11 — the subscription
+// ---------------------------------------------------------------------------
+
+/// The subscription's state, re-checked against today. Asked before sign-in
+/// too, so the sign-in screen can say a school is read-only; it reveals
+/// nothing but the school code, which is not secret.
+#[tauri::command]
+pub fn licence_status(state: State<'_, AppState>) -> AppResult<crate::licence::LicenceStatus> {
+    let conn = state.db.lock();
+    crate::licence::refresh(&conn)
+}
+
+/// Installs a key the owner sent. Works while read-only: that is how a
+/// school gets out of it.
+#[tauri::command]
+pub fn install_licence_key(state: State<'_, AppState>, key: String) -> AppResult<crate::licence::LicenceStatus> {
+    let session = state.sessions.require()?;
+    session.require(Permission::ManageSchool)?;
+    let conn = state.db.lock();
+    let claims = crate::licence::install(&conn, &key)?;
+    audit::record(
+        &conn,
+        Some(&session),
+        "licence.install",
+        "licence",
+        &claims.id,
+        format!(
+            "Installed licence key {} ({} plan, {} to {})",
+            claims.id, claims.plan, claims.from, claims.until
+        ),
+    )?;
+    crate::licence::refresh(&conn)
+}
+
+// ---------------------------------------------------------------------------
 // Backup (simplified FR-B12, per SRS 16.1)
 // ---------------------------------------------------------------------------
 
@@ -482,7 +517,10 @@ pub fn inspect_backup(state: State<'_, AppState>, path: String) -> AppResult<Bac
 pub fn restore_backup(state: State<'_, AppState>, path: String) -> AppResult<BackupSummary> {
     let session = state.sessions.require()?;
     session.require(Permission::ManageBackups)?;
-    backup::restore(&state, &session, std::path::Path::new(&path))
+    let summary = backup::restore(&state, &session, std::path::Path::new(&path))?;
+    // The restored database carries its own subscription.
+    crate::licence::refresh(&state.db.lock())?;
+    Ok(summary)
 }
 
 // ---------------------------------------------------------------------------

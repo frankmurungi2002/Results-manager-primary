@@ -1658,3 +1658,66 @@
 .audit-row-broken td {
   background: var(--danger-soft);
 }
+
+/* ---------------------------------------------------------------------- */
+/* Subscription                                                            */
+/* ---------------------------------------------------------------------- */
+
+.licence-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-6);
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.licence-banner svg {
+  flex: none;
+}
+
+.licence-banner.is-info {
+  background: var(--info-soft);
+}
+
+.licence-banner.is-warn {
+  background: var(--warning-soft);
+  border-bottom-color: var(--warning-border);
+}
+
+.licence-banner.is-locked {
+  background: var(--danger-soft);
+  border-bottom: 2px solid var(--danger);
+}
+
+.sub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.sub-fact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.sub-fact > span:first-child {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sub-fact strong {
+  font-size: var(--text-lg);
+}
+
+.sub-steps {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

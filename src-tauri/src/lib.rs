@@ -13,6 +13,8 @@ pub mod db;
 pub mod domain;
 pub mod error;
 pub mod ink;
+pub mod licence;
+pub mod licence_format;
 pub mod security;
 pub mod sms;
 pub mod state;
@@ -69,6 +71,8 @@ pub fn run() {
             commands::system::audit_integrity,
             commands::system::build_audit_export,
             commands::system::verify_audit_code,
+            commands::system::licence_status,
+            commands::system::install_licence_key,
             commands::system::backup_status,
             commands::system::set_mirror_path,
             commands::system::run_backup,

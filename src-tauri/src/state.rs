@@ -19,6 +19,8 @@ pub struct AppState {
 impl AppState {
     pub fn new(paths: AppPaths) -> AppResult<Self> {
         let db = Database::open(&paths.db_file)?;
+        // A lapsed subscription is read-only from the first statement.
+        crate::licence::refresh(&db.lock())?;
         let changes = db.total_changes();
         Ok(Self {
             db,

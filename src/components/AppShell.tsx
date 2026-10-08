@@ -30,6 +30,7 @@ import { OFFICE_TITLES } from "../lib/types";
 import type { FeatureFlags, Permission, SessionView } from "../lib/types";
 import { type ScreenId, useCan, useStore } from "../state/store";
 import { APP_NAME, BrandMark } from "./Logo";
+import { LicenceBanner, useLicence } from "./Subscription";
 import { Badge, Button, cx, initials } from "./ui";
 
 interface NavEntry {
@@ -109,6 +110,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const session = useStore((state) => state.session);
   const can = useCan();
+  const [licence] = useLicence();
   const institution = useStore((state) => state.institution);
   const screen = useStore((state) => state.screen);
   const navigate = useStore((state) => state.navigate);
@@ -289,6 +291,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        <LicenceBanner status={licence} />
         {children}
       </div>
       </div>

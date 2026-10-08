@@ -76,6 +76,7 @@ impl AppError {
             AppError::BadCredentials => "bad_credentials",
             AppError::AccountLocked => "account_locked",
             AppError::NotProvisioned => "not_provisioned",
+            AppError::Database(e) if crate::licence::is_read_only_refusal(e) => "read_only",
             AppError::Database(_) => "database",
             AppError::Io(_) => "io",
             AppError::Spreadsheet(_) => "spreadsheet",
@@ -89,6 +90,11 @@ impl AppError {
             AppError::NotFound(what) => format!("{what} could not be found."),
             AppError::Spreadsheet(detail) => {
                 format!("That spreadsheet could not be read: {detail}")
+            }
+            AppError::Database(e) if crate::licence::is_read_only_refusal(e) => {
+                "The subscription has ended, so Phantom is read-only: you can view, print and back up \
+                 everything, but not add or change anything. Enter a renewal key in Settings → Subscription."
+                    .to_string()
             }
             // Database/Io/Internal deliberately fall back to the terse Display
             // text so paths and SQL never reach the screen. The detail is logged.

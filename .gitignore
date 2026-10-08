@@ -44,3 +44,10 @@ yarn-debug.log*
 yarn-error.log*
 node_modules/ 
 node_modules/ 
+
+# The owner's licence signing key and sales register. Never commit these:
+# anyone holding the key can issue licences for every school.
+phantom-issuer.key
+*.key
+issued-keys.csv
+tools/phantom-licence/target/

@@ -29,6 +29,7 @@ import type {
 } from "../lib/types";
 import { useCan, useStore } from "../state/store";
 import { SignaturesSettings } from "../components/SignaturesSettings";
+import { SubscriptionSettings } from "../components/Subscription";
 import {
   Alert,
   Badge,
@@ -46,7 +47,7 @@ import {
   relativeTime,
 } from "../components/ui";
 
-type Tab = "school" | "features" | "sms" | "signatures" | "backup" | "account";
+type Tab = "school" | "features" | "sms" | "signatures" | "subscription" | "backup" | "account";
 
 const ACCENTS = [
   "#4F63D2",
@@ -70,6 +71,7 @@ export function SettingsScreen() {
     { id: "features", label: "Optional features", allowed: can("manage_school") },
     { id: "sms", label: "SMS", allowed: can("manage_school") },
     { id: "signatures", label: "Signatures & stamp", allowed: true },
+    { id: "subscription", label: "Subscription", allowed: can("manage_school") },
     { id: "backup", label: "Backup", allowed: can("manage_backups") },
     { id: "account", label: "My account", allowed: true },
   ];
@@ -110,6 +112,7 @@ export function SettingsScreen() {
         {tab === "features" && allowed("features") && <FeaturesTab />}
         {tab === "sms" && allowed("sms") && <SmsTab />}
         {tab === "signatures" && <SignaturesSettings />}
+        {tab === "subscription" && allowed("subscription") && <SubscriptionSettings />}
         {tab === "backup" && allowed("backup") && <BackupTab />}
         {tab === "account" && <AccountTab />}
       </div>

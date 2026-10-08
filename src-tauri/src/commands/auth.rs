@@ -152,6 +152,8 @@ pub fn sign_in(
         });
     }
 
+    // A subscription can lapse while the window is left open overnight.
+    crate::licence::refresh(&conn)?;
     let role = Role::parse(&role_text)?;
     let office = office_text.as_deref().map(Office::parse).transpose()?;
     let (class_ids, class_teacher_of) = load_teacher_scope(&conn, &user_id, role)?;

@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  LicenceStatus,
   AuditExport,
   AuditIntegrity,
   CodeCheck,
@@ -167,6 +168,8 @@ export const api = {
   buildAuditExport: (from: string | null, to: string | null, query: string | null) =>
     call<DocumentEnvelope<AuditExport>>("build_audit_export", { from, to, query }),
   verifyAuditCode: (code: string) => call<CodeCheck>("verify_audit_code", { code }),
+  licenceStatus: () => call<LicenceStatus>("licence_status"),
+  installLicenceKey: (key: string) => call<LicenceStatus>("install_licence_key", { key }),
   backupStatus: () => call<BackupStatus>("backup_status"),
   setMirrorPath: (path: string | null) => call<void>("set_mirror_path", { path }),
   runBackup: () => call<BackupResult>("run_backup"),
