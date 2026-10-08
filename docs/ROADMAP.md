@@ -79,7 +79,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-W5 | Automatic first-admin credentials after payment | 🌐 ⏸ | M3 | Pilot: the setup wizard creates the first admin |
 | FR-W6 | Level-specific installer with a one-time install token | 🌐 ⏸ | M3 | Pilot: activation key tied to institution ID |
 | FR-W7 | Connector-RM rescue tool | 🌐 ⏸ | M4 | |
-| FR-W8 | Encrypted cloud backup endpoint, built but switched off | 🌐 ⏸ | M4 | |
+| FR-W8 | Encrypted cloud backup endpoint, built but switched off | 🌐 ⏸ | M3 | Designed in [`CLOUD.md`](CLOUD.md): encrypted on the school's computer before upload, so the cloud cannot read it |
 | FR-W9 | Institution online account | 🌐 ⬜ | M3 | |
 | FR-W10 | Admin manual, optional quiz and certificate | 🌐 ⬜ | Manual: M1. Quiz and certificate: M4 | The manual is what makes SRS 14.4 (setup without a technician) achievable |
 | FR-W11 | Public feedback form | 🌐 ⬜ | M3 | |
