@@ -943,6 +943,8 @@ export interface SmsSettings {
   apiKey: string;
   senderId: string;
   signature: string;
+  /** Whether Class Teachers and group leaders may text their own parents. */
+  teachersMayBroadcast: boolean;
 }
 
 export interface SmsOutboxRow {
@@ -964,6 +966,105 @@ export interface FlushResult {
   /** Closed unsent because they were out of date by the time they could go. */
   expired: number;
   skippedReason: string | null;
+}
+
+// --- Bulk SMS (FR-G23) and learner groups ------------------------------------
+
+export type AudienceKind = "school" | "class" | "stream" | "group" | "staff";
+
+/** One part of who a message goes to. `id` is empty for school and staff. */
+export interface AudiencePart {
+  kind: AudienceKind;
+  id: string | null;
+}
+
+export interface AudienceStream {
+  id: string;
+  name: string;
+}
+
+export interface AudienceClass {
+  id: string;
+  name: string;
+  learners: number;
+  streams: AudienceStream[];
+}
+
+export interface AudienceGroup {
+  id: string;
+  name: string;
+  members: number;
+}
+
+/** What the signed-in person may text. */
+export interface AudienceOptions {
+  canTextSchool: boolean;
+  canTextStaff: boolean;
+  classes: AudienceClass[];
+  groups: AudienceGroup[];
+  smsReady: boolean;
+  blockedReason: string | null;
+}
+
+export type SmsEncoding = "gsm" | "unicode";
+
+export interface BroadcastPreview {
+  audienceLabel: string;
+  /** Phone numbers that will be texted. */
+  recipients: number;
+  /** Learners covered, each child counted once. */
+  learners: number;
+  /** SMS the gateway will charge for, across every recipient. */
+  units: number;
+  partsPerMessage: number;
+  encoding: SmsEncoding;
+  sample: string | null;
+  missingCount: number;
+  missingNames: string[];
+  notes: string[];
+}
+
+export interface BroadcastSent {
+  id: string;
+  recipients: number;
+  units: number;
+  audienceLabel: string;
+}
+
+export interface BroadcastRow {
+  id: string;
+  audienceLabel: string;
+  template: string;
+  recipients: number;
+  units: number;
+  sent: number;
+  waiting: number;
+  failed: number;
+  sentBy: string;
+  createdAt: string;
+}
+
+export interface GroupRow {
+  id: string;
+  name: string;
+  note: string | null;
+  leaderId: string | null;
+  leaderName: string | null;
+  members: number;
+}
+
+export interface GroupInput {
+  name: string;
+  note: string | null;
+  leaderId: string | null;
+}
+
+export interface GroupMember {
+  studentId: string;
+  fullName: string;
+  regNumber: string;
+  className: string | null;
+  hasPhone: boolean;
 }
 
 // --- Mark anomaly detection ------------------------------------------------

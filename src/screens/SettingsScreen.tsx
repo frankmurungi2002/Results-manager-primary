@@ -619,6 +619,11 @@ function SmsTab() {
                 placeholder="Your school name"
                 hint="A short name keeps each text to one SMS, e.g. RAINBOW N&P."
               />
+              <Switch
+                checked={settings.teachersMayBroadcast}
+                onChange={(on) => set({ teachersMayBroadcast: on })}
+                label="Class Teachers may text the parents of their own class, and teachers in charge of a group may text that group"
+              />
             </>
           )}
         </div>

@@ -47,6 +47,14 @@ pub struct SmsSettings {
     pub sender_id: String,
     /// How messages begin, e.g. "RAINBOW N&P". Blank uses the school name.
     pub signature: String,
+    /// Whether Class Teachers and teachers in charge of a group may text
+    /// their own parents (FR-G23). The office always may.
+    #[serde(default = "yes")]
+    pub teachers_may_broadcast: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 pub fn load_settings(conn: &Connection) -> AppResult<SmsSettings> {
@@ -60,6 +68,7 @@ pub fn load_settings(conn: &Connection) -> AppResult<SmsSettings> {
         api_key: get("sms.api_key")?,
         sender_id: get("sms.sender_id")?,
         signature: get("sms.signature")?,
+        teachers_may_broadcast: get("sms.teachers_may_broadcast")? != "0",
     })
 }
 
@@ -72,6 +81,11 @@ pub fn save_settings(conn: &Connection, settings: &SmsSettings) -> AppResult<()>
     repo::set_setting(conn, "sms.api_key", settings.api_key.trim())?;
     repo::set_setting(conn, "sms.sender_id", settings.sender_id.trim())?;
     repo::set_setting(conn, "sms.signature", settings.signature.trim())?;
+    repo::set_setting(
+        conn,
+        "sms.teachers_may_broadcast",
+        if settings.teachers_may_broadcast { "1" } else { "0" },
+    )?;
     Ok(())
 }
 
@@ -110,14 +124,68 @@ pub fn normalize_phone(raw: &str) -> Option<String> {
     (national.len() == 9 && national.starts_with('7')).then(|| format!("+256{national}"))
 }
 
-/// How many SMS a message costs: 160 characters for one, 153 per part after.
-pub fn segments(body: &str) -> usize {
-    let len = body.chars().count();
-    if len <= 160 {
-        1
-    } else {
-        len.div_ceil(153)
+// ---------------------------------------------------------------------------
+// What a message costs
+// ---------------------------------------------------------------------------
+
+/// The GSM 03.38 default alphabet: a message using only these characters
+/// fits 160 to an SMS.
+const GSM_BASIC: &str = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+/// Characters that exist in GSM but take two of the 160 places each.
+const GSM_EXTENDED: &str = "^{}\\[~]|€\u{000C}";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Encoding {
+    /// 160 characters for one SMS, 153 per part after that.
+    Gsm,
+    /// Any character outside GSM makes the whole message Unicode:
+    /// 70 for one SMS, 67 per part after. The same text can cost twice as much.
+    Unicode,
+}
+
+/// How a message will be encoded, and how many SMS it costs to send once.
+pub fn cost(body: &str) -> (Encoding, usize) {
+    let mut septets = 0usize;
+    for c in body.chars() {
+        if GSM_BASIC.contains(c) {
+            septets += 1;
+        } else if GSM_EXTENDED.contains(c) {
+            septets += 2;
+        } else {
+            let units = body.encode_utf16().count();
+            let parts = if units <= 70 { 1 } else { units.div_ceil(67) };
+            return (Encoding::Unicode, parts);
+        }
     }
+    let parts = if septets <= 160 { 1 } else { septets.div_ceil(153) };
+    (Encoding::Gsm, parts)
+}
+
+/// How many SMS a message costs to send once.
+pub fn segments(body: &str) -> usize {
+    cost(body).1
+}
+
+/// Replaces the typographic characters word processors and phones insert
+/// (curly quotes, long dashes, ellipses, non-breaking spaces) with their
+/// plain equivalents. One curly apostrophe pasted from Word would otherwise
+/// turn the whole message into Unicode and can double what the school pays.
+pub fn plain_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '\u{2018}' | '\u{2019}' | '\u{201A}' | '\u{201B}' | '\u{2032}' | '\u{00B4}' | '`' => out.push('\''),
+            '\u{201C}' | '\u{201D}' | '\u{201E}' | '\u{201F}' | '\u{2033}' | '\u{00AB}' | '\u{00BB}' => out.push('"'),
+            '\u{2010}' | '\u{2011}' | '\u{2012}' | '\u{2013}' | '\u{2014}' | '\u{2015}' | '\u{2212}' => out.push('-'),
+            '\u{2026}' => out.push_str("..."),
+            '\u{00A0}' | '\u{2007}' | '\u{202F}' | '\u{2009}' | '\u{200A}' | '\t' => out.push(' '),
+            '\u{200B}' | '\u{200C}' | '\u{200D}' | '\u{FEFF}' => {}
+            '\u{2022}' | '\u{00B7}' => out.push('-'),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 // ---------------------------------------------------------------------------
@@ -782,6 +850,32 @@ mod tests {
         assert!(crashed.is_err());
         let result = flush_with(&gate, &db, &delivered).unwrap();
         assert_eq!(result.sent, 1, "the gate was released by the panic");
+    }
+
+    #[test]
+    fn one_curly_apostrophe_would_make_a_message_unicode() {
+        let typed = "Parents\u{2019} meeting on Friday \u{2013} 2pm";
+        assert_eq!(cost(typed).0, Encoding::Unicode);
+        let plain = plain_text(typed);
+        assert_eq!(plain, "Parents' meeting on Friday - 2pm");
+        assert_eq!(cost(&plain).0, Encoding::Gsm);
+    }
+
+    #[test]
+    fn unicode_parts_are_seventy_and_sixty_seven() {
+        let emoji = "\u{1F600}"; // two UTF-16 units
+        assert_eq!(cost(&"\u{0101}".repeat(70)), (Encoding::Unicode, 1));
+        assert_eq!(cost(&"\u{0101}".repeat(71)), (Encoding::Unicode, 2));
+        assert_eq!(cost(&"\u{0101}".repeat(134)), (Encoding::Unicode, 2));
+        assert_eq!(cost(&"\u{0101}".repeat(135)), (Encoding::Unicode, 3));
+        assert_eq!(cost(&emoji.repeat(35)), (Encoding::Unicode, 1));
+    }
+
+    #[test]
+    fn extended_gsm_characters_take_two_places() {
+        assert_eq!(cost(&"€".repeat(80)), (Encoding::Gsm, 1));
+        assert_eq!(cost(&"€".repeat(81)), (Encoding::Gsm, 2));
+        assert_eq!(cost("UGX 50,000 [fees]"), (Encoding::Gsm, 1));
     }
 
     #[test]

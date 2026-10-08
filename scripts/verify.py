@@ -317,12 +317,16 @@ def check_ipc_shapes():
     rust = rust_structs(os.path.join(ROOT, "src-tauri", "src"))
     ts = ts_interfaces(os.path.join(ROOT, "src", "lib", "types.ts"))
 
-    problems, checked = [], 0
+    problems, checked, unchecked = [], 0, []
     for name in sorted(rust):
         if name in INTERNAL:
             continue
         target = ALIASES.get(name, name)
         if target not in ts:
+            # Nothing to compare against. Usually a request the interface
+            # builds inline, but a misspelt interface name lands here too,
+            # so say so rather than counting it as agreement.
+            unchecked.append(name)
             continue
         checked += 1
         path, rust_fields = rust[name]
@@ -341,6 +345,11 @@ def check_ipc_shapes():
 
     colour = GREEN if not problems else RED
     print(f"  {colour}{checked - len(problems)}/{checked}{RESET} shapes agree")
+    if unchecked:
+        print(f"  {DIM}{len(unchecked)} Rust structs have no TypeScript interface of the "
+              f"same name and could not be checked. Give a struct that crosses "
+              f"to the interface a matching interface, or add it to INTERNAL:{RESET}")
+        print(f"  {DIM}{', '.join(unchecked)}{RESET}")
     return len(problems)
 
 

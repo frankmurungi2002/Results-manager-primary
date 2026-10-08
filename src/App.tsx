@@ -10,6 +10,7 @@ import { GradingScreen } from "./screens/GradingScreen";
 import { LearnersScreen } from "./screens/LearnersScreen";
 import { LoginScreen } from "./screens/LoginScreen";
 import { MarksScreen } from "./screens/MarksScreen";
+import { MessagesScreen } from "./screens/MessagesScreen";
 import { PassOutsScreen } from "./screens/PassOutsScreen";
 import { WeeklyScreen } from "./screens/WeeklyScreen";
 import { AttendanceScreen } from "./screens/AttendanceScreen";
@@ -106,6 +107,8 @@ function renderScreen(screen: string) {
       return <WeeklyScreen />;
     case "passouts":
       return <PassOutsScreen />;
+    case "messages":
+      return <MessagesScreen />;
     case "reports":
       return <ReportsScreen />;
     case "staff":

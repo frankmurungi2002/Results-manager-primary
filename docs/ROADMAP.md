@@ -149,7 +149,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-O1 | Revenue dashboard | 🌐 ⏸ | M4 | A spreadsheet until ~50 schools (SRS 16.3) |
 | FR-O2 | Geographic dashboard | 🌐 ⏸ | M4 | |
 | FR-O3 | Growth and churn dashboard | 🌐 ⏸ | M4 | |
-| FR-O4 | Privacy boundary: no institutional data leaves the school | Principle | Always | Already true: the app makes no network calls |
+| FR-O4 | Privacy boundary: no institutional data leaves the school | Principle | Always | The only network calls are SMS (FR-G8, FR-G23): a phone number and the message text go to the school's chosen gateway when a text is sent. Nothing else leaves the machine |
 
 ### Phase G — Extended school operations (SRS 11)
 
@@ -177,7 +177,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G20 | Petty cash and expenditure | ⬜ | M3 | |
 | FR-G21 | School store and uniform tracking | ⬜ | M3 | |
 | FR-G22 | Pass-out / exit pass with guardian SMS | ✅ | M3 | Reason, destination, who with and time away; two-copy slip; SMS on leaving and on return; late-back flag on the dashboard |
-| FR-G23 | Bulk SMS broadcast with cost estimate | ⬜ | M3 | Built with FR-G8 |
+| FR-G23 | Bulk SMS broadcast with cost estimate | ✅ | M3 | Messages screen: whole school, classes, streams, learner groups (teams, clubs) and staff, combined freely. One text per phone number (a parent of three gets one message naming all three), `{learner}` / `{class}` / `{name}` placeholders, the exact SMS count before sending (Unicode detected, pasted curly quotes made plain), and a stale preview sends nothing. Class Teachers text their own class and teachers in charge text their group; the school can switch that off. Goes out behind urgent messages |
 
 ### Not in the SRS numbering, but already in the code
 
@@ -192,7 +192,7 @@ These are standing requirements, not milestones. Each needs a way to check it.
 
 | Ref | Requirement | Status | How we will check it |
 | --- | --- | --- | --- |
-| 14.1 | All daily work runs with no internet | ✅ by design | The app makes no network calls; keep it that way until FR-B11/FR-B13/FR-G8 add deliberate, optional ones |
+| 14.1 | All daily work runs with no internet | ✅ by design | Only SMS reaches the network, and it never blocks work: texts wait in the outbox, spend no attempts while offline, and go when the connection returns. Any new network use must be equally optional |
 | 14.2 | No single hardware failure destroys history | ✅ for the pilot | Scheduled snapshots to a second drive plus restore; the full mirror in M3 |
 | 14.3 | Scoped access, hashed credentials, encryption | ✅ | Argon2id, session guard, optional SQLCipher (`docs/SECURITY.md`) |
 | 14.4 | A headteacher sets it up in a few hours without a technician | ⬜ untested | Manual (FR-W10) plus a timed first-run test with a non-technical person in M1 |

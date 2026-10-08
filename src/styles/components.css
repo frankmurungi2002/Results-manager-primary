@@ -1232,3 +1232,179 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
 }
+
+/* ---------------------------------------------------------------------- */
+/* Messages (FR-G23)                                                       */
+/* ---------------------------------------------------------------------- */
+
+.msg-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 1180px) {
+  .msg-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.msg-side {
+  position: sticky;
+  top: var(--space-4);
+}
+
+.msg-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.msg-option,
+.msg-group {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: left;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.msg-option:hover,
+.msg-group:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.msg-option.is-on,
+.msg-group.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.msg-option-label {
+  font-weight: var(--weight-medium);
+}
+
+.msg-option-meta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.msg-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* A class and, when opened, its streams sit together as one unit in the flow. */
+.msg-class {
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.msg-class-row {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.msg-class-row .msg-option + .btn {
+  align-self: center;
+  padding-inline: 6px;
+}
+
+.msg-streams {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--accent-soft-border);
+}
+
+.msg-placeholders {
+  gap: var(--space-1);
+}
+
+.msg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.msg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-border);
+  font-size: var(--text-sm);
+}
+
+.msg-chip button {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+}
+
+.msg-chip button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.grid.msg-stats {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Reads like the phone screen the parent will see it on. */
+.msg-bubble {
+  margin-top: var(--space-1);
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg-missing {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: var(--text-sm);
+}
+
+.msg-template {
+  max-width: 420px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.msg-group {
+  width: 100%;
+}

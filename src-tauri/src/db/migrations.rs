@@ -61,6 +61,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "sms_outbox_reliability",
         sql: M008_SMS_OUTBOX_RELIABILITY,
     },
+    Migration {
+        version: 9,
+        name: "bulk_sms_and_groups",
+        sql: M009_BULK_SMS_AND_GROUPS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -824,4 +829,57 @@ UPDATE sms_outbox
    AND expires_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now');
 
 UPDATE sms_outbox SET attempts = 0 WHERE status = 'queued';
+"#;
+
+// ---------------------------------------------------------------------------
+// 009 — bulk SMS (FR-G23) and learner groups
+// ---------------------------------------------------------------------------
+
+const M009_BULK_SMS_AND_GROUPS: &str = r#"
+-- A named set of learners that is not a class: the football team, the choir,
+-- P7 candidates' parents for a meeting. A teacher in charge may text it.
+CREATE TABLE learner_groups (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    note        TEXT,
+    leader_id   TEXT REFERENCES users (id),   -- teacher in charge; may text the group
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'retired')),
+    created_by  TEXT REFERENCES users (id),
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_learner_groups_name
+    ON learner_groups (name COLLATE NOCASE) WHERE status = 'active';
+
+-- Membership is switched off, never deleted, so a past broadcast can still
+-- say who was in the group at the time.
+CREATE TABLE learner_group_members (
+    group_id    TEXT NOT NULL REFERENCES learner_groups (id),
+    student_id  TEXT NOT NULL REFERENCES students (id),
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'removed')),
+    added_by    TEXT REFERENCES users (id),
+    added_at    TEXT NOT NULL,
+    removed_at  TEXT,
+    PRIMARY KEY (group_id, student_id)
+);
+
+CREATE INDEX idx_group_members_student ON learner_group_members (student_id, status);
+
+-- One message sent to many people. Each copy is an `sms_outbox` row with
+-- kind 'bulk' and related_id pointing here.
+CREATE TABLE sms_broadcasts (
+    id              TEXT PRIMARY KEY,
+    audience        TEXT NOT NULL,     -- JSON: what was chosen, for the record
+    audience_label  TEXT NOT NULL,     -- "P5, P6 and the Football team", frozen at send time
+    template        TEXT NOT NULL,     -- as typed, placeholders included
+    recipients      INTEGER NOT NULL,  -- phone numbers texted
+    units           INTEGER NOT NULL,  -- SMS the gateway will charge for
+    created_by      TEXT NOT NULL REFERENCES users (id),
+    created_at      TEXT NOT NULL
+);
+
+CREATE INDEX idx_sms_broadcasts_created ON sms_broadcasts (created_at);
+CREATE INDEX idx_sms_outbox_related ON sms_outbox (related_id);
+
 "#;

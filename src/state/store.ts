@@ -14,6 +14,7 @@ export type ScreenId =
   | "classes"
   | "learners"
   | "passouts"
+  | "messages"
   | "reports"
   | "staff"
   | "calendar"

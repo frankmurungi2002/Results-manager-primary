@@ -9,6 +9,14 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AudienceOptions,
+  AudiencePart,
+  BroadcastPreview,
+  BroadcastRow,
+  BroadcastSent,
+  GroupInput,
+  GroupMember,
+  GroupRow,
   AcademicYearRow,
   AppError,
   AssignmentRow,
@@ -372,6 +380,23 @@ export const api = {
   listSmsOutbox: () => call<SmsOutboxRow[]>("list_sms_outbox"),
   sendQueuedSms: () => call<FlushResult>("send_queued_sms"),
   sendTestSms: (phone: string) => call<string>("send_test_sms", { phone }),
+
+  // --- Bulk SMS (FR-G23) and learner groups -----------------------------------
+  listSmsAudiences: () => call<AudienceOptions>("list_sms_audiences"),
+  previewSmsBroadcast: (audience: AudiencePart[], message: string) =>
+    call<BroadcastPreview>("preview_sms_broadcast", { audience, message }),
+  /** `expectedUnits` is the preview's count; a changed audience sends nothing. */
+  sendSmsBroadcast: (audience: AudiencePart[], message: string, expectedUnits: number) =>
+    call<BroadcastSent>("send_sms_broadcast", { audience, message, expectedUnits }),
+  listSmsBroadcasts: () => call<BroadcastRow[]>("list_sms_broadcasts"),
+  listLearnerGroups: () => call<GroupRow[]>("list_learner_groups"),
+  createLearnerGroup: (input: GroupInput) => call<string>("create_learner_group", { input }),
+  updateLearnerGroup: (groupId: string, input: GroupInput) =>
+    call<void>("update_learner_group", { groupId, input }),
+  retireLearnerGroup: (groupId: string) => call<void>("retire_learner_group", { groupId }),
+  listGroupMembers: (groupId: string) => call<GroupMember[]>("list_group_members", { groupId }),
+  changeGroupMembers: (groupId: string, add: string[], remove: string[]) =>
+    call<void>("change_group_members", { groupId, add, remove }),
 
   buildExamPermits: (request: { classId: string; examId: string; studentIds?: string[] }) =>
     call<DocumentEnvelope<ExamPermitBatch>>("build_exam_permits", {
