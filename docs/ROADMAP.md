@@ -236,6 +236,7 @@ or consciously rejected.
 | X8 | **Installer signing** on Windows | Unsigned installers trigger SmartScreen warnings, which frighten a headteacher | M2 |
 | X9 | **Data retention for dropped learners and retired staff** | Never-delete keeps data forever; a school may need to answer what is kept and why | M3 |
 | X10 | **Class-level position and subject position on report cards** (a common Ugandan request) | Confirm with Rainbow Nursery and Primary School | M1 decision |
+| X11 | **Stored signatures and the school stamp** on report cards and permits | A school signs hundreds of documents a term. Done: photographed once (shadows and paper removed in Rust), printed across the signature line, set only by the office (or by a teacher for their own), every replacement kept on record, and one switch for schools that want wet signatures | ✅ Done |
 
 ---
 

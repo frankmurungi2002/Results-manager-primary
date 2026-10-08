@@ -647,10 +647,6 @@
   padding: 1.4mm 3mm;
 }
 
-.sheet-primary .nr-sign span {
-  margin-top: 2.5mm;
-}
-
 .sheet-primary .nr-stamp {
   width: 22mm;
 }
@@ -1120,6 +1116,7 @@
 }
 
 .ep-sign {
+  position: relative;
   flex: 1;
   max-width: 40mm;
   padding-top: 0.8mm;
@@ -1127,6 +1124,17 @@
   font-size: 6.5pt;
   color: var(--ink-faint);
   text-align: center;
+}
+
+.ep-sign-ink {
+  position: absolute;
+  left: 50%;
+  bottom: 1.6mm;
+  transform: translateX(-50%);
+  height: 8mm;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 /* --- Monthly attendance register (FR-G9) ----------------------------------- */
@@ -1897,16 +1905,40 @@
   font-style: normal;
   font-weight: 700;
   border-left: 1px solid var(--rule-soft);
+  position: relative;
 }
 
-.nr-sign span {
-  display: block;
-  margin-top: 3.5mm;
-  padding-top: 0.6mm;
-  border-top: 1px dotted var(--ink-faint);
-  font-size: 7pt;
+.nr-sign-space {
+  position: relative;
+  height: 8mm;
+  border-bottom: 1px dotted var(--ink-faint);
+}
+
+/* A stored signature crosses the line, as a pen stroke would, and never
+   changes the height of the row it sits in. */
+.sig-ink {
+  position: absolute;
+  left: 50%;
+  bottom: -1.6mm;
+  transform: translateX(-50%);
+  height: 10.5mm;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.nr-sign-name {
+  margin-top: 0.8mm;
+  font-size: 8pt;
+  font-weight: 700;
+  text-align: center;
+}
+
+.nr-sign-label {
+  font-size: 6.5pt;
   font-weight: 500;
   color: var(--ink-faint);
+  text-align: center;
 }
 
 /* Foot: dates, requirements and the stamp */
@@ -1966,6 +1998,19 @@
   color: var(--ink-faint);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+/* A real stamp is never pressed perfectly straight. */
+.nr-stamp-inked {
+  border: 0;
+  overflow: visible;
+}
+
+.nr-stamp-inked img {
+  width: 112%;
+  height: 112%;
+  object-fit: contain;
+  transform: rotate(-6deg);
 }
 
 @media print {

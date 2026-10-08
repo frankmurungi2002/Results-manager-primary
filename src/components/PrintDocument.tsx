@@ -600,7 +600,10 @@ export function ExamPermitSheets({ envelope }: { envelope: DocumentEnvelope<Exam
 
                 <footer className="ep-foot">
                   <span className="ep-cleared">✓ Cleared to sit</span>
-                  <span className="ep-sign">Headteacher's signature</span>
+                  <span className="ep-sign">
+                    <SignatureInk src={branding.headSignatureDataUrl} className="ep-sign-ink" />
+                    Headteacher's signature
+                  </span>
                 </footer>
               </section>
             ))}
@@ -612,6 +615,47 @@ export function ExamPermitSheets({ envelope }: { envelope: DocumentEnvelope<Exam
 }
 
 /** Teacher initials for the "Initials" column: "Nakato Sarah" → "N.S." */
+/**
+ * A stored signature, drawn across the signature line the way a pen would be.
+ * Positioned absolutely, so a card with no signature lays out identically.
+ */
+function SignatureInk({ src, className = "sig-ink" }: { src: string | null | undefined; className?: string }) {
+  return src ? <img className={className} src={src} alt="" /> : null;
+}
+
+/**
+ * Room to sign, the line, then the printed name beneath it, as official forms
+ * lay it out. A stored signature sits across the line; without one the space
+ * is left for a pen.
+ */
+function SignatureBlock({ ink, name }: { ink: string | null | undefined; name: string | null }) {
+  return (
+    <>
+      <div className="nr-sign-space">
+        <SignatureInk src={ink} />
+      </div>
+      <div className="nr-sign-name">{name ?? "\u00a0"}</div>
+      <div className="nr-sign-label">Signature</div>
+    </>
+  );
+}
+
+/** The school stamp when the school has added one, otherwise the empty ring. */
+function Stamp({ src }: { src: string | null }) {
+  return src ? (
+    <div className="nr-stamp nr-stamp-inked">
+      <img src={src} alt="School stamp" />
+    </div>
+  ) : (
+    <div className="nr-stamp">School stamp</div>
+  );
+}
+
+function classTeacherInk(batch: ReportCardBatch, userId: string | null): string | null {
+  if (!userId) return null;
+  return batch.signatures.find((s) => s.userId === userId)?.dataUrl ?? null;
+}
+
 function teacherInitials(name: string | null): string {
   if (!name) return "";
   return name
@@ -940,16 +984,14 @@ function ReportCardSheet({
             <th>Class Teacher's comment</th>
             <td>{card.classTeacherComment ?? ""}</td>
             <td className="nr-sign">
-              {card.classTeacherName ?? ""}
-              <span>Signature</span>
+              <SignatureBlock ink={classTeacherInk(batch, card.classTeacherId)} name={card.classTeacherName} />
             </td>
           </tr>
           <tr>
             <th>Headteacher's comment</th>
             <td>{card.headTeacherComment ?? ""}</td>
             <td className="nr-sign">
-              {batch.headTeacherName ?? ""}
-              <span>Signature</span>
+              <SignatureBlock ink={branding.headSignatureDataUrl} name={batch.headTeacherName} />
             </td>
           </tr>
         </tbody>
@@ -981,7 +1023,7 @@ function ReportCardSheet({
             <strong>{batch.requirements ?? "\u00a0"}</strong>
           </div>
         </div>
-        <div className="nr-stamp">School stamp</div>
+        <Stamp src={branding.stampDataUrl} />
       </div>
     </Sheet>
   );
@@ -1213,8 +1255,7 @@ function NurseryReportSheet({
             <th>Class Teacher's report</th>
             <td>{card.classTeacherComment ?? ""}</td>
             <td className="nr-sign">
-              {card.classTeacherName ?? ""}
-              <span>Signature</span>
+              <SignatureBlock ink={classTeacherInk(batch, card.classTeacherId)} name={card.classTeacherName} />
             </td>
           </tr>
           <tr>
@@ -1225,8 +1266,7 @@ function NurseryReportSheet({
             <th>Headteacher's comment</th>
             <td>{card.headTeacherComment ?? ""}</td>
             <td className="nr-sign">
-              {batch.headTeacherName ?? ""}
-              <span>Signature</span>
+              <SignatureBlock ink={branding.headSignatureDataUrl} name={batch.headTeacherName} />
             </td>
           </tr>
         </tbody>
@@ -1247,7 +1287,7 @@ function NurseryReportSheet({
             <strong>{batch.requirements ?? "\u00a0"}</strong>
           </div>
         </div>
-        <div className="nr-stamp">School stamp</div>
+        <Stamp src={branding.stampDataUrl} />
       </div>
     </Sheet>
   );

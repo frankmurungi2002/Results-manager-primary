@@ -45,6 +45,11 @@ rust_xlsxwriter = "0.79"
 # is sent. Blocking and rustls-based: no OpenSSL to build, nothing async.
 ureq = { version = "2", default-features = false, features = ["tls"] }
 
+# Signatures and the school stamp (photographed on paper) are decoded and
+# cleaned in Rust: untrusted image files never reach the webview. PNG and
+# JPEG only, pure Rust decoders.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
 # OS-keychain storage for the database key, used only by `encrypted-db`.
 keyring = { version = "3", optional = true }
 

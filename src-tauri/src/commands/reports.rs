@@ -54,6 +54,10 @@ pub struct Branding {
     pub address: Option<String>,
     pub phone: Option<String>,
     pub email: Option<String>,
+    /// The headteacher's signature and the school stamp as cleaned ink, or
+    /// none when the school has not added them or prints them by hand.
+    pub head_signature_data_url: Option<String>,
+    pub stamp_data_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -96,6 +100,9 @@ fn load_branding(conn: &Connection) -> AppResult<Branding> {
         .optional()?
         .ok_or(AppError::NotProvisioned)?;
 
+    let (head_signature_data_url, stamp_data_url) =
+        crate::commands::signatures::institution_marks(conn)?;
+
     Ok(Branding {
         institution_name: raw.0,
         motto: raw.1,
@@ -106,6 +113,8 @@ fn load_branding(conn: &Connection) -> AppResult<Branding> {
         address: raw.4,
         phone: raw.5,
         email: raw.6,
+        head_signature_data_url,
+        stamp_data_url,
     })
 }
 
@@ -159,6 +168,15 @@ pub struct ReportCardBatch {
     pub weekly_weeks: i64,
     /// FR-B8: who was left out, and why. Never silently dropped.
     pub blocked: Vec<BlockedLearner>,
+    /// Class Teachers' signatures, once each; a card names its teacher by id.
+    pub signatures: Vec<SignatureImage>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SignatureImage {
+    pub user_id: String,
+    pub data_url: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -194,6 +212,8 @@ pub struct ReportCard {
     /// Nursery: the "Behaviour and cleanliness" line.
     pub conduct_comment: Option<String>,
     pub class_teacher_name: Option<String>,
+    /// Whose signature to print beside the Class Teacher's comment.
+    pub class_teacher_id: Option<String>,
     /// Sum of the term marks, and of the maxima they are out of.
     pub total_score: Option<f64>,
     pub total_max: f64,
@@ -634,25 +654,34 @@ fn compute_report_cards(
     }
 
     // --- Class teachers, per stream -----------------------------------------
-    let class_teachers: Vec<(Option<String>, String)> = {
+    let class_teachers: Vec<(Option<String>, String, String)> = {
         let mut stmt = conn.prepare(
-            "SELECT ta.stream_id, u.full_name
+            "SELECT ta.stream_id, u.full_name, u.id
              FROM teacher_assignments ta
              JOIN users u ON u.id = ta.user_id
              WHERE ta.class_id = ?1 AND ta.role = 'class_teacher' AND ta.status = 'active'",
         )?;
         let collected = stmt
-            .query_map(params![class_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .query_map(params![class_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
             .collect::<rusqlite::Result<_>>()?;
         collected
     };
-    let class_teacher_for = |stream_id: &Option<String>| -> Option<String> {
+    let class_teacher_row = |stream_id: &Option<String>| {
         class_teachers
             .iter()
-            .find(|(stream, _)| stream.is_some() && stream == stream_id)
-            .or_else(|| class_teachers.iter().find(|(stream, _)| stream.is_none()))
-            .map(|(_, name)| name.clone())
+            .find(|(stream, _, _)| stream.is_some() && stream == stream_id)
+            .or_else(|| class_teachers.iter().find(|(stream, _, _)| stream.is_none()))
     };
+    let class_teacher_for =
+        |stream_id: &Option<String>| class_teacher_row(stream_id).map(|(_, name, _)| name.clone());
+    let class_teacher_id_for =
+        |stream_id: &Option<String>| class_teacher_row(stream_id).map(|(_, _, id)| id.clone());
+    let mut signatures = Vec::new();
+    for (_, _, user_id) in &class_teachers {
+        if let Some(data_url) = crate::commands::signatures::staff_signature(conn, user_id)? {
+            signatures.push(SignatureImage { user_id: user_id.clone(), data_url });
+        }
+    }
 
     let non_empty = |value: Option<String>| value.filter(|text| !text.trim().is_empty());
     let requirements = non_empty(repo::get_setting(&conn, "report.requirements")?);
@@ -805,6 +834,7 @@ fn compute_report_cards(
             head_teacher_comment: head_comment,
             conduct_comment,
             class_teacher_name: class_teacher_for(&learner.stream_id),
+            class_teacher_id: class_teacher_id_for(&learner.stream_id),
             total_score,
             total_max,
             exam_totals,
@@ -924,6 +954,7 @@ fn compute_report_cards(
         is_final,
         cards,
         blocked,
+        signatures,
     })
 }
 
@@ -2003,6 +2034,7 @@ mod tests {
             head_teacher_comment: None,
             conduct_comment: None,
             class_teacher_name: None,
+            class_teacher_id: None,
             total_score: None,
             total_max: 0.0,
             exam_totals: vec![],

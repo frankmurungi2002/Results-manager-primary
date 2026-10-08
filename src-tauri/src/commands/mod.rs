@@ -9,6 +9,7 @@ pub mod messages;
 pub mod passouts;
 pub mod reports;
 pub mod setup;
+pub mod signatures;
 pub mod students;
 pub mod system;
 pub mod teachers;

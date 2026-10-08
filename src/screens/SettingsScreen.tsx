@@ -28,6 +28,7 @@ import type {
   SmsSettings,
 } from "../lib/types";
 import { useStore } from "../state/store";
+import { SignaturesSettings } from "../components/SignaturesSettings";
 import {
   Alert,
   Badge,
@@ -45,7 +46,7 @@ import {
   relativeTime,
 } from "../components/ui";
 
-type Tab = "school" | "features" | "sms" | "backup" | "account";
+type Tab = "school" | "features" | "sms" | "signatures" | "backup" | "account";
 
 const ACCENTS = [
   "#4F63D2",
@@ -69,6 +70,7 @@ export function SettingsScreen() {
     { id: "school", label: "School", adminOnly: true },
     { id: "features", label: "Optional features", adminOnly: true },
     { id: "sms", label: "SMS", adminOnly: true },
+    { id: "signatures", label: "Signatures & stamp", adminOnly: false },
     { id: "backup", label: "Backup", adminOnly: true },
     { id: "account", label: "My account", adminOnly: false },
   ];
@@ -107,6 +109,7 @@ export function SettingsScreen() {
         {tab === "school" && isAdmin && <SchoolTab />}
         {tab === "features" && isAdmin && <FeaturesTab />}
         {tab === "sms" && isAdmin && <SmsTab />}
+        {tab === "signatures" && <SignaturesSettings />}
         {tab === "backup" && isAdmin && <BackupTab />}
         {tab === "account" && <AccountTab />}
       </div>

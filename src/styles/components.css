@@ -1408,3 +1408,109 @@
 .msg-group {
   width: 100%;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Signatures and the stamp                                                */
+/* ---------------------------------------------------------------------- */
+
+.sig-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.sig-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.sig-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sig-slot-title {
+  font-weight: var(--weight-semibold);
+}
+
+/* Always paper-white, even in dark mode: this is how it looks on the page. */
+.sig-preview {
+  display: grid;
+  place-items: center;
+  height: 84px;
+  border-radius: var(--radius-md);
+  background: #fff;
+  border: 1px dashed var(--border-default);
+  overflow: hidden;
+}
+
+.sig-preview-stamp {
+  height: 120px;
+}
+
+.sig-preview img {
+  max-width: 92%;
+  max-height: 70px;
+  object-fit: contain;
+}
+
+.sig-preview-stamp img {
+  max-height: 106px;
+}
+
+.sig-proof {
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: #14161f;
+}
+
+.sig-proof-line {
+  position: relative;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sig-proof-line img {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  max-height: 110px;
+  max-width: 90%;
+}
+
+.sig-proof-line span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px dotted #7c8296;
+  font-size: 12px;
+  color: #7c8296;
+}
+
+.sig-proof-stamp {
+  display: grid;
+  place-items: center;
+  height: 220px;
+}
+
+.sig-proof-stamp img {
+  max-height: 100%;
+  transform: rotate(-6deg);
+}
+
+.sig-proof .subtle {
+  color: #4a5164;
+}

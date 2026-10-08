@@ -66,6 +66,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "bulk_sms_and_groups",
         sql: M009_BULK_SMS_AND_GROUPS,
     },
+    Migration {
+        version: 10,
+        name: "signatures_and_stamp",
+        sql: M010_SIGNATURES_AND_STAMP,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -882,4 +887,29 @@ CREATE TABLE sms_broadcasts (
 CREATE INDEX idx_sms_broadcasts_created ON sms_broadcasts (created_at);
 CREATE INDEX idx_sms_outbox_related ON sms_outbox (related_id);
 
+"#;
+
+// ---------------------------------------------------------------------------
+// 010 — signatures and the school stamp
+// ---------------------------------------------------------------------------
+
+const M010_SIGNATURES_AND_STAMP: &str = r#"
+-- The headteacher's signature, each staff member's signature and the school
+-- stamp, as cleaned ink on a transparent background. A replaced image is
+-- kept, marked replaced, so it is always possible to say which signature a
+-- document printed on a given day carried.
+CREATE TABLE signature_images (
+    id          TEXT PRIMARY KEY,
+    kind        TEXT NOT NULL CHECK (kind IN ('head_teacher', 'stamp', 'staff')),
+    user_id     TEXT REFERENCES users (id),
+    png         BLOB NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'replaced', 'removed')),
+    created_by  TEXT NOT NULL REFERENCES users (id),
+    created_at  TEXT NOT NULL,
+    retired_at  TEXT,
+    CHECK ((kind = 'staff') = (user_id IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX idx_signature_one_active
+    ON signature_images (kind, IFNULL(user_id, '-')) WHERE status = 'active';
 "#;

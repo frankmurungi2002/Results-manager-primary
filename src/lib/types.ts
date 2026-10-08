@@ -363,6 +363,9 @@ export interface Branding {
   address: string | null;
   phone: string | null;
   email: string | null;
+  /** Cleaned ink on transparent PNG, or null when absent or printing is off. */
+  headSignatureDataUrl: string | null;
+  stampDataUrl: string | null;
 }
 
 export interface Footer {
@@ -416,6 +419,8 @@ export interface ReportCard {
   /** Nursery: the "Behaviour and cleanliness" line. */
   conductComment: string | null;
   classTeacherName: string | null;
+  /** Whose signature prints beside the Class Teacher's comment. */
+  classTeacherId: string | null;
   totalScore: number | null;
   totalMax: number;
   examTotals: ExamTotal[];
@@ -769,6 +774,31 @@ export interface ReportCardBatch {
   isFinal: boolean;
   cards: ReportCard[];
   blocked: BlockedLearner[];
+  /** Class Teachers' signatures, once each. */
+  signatures: SignatureImage[];
+}
+
+export interface SignatureImage {
+  userId: string;
+  dataUrl: string;
+}
+
+// --- Signatures and the school stamp -----------------------------------------
+
+export type SignatureKind = "head_teacher" | "stamp" | "staff";
+
+export interface StaffSignature {
+  userId: string;
+  fullName: string;
+  dataUrl: string | null;
+}
+
+export interface SignatureOverview {
+  printSignatures: boolean;
+  headTeacher: string | null;
+  stamp: string | null;
+  canManageSchool: boolean;
+  staff: StaffSignature[];
 }
 
 export interface IdCard {

@@ -12,6 +12,7 @@ pub mod commands;
 pub mod db;
 pub mod domain;
 pub mod error;
+pub mod ink;
 pub mod security;
 pub mod sms;
 pub mod state;
@@ -166,6 +167,12 @@ pub fn run() {
             commands::passouts::list_sms_outbox,
             commands::passouts::send_queued_sms,
             commands::passouts::send_test_sms,
+            // --- Signatures and the school stamp ---------------------------
+            commands::signatures::prepare_signature_image,
+            commands::signatures::save_signature,
+            commands::signatures::remove_signature,
+            commands::signatures::get_signatures,
+            commands::signatures::set_print_signatures,
             // --- Bulk SMS (FR-G23) and learner groups ----------------------
             commands::messages::list_sms_audiences,
             commands::messages::preview_sms_broadcast,

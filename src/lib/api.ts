@@ -9,6 +9,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  SignatureKind,
+  SignatureOverview,
   AudienceOptions,
   AudiencePart,
   BroadcastPreview,
@@ -380,6 +382,17 @@ export const api = {
   listSmsOutbox: () => call<SmsOutboxRow[]>("list_sms_outbox"),
   sendQueuedSms: () => call<FlushResult>("send_queued_sms"),
   sendTestSms: (phone: string) => call<string>("send_test_sms", { phone }),
+
+  // --- Signatures and the school stamp ----------------------------------------
+  /** Reads a photo the user picked and returns it as cleaned ink (PNG bytes). */
+  prepareSignatureImage: (path: string, kind: SignatureKind) =>
+    call<number[]>("prepare_signature_image", { path, kind }),
+  saveSignature: (kind: SignatureKind, userId: string | null, png: number[]) =>
+    call<void>("save_signature", { kind, userId, png }),
+  removeSignature: (kind: SignatureKind, userId: string | null) =>
+    call<void>("remove_signature", { kind, userId }),
+  getSignatures: () => call<SignatureOverview>("get_signatures"),
+  setPrintSignatures: (on: boolean) => call<void>("set_print_signatures", { on }),
 
   // --- Bulk SMS (FR-G23) and learner groups -----------------------------------
   listSmsAudiences: () => call<AudienceOptions>("list_sms_audiences"),
