@@ -2137,3 +2137,105 @@
     break-inside: avoid;
   }
 }
+
+/* --- FR-E2: the printed activity log ------------------------------------- */
+
+.al-meta {
+  display: flex;
+  justify-content: space-between;
+  margin: 2mm 0 3mm;
+  font-size: 8pt;
+  color: var(--ink-soft);
+}
+
+.al-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+}
+
+.al-table th {
+  text-align: left;
+  padding: 1.4mm 2mm;
+  border-bottom: 1.5px solid var(--ink);
+  font-size: 7pt;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.al-table td {
+  padding: 1.2mm 2mm;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+}
+
+.al-table tr {
+  break-inside: avoid;
+}
+
+.al-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+/* Beside the name, not under it: one line per entry fits twice as many on
+   a page, and a log of a term runs to many pages. */
+.al-role {
+  margin-left: 1.5mm;
+  font-size: 6.5pt;
+  color: var(--ink-faint);
+}
+
+.al-role::before {
+  content: "· ";
+}
+
+/* Black on white with a heavy rule: photocopies as clearly as it prints. */
+.al-seal {
+  display: flex;
+  gap: 6mm;
+  align-items: center;
+  margin-top: 6mm;
+  padding: 4mm 5mm;
+  border: 1.5px solid var(--ink);
+  break-inside: avoid;
+}
+
+.al-seal p {
+  margin: 1mm 0 0;
+  font-size: 8pt;
+  line-height: 1.45;
+}
+
+.al-seal-title {
+  font-weight: 700;
+  font-size: 9.5pt;
+}
+
+.al-seal-broken {
+  border-width: 3px;
+  border-style: double;
+}
+
+.al-code {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1mm;
+  padding: 2mm 4mm;
+  border: 1px dashed var(--ink-soft);
+}
+
+.al-code span {
+  font-size: 6.5pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.al-code strong {
+  font-family: var(--font-mono, monospace);
+  font-size: 13pt;
+  letter-spacing: 0.06em;
+}

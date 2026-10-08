@@ -889,6 +889,38 @@ export interface CommentBankEntry {
 
 // --- System ----------------------------------------------------------------
 
+/** The activity log's hash chain, checked from the entries themselves. */
+export interface ChainReport {
+  entries: number;
+  intact: boolean;
+  problem: string | null;
+  problemEntry: number | null;
+  headEntry: number;
+  headHash: string;
+}
+
+export interface AuditIntegrity {
+  report: ChainReport;
+  /** The code a printout made now would carry. */
+  currentCode: string;
+}
+
+export interface AuditExport {
+  rangeLabel: string;
+  search: string | null;
+  entries: AuditEntry[];
+  truncated: boolean;
+  report: ChainReport;
+  verificationCode: string;
+  printedBy: string;
+}
+
+export interface CodeCheck {
+  matches: boolean;
+  entry: number;
+  message: string;
+}
+
 export interface AuditEntry {
   id: number;
   at: string;
@@ -965,7 +997,6 @@ export interface DashboardSummary {
   marksEnteredThisTerm: number;
   marksExpectedThisTerm: number;
   lastBackupAt: string | null;
-  recentActivity: AuditEntry[];
   passOutsOut: number;
   overduePassOuts: OverduePassOut[];
   /** Each office's own figures; a field is absent for whoever may not see it. */

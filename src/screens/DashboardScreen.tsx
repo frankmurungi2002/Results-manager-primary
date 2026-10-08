@@ -21,7 +21,7 @@ import { api } from "../lib/api";
 import type { AcademicYearRow, ClassRow, DashboardSummary, Permission } from "../lib/types";
 import { useCan, useStore, type ScreenId } from "../state/store";
 import { YourDesk, deskActions } from "../components/YourDesk";
-import { Alert, Button, EmptyState, formatDate, initials, relativeTime } from "../components/ui";
+import { Alert, Button, EmptyState, formatDate, relativeTime } from "../components/ui";
 
 export function DashboardScreen() {
   const session = useStore((state) => state.session);
@@ -149,14 +149,11 @@ export function DashboardScreen() {
           )}
         </section>
 
-        {/* ---- Charts, activity, calendar, attention ---- */}
+        {/* ---- Charts, calendar, attention ---- */}
         <section className="dash-grid">
           <div className="dash-col">
             <LearnersByClass classes={classes} />
             <NeedsAttention items={attention} onGo={(screen, params) => navigate(screen, params)} />
-            {can("view_audit") && (
-              <RecentActivity entries={summary.recentActivity} onViewAll={() => navigate("audit")} />
-            )}
           </div>
 
           <div className="dash-col">
@@ -662,52 +659,6 @@ function NeedsAttention({
             </div>
           ))}
         </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Recent activity
-// ---------------------------------------------------------------------------
-
-function RecentActivity({
-  entries,
-  onViewAll,
-}: {
-  entries: DashboardSummary["recentActivity"];
-  onViewAll: () => void;
-}) {
-  return (
-    <div className="dash-card">
-      <div className="dash-card-head">
-        <div>
-          <h2 className="dash-card-title">Recent activity</h2>
-          <p className="dash-card-sub">Every change is recorded, by whom and when</p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={onViewAll}>
-          View all
-        </Button>
-      </div>
-
-      {entries.length === 0 ? (
-        <EmptyState icon={<TriangleAlert size={18} />} title="Nothing recorded yet">
-          Activity appears here as soon as people start using Phantom School Manager.
-        </EmptyState>
-      ) : (
-        <ul className="activity">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <span className="activity-avatar">{entry.actor_name ? initials(entry.actor_name) : "PS"}</span>
-              <span className="grow">
-                <span className="activity-text">{entry.summary}</span>
-                <span className="activity-meta">
-                  {entry.actor_name ?? "System"} · {relativeTime(entry.at)}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );

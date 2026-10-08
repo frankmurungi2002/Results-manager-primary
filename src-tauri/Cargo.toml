@@ -50,6 +50,10 @@ ureq = { version = "2", default-features = false, features = ["tls"] }
 # JPEG only, pure Rust decoders.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
+# SHA-256 for the audit log's hash chain: each entry seals the one before,
+# so any change, deletion or insertion outside the application is detectable.
+sha2 = "0.10"
+
 # OS-keychain storage for the database key, used only by `encrypted-db`.
 keyring = { version = "3", optional = true }
 

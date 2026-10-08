@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import type {
+  AuditExport,
   Branding,
   ClassListBody,
   DocumentEnvelope,
@@ -48,10 +49,10 @@ import type {
   IdCardBatch,
   MonthRegister,
   PassOutSlip,
-  TimetableDocument,
-  ReportCard,
   Rating,
+  ReportCard,
   ReportCardBatch,
+  TimetableDocument,
 } from "../lib/types";
 import { Button } from "./ui";
 
@@ -69,8 +70,9 @@ interface SheetProps {
   variant?: "standard" | "nursery" | "primary" | "compact";
   /** Drawn at the header's right edge, e.g. the learner's photo. */
   aside?: ReactNode;
-  pageNumber: number;
-  pageCount: number;
+  /** Left out for a document that flows over as many pages as it needs. */
+  pageNumber?: number;
+  pageCount?: number;
   children: ReactNode;
 }
 
@@ -133,9 +135,11 @@ function Sheet({
       {/* --- Fixed footer, per FR-D4. --- */}
       <footer className="doc-foot">
         <span>{footer.generatedBy}</span>
-        <span>
-          Page {pageNumber} of {pageCount}
-        </span>
+        {pageNumber !== undefined && pageCount !== undefined && (
+          <span>
+            Page {pageNumber} of {pageCount}
+          </span>
+        )}
         <span>Printed {footer.printedOn}</span>
       </footer>
     </article>
@@ -1667,4 +1671,85 @@ export function ClassListSheet({
 
 function round(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+// ---------------------------------------------------------------------------
+// FR-E2 — the printed activity log
+// ---------------------------------------------------------------------------
+
+export const ROLE_TITLES: Record<string, string> = {
+  school_admin: "School Admin",
+  head_teacher: "Headteacher",
+  director_of_studies: "Director of Studies",
+  secretary: "Secretary",
+  bursar: "Bursar",
+  teacher: "Teacher",
+};
+
+/**
+ * The activity log on paper. The verification code at the end is the log's
+ * seal at the moment this was printed; typed back into the Activity log
+ * screen later, it proves whether anything up to that entry has changed.
+ */
+export function AuditLogSheet({ envelope }: { envelope: DocumentEnvelope<AuditExport> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} title="Activity log" subtitle={body.rangeLabel} landscape>
+      <div className="al-meta">
+        <span>
+          {body.entries.length.toLocaleString()} entr{body.entries.length === 1 ? "y" : "ies"}
+          {body.search ? ` matching “${body.search}”` : ""}
+          {body.truncated ? " (the first 3,000; narrow the dates for the rest)" : ""}
+        </span>
+        <span>Printed by {body.printedBy}</span>
+      </div>
+      <table className="al-table">
+        <thead>
+          <tr>
+            <th style={{ width: "8%" }}>No.</th>
+            <th style={{ width: "15%" }}>When</th>
+            <th style={{ width: "20%" }}>Who</th>
+            <th>What happened</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.entries.map((entry) => (
+            <tr key={entry.id}>
+              <td className="al-num">{entry.id}</td>
+              <td>{formatDateTimePrint(entry.at)}</td>
+              <td>
+                {entry.actor_name ?? "System"}
+                {entry.actor_role && <span className="al-role">{ROLE_TITLES[entry.actor_role] ?? entry.actor_role}</span>}
+              </td>
+              <td>{entry.summary}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <section className={body.report.intact ? "al-seal" : "al-seal al-seal-broken"}>
+        <div>
+          <div className="al-seal-title">
+            {body.report.intact ? "Log intact when printed" : "WARNING: the log was NOT intact when printed"}
+          </div>
+          <p>
+            {body.report.intact
+              ? `All ${body.report.entries.toLocaleString()} entries were checked against their seals. `
+              : `${body.report.problem} `}
+            To check later that nothing up to entry {body.report.headEntry} has been changed, removed or added, open
+            Activity log in Phantom School Manager, choose “Check a printout” and type this code.
+          </p>
+        </div>
+        <div className="al-code">
+          <span>Verification code</span>
+          <strong>{body.verificationCode}</strong>
+        </div>
+      </section>
+    </Sheet>
+  );
+}
+
+function formatDateTimePrint(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }

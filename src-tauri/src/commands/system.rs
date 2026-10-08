@@ -7,7 +7,8 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::audit::{self, AuditEntry};
+use crate::audit::{self, AuditEntry, ChainReport, CodeCheck};
+use crate::commands::reports::DocumentEnvelope;
 use crate::backup::{self, BackupFile, BackupResult, BackupSummary, Trigger};
 use crate::domain::models::Institution;
 use crate::domain::repo;
@@ -243,6 +244,139 @@ pub fn search_audit_log(
     )
 }
 
+/// Whether the activity log is intact, and the code a printout made now
+/// would carry.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditIntegrity {
+    pub report: ChainReport,
+    pub current_code: String,
+}
+
+#[tauri::command]
+pub fn audit_integrity(state: State<'_, AppState>) -> AppResult<AuditIntegrity> {
+    let session = state.sessions.require()?;
+    session.require(Permission::ViewAudit)?;
+    let conn = state.db.lock();
+    let report = audit::verify_chain(&conn)?;
+    let current_code = audit::verification_code(report.head_entry, &report.head_hash);
+    Ok(AuditIntegrity { report, current_code })
+}
+
+/// The printed activity log: entries in order, the state of the chain, and
+/// the verification code that lets anyone check later that history has not
+/// been rewritten since this sheet was printed.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditExport {
+    pub range_label: String,
+    pub search: Option<String>,
+    pub entries: Vec<AuditEntry>,
+    /// More entries matched than one printout holds.
+    pub truncated: bool,
+    pub report: ChainReport,
+    pub verification_code: String,
+    pub printed_by: String,
+}
+
+const EXPORT_LIMIT: i64 = 3000;
+
+#[tauri::command]
+pub fn build_audit_export(
+    state: State<'_, AppState>,
+    from: Option<String>,
+    to: Option<String>,
+    query: Option<String>,
+) -> AppResult<DocumentEnvelope<AuditExport>> {
+    let session = state.sessions.require()?;
+    session.require(Permission::ViewAudit)?;
+    let conn = state.db.lock();
+
+    let day = |d: &Option<String>| d.as_deref().map(str::trim).filter(|d| d.len() == 10).map(str::to_string);
+    let (from, to) = (day(&from), day(&to));
+    let pattern = query.as_deref().map(str::trim).filter(|q| q.len() > 2).map(|q| format!("%{q}%"));
+
+    let range_label = match (&from, &to) {
+        (Some(f), Some(t)) => format!("{f} to {t}"),
+        (Some(f), None) => format!("From {f}"),
+        (None, Some(t)) => format!("Up to {t}"),
+        (None, None) => "Every entry".to_string(),
+    };
+
+    // The printing is itself recorded first, so the code below covers it.
+    audit::record(
+        &conn,
+        Some(&session),
+        "audit.export",
+        "audit_log",
+        "-",
+        format!("Printed the activity log ({range_label})"),
+    )?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, at, actor_name, actor_role, action, entity, entity_id, summary
+         FROM audit_log
+         WHERE (?1 IS NULL OR substr(at, 1, 10) >= ?1)
+           AND (?2 IS NULL OR substr(at, 1, 10) <= ?2)
+           AND (?3 IS NULL OR summary LIKE ?3 COLLATE NOCASE OR actor_name LIKE ?3 COLLATE NOCASE
+                OR action LIKE ?3 COLLATE NOCASE)
+         ORDER BY id ASC
+         LIMIT ?4",
+    )?;
+    let mut entries = stmt
+        .query_map(params![from, to, pattern, EXPORT_LIMIT + 1], |row| {
+            Ok(AuditEntry {
+                id: row.get(0)?,
+                at: row.get(1)?,
+                actor_name: row.get(2)?,
+                actor_role: row.get(3)?,
+                action: row.get(4)?,
+                entity: row.get(5)?,
+                entity_id: row.get(6)?,
+                summary: row.get(7)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(stmt);
+    let truncated = entries.len() as i64 > EXPORT_LIMIT;
+    entries.truncate(EXPORT_LIMIT as usize);
+
+    let report = audit::verify_chain(&conn)?;
+    let verification_code = audit::verification_code(report.head_entry, &report.head_hash);
+    let body = AuditExport {
+        range_label,
+        search: query.filter(|q| q.trim().len() > 2),
+        entries,
+        truncated,
+        report,
+        verification_code,
+        printed_by: session.full_name.clone(),
+    };
+    crate::commands::reports::envelope(&conn, "audit_log", body)
+}
+
+/// Checks a code copied from a printed activity log.
+#[tauri::command]
+pub fn verify_audit_code(state: State<'_, AppState>, code: String) -> AppResult<CodeCheck> {
+    let session = state.sessions.require()?;
+    session.require(Permission::ViewAudit)?;
+    let conn = state.db.lock();
+    let check = audit::check_code(&conn, &code)?;
+    audit::record(
+        &conn,
+        Some(&session),
+        "audit.verify",
+        "audit_log",
+        &check.entry.to_string(),
+        format!(
+            "Checked a printed activity log up to entry {}: {}",
+            check.entry,
+            if check.matches { "it matches" } else { "it does NOT match" }
+        ),
+    )?;
+    Ok(check)
+}
+
 // ---------------------------------------------------------------------------
 // Backup (simplified FR-B12, per SRS 16.1)
 // ---------------------------------------------------------------------------
@@ -370,7 +504,6 @@ pub struct DashboardSummary {
     pub marks_entered_this_term: i64,
     pub marks_expected_this_term: i64,
     pub last_backup_at: Option<String>,
-    pub recent_activity: Vec<AuditEntry>,
     /// FR-G22: learners out on a pass-out right now, and those overdue.
     pub pass_outs_out: i64,
     pub overdue_pass_outs: Vec<crate::commands::passouts::OverduePassOut>,
@@ -585,13 +718,6 @@ pub fn dashboard_summary(state: State<'_, AppState>) -> AppResult<DashboardSumma
         _ => (0, 0),
     };
 
-    // Teachers see the school's shape but not its audit trail.
-    let recent_activity = if session.has(Permission::ViewAudit) {
-        audit::search(&conn, None, 8, 0)?
-    } else {
-        Vec::new()
-    };
-
     Ok(DashboardSummary {
         institution_name,
         academic_year,
@@ -605,7 +731,6 @@ pub fn dashboard_summary(state: State<'_, AppState>) -> AppResult<DashboardSumma
         marks_entered_this_term: marks_entered,
         marks_expected_this_term: marks_expected,
         last_backup_at: repo::get_setting(&conn, "backup.last_at")?,
-        recent_activity,
         pass_outs_out: conn.query_row(
             "SELECT COUNT(*) FROM pass_outs WHERE status = 'out'",
             [],

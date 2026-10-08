@@ -1619,3 +1619,42 @@
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Activity log seal                                                       */
+/* ---------------------------------------------------------------------- */
+
+.audit-seal {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.audit-seal.is-ok {
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
+  color: var(--text-primary);
+}
+
+.audit-seal.is-ok svg {
+  color: var(--success);
+  flex: none;
+}
+
+.audit-seal.is-broken {
+  background: var(--danger-soft);
+  border: 2px solid var(--danger);
+}
+
+.audit-seal.is-broken svg {
+  color: var(--danger);
+  flex: none;
+}
+
+.audit-row-broken td {
+  background: var(--danger-soft);
+}

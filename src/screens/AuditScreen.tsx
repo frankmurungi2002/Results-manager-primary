@@ -1,16 +1,19 @@
 /**
- * FR-E2 — the activity log.
+ * FR-E2 — the activity log, and only here: it is not on the dashboard.
  *
- * Append-only in the database, searchable here. It is precise enough to tell a
- * Class Teacher's change from their Assistant's, which is the point of it.
+ * Append-only in the database and sealed by a hash chain, so a change made
+ * outside the application (with a copy of SQLite) is detected and named. A
+ * printout carries a verification code that proves, later, whether anything
+ * up to that point has been rewritten.
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { ScrollText, Search } from "lucide-react";
+import { ArrowLeft, Printer, ScrollText, Search, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { AuditEntry } from "../lib/types";
+import type { AuditEntry, AuditExport, AuditIntegrity, CodeCheck, DocumentEnvelope } from "../lib/types";
 import { useStore } from "../state/store";
+import { AuditLogSheet, PrintPreview, ROLE_TITLES } from "../components/PrintDocument";
 import {
   Alert,
   Badge,
@@ -18,6 +21,7 @@ import {
   Card,
   EmptyState,
   TableSkeleton,
+  TextInput,
   formatDateTime,
 } from "../components/ui";
 
@@ -31,6 +35,20 @@ export function AuditScreen() {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  const [integrity, setIntegrity] = useState<AuditIntegrity | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [printing, setPrinting] = useState(false);
+  const [printout, setPrintout] = useState<DocumentEnvelope<AuditExport> | null>(null);
+  const [code, setCode] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [checked, setChecked] = useState<CodeCheck | null>(null);
+
+  const loadIntegrity = useCallback(() => {
+    api.auditIntegrity().then(setIntegrity).catch(reportError);
+  }, [reportError]);
+
+  useEffect(loadIntegrity, [loadIntegrity]);
 
   const load = useCallback(
     async (searchTerm: string, nextOffset: number, append: boolean) => {
@@ -58,6 +76,35 @@ export function AuditScreen() {
     return () => window.clearTimeout(handle);
   }, [query, load]);
 
+  if (printout) {
+    return (
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <PrintPreview
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                icon={<ArrowLeft size={15} />}
+                onClick={() => {
+                  setPrintout(null);
+                  loadIntegrity();
+                  void load(query, 0, false);
+                }}
+              >
+                Back
+              </Button>
+              <span className="subtle" style={{ fontSize: "var(--text-sm)" }}>
+                To save a file instead of paper, choose “Microsoft Print to PDF” as the printer.
+              </span>
+            </>
+          }
+        >
+          <AuditLogSheet envelope={printout} />
+        </PrintPreview>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <div className="page-inner">
@@ -66,9 +113,93 @@ export function AuditScreen() {
             <h1 className="page-title">Activity log</h1>
             <p className="page-description">
               Every action by every person, with a timestamp. Entries cannot be
-              edited or removed — the database refuses it.
+              edited or removed, and each one is sealed to the one before it, so
+              a change made outside Phantom School Manager is found and named.
             </p>
           </div>
+        </div>
+
+        {integrity &&
+          (integrity.report.intact ? (
+            <div className="audit-seal is-ok">
+              <ShieldCheck size={20} />
+              <div>
+                <strong>The log is intact.</strong> All {integrity.report.entries.toLocaleString()} entries
+                match their seals.
+              </div>
+            </div>
+          ) : (
+            <div className="audit-seal is-broken" role="alert">
+              <ShieldAlert size={20} />
+              <div>
+                <strong>The log has been altered outside Phantom School Manager.</strong> {integrity.report.problem}{" "}
+                Nothing the application did can cause this. Keep your printed logs and backups; they show what the
+                record said before.
+              </div>
+            </div>
+          ))}
+
+        <div className="grid grid-2">
+          <Card title="Print or save the log" subtitle="With a code that proves later it has not been rewritten">
+            <div className="stack">
+              <div className="row" style={{ gap: "var(--space-3)" }}>
+                <TextInput label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <TextInput label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              </div>
+              <p className="field-hint">
+                Leave the dates empty for everything. The search box below narrows it further.
+              </p>
+              <Button
+                variant="primary"
+                icon={<Printer size={15} />}
+                loading={printing}
+                onClick={() => {
+                  setPrinting(true);
+                  api
+                    .buildAuditExport(from || null, to || null, query.trim() || null)
+                    .then(setPrintout)
+                    .catch(reportError)
+                    .finally(() => setPrinting(false));
+                }}
+              >
+                Prepare printout
+              </Button>
+            </div>
+          </Card>
+
+          <Card title="Check a printout" subtitle="Type the verification code from the bottom of a printed log">
+            <div className="stack">
+              <TextInput
+                label="Verification code"
+                placeholder="1234-K7QX-3MZT-9PRH"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setChecked(null);
+                }}
+                className="mono"
+              />
+              <Button
+                loading={checking}
+                disabled={code.trim().length < 8}
+                onClick={() => {
+                  setChecking(true);
+                  api
+                    .verifyAuditCode(code)
+                    .then(setChecked)
+                    .catch(reportError)
+                    .finally(() => setChecking(false));
+                }}
+              >
+                Check
+              </Button>
+              {checked && (
+                <Alert tone={checked.matches ? "success" : "danger"} title={checked.matches ? "It matches" : "It does not match"}>
+                  {checked.message}
+                </Alert>
+              )}
+            </div>
+          </Card>
         </div>
 
         <Card>
@@ -116,20 +247,19 @@ export function AuditScreen() {
                 </thead>
                 <tbody>
                   {entries.map((entry) => (
-                    <tr key={entry.id}>
-                      <td className="muted">{formatDateTime(entry.at)}</td>
+                    <tr
+                      key={entry.id}
+                      className={integrity?.report.problemEntry === entry.id ? "audit-row-broken" : undefined}
+                    >
+                      <td className="muted">
+                        <span className="mono subtle">#{entry.id}</span> {formatDateTime(entry.at)}
+                      </td>
                       <td>
                         {entry.actor_name ?? <span className="subtle">System</span>}
                         {entry.actor_role && (
                           <div style={{ marginTop: 2 }}>
-                            <Badge
-                              tone={
-                                entry.actor_role === "school_admin" ? "accent" : "neutral"
-                              }
-                            >
-                              {entry.actor_role === "school_admin"
-                                ? "School Admin"
-                                : "Teacher"}
+                            <Badge tone={entry.actor_role === "teacher" ? "neutral" : "accent"}>
+                              {ROLE_TITLES[entry.actor_role] ?? entry.actor_role}
                             </Badge>
                           </div>
                         )}
@@ -156,8 +286,11 @@ export function AuditScreen() {
 
         <Alert tone="info" title="Why nothing here can be changed">
           If the record of what happened could be edited, it would not be worth
-          keeping. The audit table rejects every update and delete at the
-          database level, not just in the application.
+          keeping. The database rejects every update and delete, and each entry
+          is sealed with a fingerprint of the one before it. Someone with the
+          skill to rewrite the database and every seal still cannot change a
+          code already printed on paper, which is why a printed log is worth
+          keeping in the office file.
         </Alert>
       </div>
     </div>

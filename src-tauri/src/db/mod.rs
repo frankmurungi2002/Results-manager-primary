@@ -33,6 +33,7 @@ impl Database {
 
         apply_pragmas(&conn)?;
         migrations::run(&mut conn)?;
+        crate::audit::seal_legacy_once(&conn)?;
 
         Ok(Self {
             conn: Mutex::new(conn),
@@ -46,6 +47,7 @@ impl Database {
         let mut conn = Connection::open_in_memory()?;
         apply_pragmas(&conn)?;
         migrations::run(&mut conn)?;
+        crate::audit::seal_legacy_once(&conn)?;
         Ok(Self {
             conn: Mutex::new(conn),
             path: PathBuf::from(":memory:"),

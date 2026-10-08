@@ -176,6 +176,12 @@ def check_invariants(con):
     case("audit_log refuses UPDATE", "UPDATE audit_log SET summary='tampered'",
          must_fail=True)
     case("audit_log refuses DELETE", "DELETE FROM audit_log", must_fail=True)
+    con.execute("INSERT INTO audit_seal (audit_id, hash) "
+                "SELECT id, 'seal' FROM audit_log LIMIT 1")
+    con.commit()
+    case("audit_seal refuses UPDATE", "UPDATE audit_seal SET hash='forged'",
+         must_fail=True)
+    case("audit_seal refuses DELETE", "DELETE FROM audit_seal", must_fail=True)
 
     # FR-B6 — one Class Teacher, at most one Assistant, one teacher per subject.
     con.execute("INSERT INTO teacher_assignments (id,user_id,class_id,role,"

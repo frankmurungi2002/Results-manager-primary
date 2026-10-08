@@ -76,6 +76,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "staff_offices",
         sql: M011_STAFF_OFFICES,
     },
+    Migration {
+        version: 12,
+        name: "audit_seal",
+        sql: M012_AUDIT_SEAL,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -931,4 +936,34 @@ CREATE UNIQUE INDEX idx_signature_one_active
 const M011_STAFF_OFFICES: &str = r#"
 ALTER TABLE users ADD COLUMN office TEXT
     CHECK (office IN ('head_teacher', 'director_of_studies', 'secretary', 'bursar'));
+"#;
+
+// ---------------------------------------------------------------------------
+// 012 — the audit log's hash chain
+// ---------------------------------------------------------------------------
+//
+// The triggers on audit_log stop the application changing history, but not
+// someone with a copy of SQLite who drops them first. Each entry is now
+// sealed: its seal is a SHA-256 of the entry and the seal before it, so
+// changing, deleting or inserting any entry breaks every seal after it. The
+// seals are written by Rust (`audit::record_with_details`); entries made
+// before this migration are sealed once, at the next start, and never again.
+
+const M012_AUDIT_SEAL: &str = r#"
+CREATE TABLE audit_seal (
+    audit_id  INTEGER PRIMARY KEY REFERENCES audit_log (id),
+    hash      TEXT NOT NULL            -- hex SHA-256 of the previous hash and this entry
+);
+
+CREATE TRIGGER trg_audit_seal_no_update
+BEFORE UPDATE ON audit_seal
+BEGIN
+    SELECT RAISE(ABORT, 'audit_seal is append-only');
+END;
+
+CREATE TRIGGER trg_audit_seal_no_delete
+BEFORE DELETE ON audit_seal
+BEGIN
+    SELECT RAISE(ABORT, 'audit_seal is append-only');
+END;
 "#;

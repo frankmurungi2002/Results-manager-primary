@@ -151,3 +151,24 @@ client-side with a key the product owner does not hold (FR-O4).
 
 Security issues should go to the maintainer directly rather than into a public
 issue tracker.
+
+## The activity log cannot be rewritten unnoticed
+
+`audit_log` refuses UPDATE and DELETE through triggers, but someone with a
+copy of SQLite can drop triggers. So every entry is also sealed
+(`audit_seal`): its seal is SHA-256 of the previous seal and the entry
+itself. Changing, deleting or inserting an entry breaks the chain from that
+point, and the Activity log screen names the first broken entry.
+
+A chain stored beside the data it protects can, in principle, be recomputed
+by someone who knows the algorithm. That is why it is anchored outside the
+database: every printed export carries a verification code (the seal at that
+moment, in Crockford Base32 so it survives being copied by hand). Typed back
+in later, the code is checked against a chain recomputed from the entries
+themselves, so a rewritten log cannot match a code already on paper. The
+tests include exactly this attack.
+
+Entries written before sealing existed are sealed once, at the first start
+after migration 012. After that an unsealed entry is reported as added
+outside the application; it is never quietly sealed.
+

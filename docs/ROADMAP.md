@@ -135,7 +135,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | ID | Requirement | Status | Milestone | Notes |
 | --- | --- | --- | --- | --- |
 | FR-E1 | Rank classes by learners gained and lost | ⬜ | M2 | The data exists in `enrollments`; this is a query and a dashboard card |
-| FR-E2 | Append-only audit log | ✅ | — | Enforced by triggers |
+| FR-E2 | Append-only audit log | ✅ | — | Enforced by triggers, and sealed by a SHA-256 hash chain so a change made outside the application (rows edited, deleted or inserted with SQLite) is detected and named on the Activity log screen. Printed exports carry a verification code; typed back in later, it proves whether anything up to that entry has been rewritten, even by someone who recomputed every seal. Shown only on its own screen, not the dashboard |
 | FR-E3 | Promotion up the ladder; sealed yearly records; graduates | ⬜ | **M2** | Schema allows `promoted` and `graduated`. Needs: new academic year creation, bulk promote with per-learner exceptions (repeat, leave), sealing the old year, PLE candidate list |
 | FR-E4 | Disaster recovery, three scenarios | 🟡 | M4 (2 and 3) | Scenario 1 works: install on a new PC, then restore from the second drive. Scenarios 2 and 3 depend on FR-W7 and FR-W8 |
 | FR-E5 | Multi-year subject trends | ⬜ | M4 | Needs two or more sealed years to be meaningful |

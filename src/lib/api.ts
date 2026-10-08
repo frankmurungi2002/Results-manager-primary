@@ -9,6 +9,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AuditExport,
+  AuditIntegrity,
+  CodeCheck,
   Office,
   SignatureKind,
   SignatureOverview,
@@ -159,6 +162,11 @@ export const api = {
   setTheme: (theme: string) => call<void>("set_theme", { theme }),
   searchAuditLog: (query?: string, limit = 100, offset = 0) =>
     call<AuditEntry[]>("search_audit_log", { query, limit, offset }),
+  auditIntegrity: () => call<AuditIntegrity>("audit_integrity"),
+  /** Records the printing, then returns the sheet and its verification code. */
+  buildAuditExport: (from: string | null, to: string | null, query: string | null) =>
+    call<DocumentEnvelope<AuditExport>>("build_audit_export", { from, to, query }),
+  verifyAuditCode: (code: string) => call<CodeCheck>("verify_audit_code", { code }),
   backupStatus: () => call<BackupStatus>("backup_status"),
   setMirrorPath: (path: string | null) => call<void>("set_mirror_path", { path }),
   runBackup: () => call<BackupResult>("run_backup"),
