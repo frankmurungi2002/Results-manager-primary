@@ -14,7 +14,7 @@ use crate::audit;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::security::password::{self, Secret};
-use crate::security::{Role, Session, SessionView, TeacherMode};
+use crate::security::{permissions_for, Office, Permission, Role, Session, SessionView, TeacherMode};
 use crate::state::AppState;
 
 /// After this many consecutive failures an account is locked for a while.
@@ -67,11 +67,11 @@ pub fn sign_in(
 
     let conn = state.db.lock();
 
-    type Account = (String, String, String, String, String, i64, i64, Option<String>);
+    type Account = (String, String, String, String, String, i64, i64, Option<String>, Option<String>);
     let account: Option<Account> = conn
         .query_row(
             "SELECT id, username, full_name, role, password_hash, must_change_password,
-                    failed_attempts, locked_until
+                    failed_attempts, locked_until, office
              FROM users
              WHERE username = ?1 COLLATE NOCASE AND status = 'active'",
             params![username],
@@ -85,6 +85,7 @@ pub fn sign_in(
                     row.get(5)?,
                     row.get(6)?,
                     row.get(7)?,
+                    row.get(8)?,
                 ))
             },
         )
@@ -99,6 +100,7 @@ pub fn sign_in(
         must_change,
         failed_attempts,
         locked_until,
+        office_text,
     )) = account
     else {
         // Hash anyway so a missing username and a wrong password take
@@ -151,6 +153,7 @@ pub fn sign_in(
     }
 
     let role = Role::parse(&role_text)?;
+    let office = office_text.as_deref().map(Office::parse).transpose()?;
     let (class_ids, class_teacher_of) = load_teacher_scope(&conn, &user_id, role)?;
 
     conn.execute(
@@ -175,6 +178,8 @@ pub fn sign_in(
         username: stored_username,
         full_name: full_name.clone(),
         role,
+        office,
+        permissions: permissions_for(role, office),
         must_change_password: must_change != 0,
         mode,
         class_ids,
@@ -276,18 +281,21 @@ pub fn change_password(
 #[tauri::command]
 pub fn reset_user_password(state: State<'_, AppState>, user_id: String) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageStaff)?;
 
     let conn = state.db.lock();
 
-    let target_name: String = conn
+    let (target_name, role, office): (String, String, Option<String>) = conn
         .query_row(
-            "SELECT full_name FROM users WHERE id = ?1 AND status = 'active'",
+            "SELECT full_name, role, office FROM users WHERE id = ?1 AND status = 'active'",
             params![user_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?
         .ok_or_else(|| AppError::not_found("That account"))?;
+    // A new password is a way into that account: never into one that can do
+    // more than the person resetting it.
+    session.require_act_on(Role::parse(&role)?, office.as_deref().map(Office::parse).transpose()?)?;
 
     let generated = password::generate_initial();
     let hash = password::hash(&generated)?;

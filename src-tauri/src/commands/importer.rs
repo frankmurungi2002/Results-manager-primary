@@ -26,6 +26,7 @@ use crate::domain::ids::{new_id, prefix};
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::Permission;
 
 /// Beyond this a spreadsheet is not a class list, and reading it would hang the
 /// interface rather than help anyone.
@@ -258,7 +259,7 @@ pub fn read_spreadsheet(
     header_row: Option<usize>,
 ) -> AppResult<SpreadsheetPreview> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageLearners)?;
 
     let file = Path::new(&path);
     if !file.is_file() {
@@ -369,7 +370,7 @@ pub fn import_learners(
     request: ImportRequest,
 ) -> AppResult<ImportResult> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageLearners)?;
 
     let file = Path::new(&request.path);
     if !file.is_file() {

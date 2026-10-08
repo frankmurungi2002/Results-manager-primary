@@ -23,6 +23,7 @@ use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::security::session::Session;
 use crate::state::AppState;
+use crate::security::Permission;
 
 const MAX_STREAMS_PER_CLASS: i64 = 20;
 const MAX_WEEKS: i64 = 20;
@@ -94,7 +95,7 @@ pub fn save_stream(
     name: String,
 ) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let conn = state.db.lock();
     require_feature(&conn, "streams", "Streams")?;
 
@@ -179,7 +180,7 @@ pub fn save_stream(
 #[tauri::command]
 pub fn retire_stream(state: State<'_, AppState>, id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let conn = state.db.lock();
 
     let (name, learners): (String, i64) = conn
@@ -236,7 +237,11 @@ pub fn set_student_stream(
         )
         .optional()?
         .ok_or_else(|| AppError::validation("That learner is not enrolled this year."))?;
-    session.require_manage_class(&class_id)?;
+    // The office places learners in streams for any class; a Class
+    // Teacher for their own.
+    if !session.has(Permission::ManageLearners) {
+        session.require_manage_class(&class_id)?;
+    }
 
     let stream_name: Option<String> = match &stream_id {
         Some(id) => Some(
@@ -317,7 +322,7 @@ fn class_of_subject(conn: &Connection, class_subject_id: &str) -> AppResult<(Str
 /// and admins write any subject in it — the same rule as marks (FR-C1).
 fn require_subject_writer(conn: &Connection, session: &Session, class_id: &str, class_subject_id: &str) -> AppResult<()> {
     session.require_view_class(class_id)?;
-    if session.is_admin() || session.may_manage_class(class_id) {
+    if session.may_write_all_marks_in(class_id) {
         return Ok(());
     }
     let assigned: i64 = conn.query_row(

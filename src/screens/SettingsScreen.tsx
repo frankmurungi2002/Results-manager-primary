@@ -27,7 +27,7 @@ import type {
   SmsOutboxRow,
   SmsSettings,
 } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import {
   Alert,
@@ -60,22 +60,22 @@ const ACCENTS = [
 ];
 
 export function SettingsScreen() {
-  const session = useStore((state) => state.session);
   const params = useStore((state) => state.screenParams);
   const [tab, setTab] = useState<Tab>((params.tab as Tab) ?? "school");
 
-  const isAdmin = session?.isAdmin ?? false;
+  const can = useCan();
 
-  const tabs: { id: Tab; label: string; adminOnly: boolean }[] = [
-    { id: "school", label: "School", adminOnly: true },
-    { id: "features", label: "Optional features", adminOnly: true },
-    { id: "sms", label: "SMS", adminOnly: true },
-    { id: "signatures", label: "Signatures & stamp", adminOnly: false },
-    { id: "backup", label: "Backup", adminOnly: true },
-    { id: "account", label: "My account", adminOnly: false },
+  const tabs: { id: Tab; label: string; allowed: boolean }[] = [
+    { id: "school", label: "School", allowed: can("manage_school") },
+    { id: "features", label: "Optional features", allowed: can("manage_school") },
+    { id: "sms", label: "SMS", allowed: can("manage_school") },
+    { id: "signatures", label: "Signatures & stamp", allowed: true },
+    { id: "backup", label: "Backup", allowed: can("manage_backups") },
+    { id: "account", label: "My account", allowed: true },
   ];
 
-  const visible = tabs.filter((entry) => !entry.adminOnly || isAdmin);
+  const visible = tabs.filter((entry) => entry.allowed);
+  const allowed = (id: Tab) => visible.some((entry) => entry.id === id);
 
   useEffect(() => {
     if (!visible.some((entry) => entry.id === tab)) setTab("account");
@@ -106,11 +106,11 @@ export function SettingsScreen() {
           ))}
         </div>
 
-        {tab === "school" && isAdmin && <SchoolTab />}
-        {tab === "features" && isAdmin && <FeaturesTab />}
-        {tab === "sms" && isAdmin && <SmsTab />}
+        {tab === "school" && allowed("school") && <SchoolTab />}
+        {tab === "features" && allowed("features") && <FeaturesTab />}
+        {tab === "sms" && allowed("sms") && <SmsTab />}
         {tab === "signatures" && <SignaturesSettings />}
-        {tab === "backup" && isAdmin && <BackupTab />}
+        {tab === "backup" && allowed("backup") && <BackupTab />}
         {tab === "account" && <AccountTab />}
       </div>
     </div>

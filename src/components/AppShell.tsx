@@ -26,8 +26,9 @@ import {
 } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { FeatureFlags } from "../lib/types";
-import { type ScreenId, useStore } from "../state/store";
+import { OFFICE_TITLES } from "../lib/types";
+import type { FeatureFlags, Permission, SessionView } from "../lib/types";
+import { type ScreenId, useCan, useStore } from "../state/store";
 import { APP_NAME, BrandMark } from "./Logo";
 import { Badge, Button, cx, initials } from "./ui";
 
@@ -35,44 +36,53 @@ interface NavEntry {
   id: ScreenId;
   label: string;
   icon: typeof LayoutDashboard;
-  adminOnly?: boolean;
+  /**
+   * Who sees it, from their permissions and their own classes. Left out, it
+   * is for everyone. The backend decides access again on every command; this
+   * only keeps people from being offered screens that would refuse them.
+   */
+  show?: (can: (p: Permission) => boolean, session: SessionView) => boolean;
   /** Shown only while this optional feature (FR-B7) is switched on. */
   feature?: keyof FeatureFlags;
 }
+
+const teaches = (session: SessionView) => session.classIds.length > 0;
+const runsAClass = (session: SessionView) => session.classTeacherOf.length > 0;
 
 const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
   {
     heading: "Daily work",
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { id: "marks", label: "Marks entry", icon: ClipboardList },
+      { id: "marks", label: "Marks entry", icon: ClipboardList, show: (can, s) => teaches(s) || can("view_all_classes") },
       {
         id: "weekly",
         label: "Weekly assignments",
         icon: NotebookPen,
         feature: "weeklyAssignments",
+        show: (can, s) => teaches(s) || can("view_all_classes"),
       },
-      { id: "attendance", label: "Attendance", icon: CalendarCheck },
-      { id: "learners", label: "Learners", icon: Users },
-      { id: "passouts", label: "Pass-outs", icon: DoorOpen },
+      { id: "attendance", label: "Attendance", icon: CalendarCheck, show: (can, s) => teaches(s) || can("view_all_classes") },
+      { id: "learners", label: "Learners", icon: Users, show: (can, s) => teaches(s) || can("view_all_learners") },
+      { id: "passouts", label: "Pass-outs", icon: DoorOpen, show: (can, s) => runsAClass(s) || can("issue_pass_outs") },
       { id: "messages", label: "Messages", icon: MessageSquare },
-      { id: "reports", label: "Reports & printing", icon: FileText },
+      { id: "reports", label: "Reports & printing", icon: FileText, show: (can, s) => teaches(s) || can("view_all_learners") },
     ],
   },
   {
     heading: "Set up the school",
     items: [
-      { id: "classes", label: "Classes & subjects", icon: BookOpenCheck },
-      { id: "calendar", label: "Terms & exams", icon: CalendarDays, adminOnly: true },
+      { id: "classes", label: "Classes & subjects", icon: BookOpenCheck, show: (can, s) => teaches(s) || can("manage_academics") || can("view_all_classes") },
+      { id: "calendar", label: "Terms & exams", icon: CalendarDays, show: (can) => can("manage_calendar") },
       { id: "timetables", label: "Timetables", icon: Table2 },
-      { id: "grading", label: "Grading systems", icon: GraduationCap, adminOnly: true },
-      { id: "staff", label: "Staff", icon: UsersRound, adminOnly: true },
+      { id: "grading", label: "Grading systems", icon: GraduationCap, show: (can) => can("manage_school") },
+      { id: "staff", label: "Staff", icon: UsersRound, show: (can) => can("manage_staff") },
     ],
   },
   {
     heading: "School office",
     items: [
-      { id: "audit", label: "Activity log", icon: ScrollText, adminOnly: true },
+      { id: "audit", label: "Activity log", icon: ScrollText, show: (can) => can("view_audit") },
       { id: "settings", label: "Settings", icon: Settings },
     ],
   },
@@ -98,6 +108,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const session = useStore((state) => state.session);
+  const can = useCan();
   const institution = useStore((state) => state.institution);
   const screen = useStore((state) => state.screen);
   const navigate = useStore((state) => state.navigate);
@@ -151,8 +162,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // plainly instead of drawing a convincing but broken chrome.
   const displayName = session.fullName ?? session.username ?? "Unknown user";
 
-  const roleLabel =
-    session.role === "school_admin"
+  // An office names the person first: a headteacher who teaches P7 is still
+  // "Headteacher" in the corner of the screen.
+  const roleLabel = session.office
+    ? OFFICE_TITLES[session.office]
+    : session.role === "school_admin"
       ? "School Admin"
       : session.mode === "class_teacher"
         ? "Class Teacher"
@@ -168,7 +182,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="sidebar-mark">
               <img src={logo} alt="" />
             </div>
-          ) : session.isAdmin ? (
+          ) : can("manage_school") ? (
             <button
               className="sidebar-mark sidebar-mark-empty"
               title="Add your school's logo"
@@ -196,7 +210,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV_SECTIONS.map((section) => {
             const visible = section.items.filter(
               (item) =>
-                (!item.adminOnly || session.isAdmin) &&
+                (!item.show || item.show(can, session)) &&
                 (!item.feature || features[item.feature]),
             );
             if (visible.length === 0) return null;

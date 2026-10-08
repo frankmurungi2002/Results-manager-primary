@@ -96,6 +96,7 @@ pub fn run() {
             commands::teachers::retire_staff,
             commands::teachers::list_assignments,
             commands::teachers::assign_teacher,
+            commands::teachers::set_staff_office,
             commands::teachers::unassign_teacher,
             // --- Learners (FR-C7, FR-C8, FR-C10) ----------------------------
             commands::students::list_class_roster,

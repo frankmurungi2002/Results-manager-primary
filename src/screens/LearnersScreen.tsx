@@ -18,7 +18,7 @@ import { ImportLearnersModal } from "../components/ImportLearnersModal";
 import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
 import type { ClassRow, StreamRow, StudentRow } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import {
   Alert,
   Badge,
@@ -35,7 +35,6 @@ import {
 } from "../components/ui";
 
 export function LearnersScreen() {
-  const session = useStore((state) => state.session);
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
 
@@ -56,7 +55,10 @@ export function LearnersScreen() {
   const [streams, setStreams] = useState<StreamRow[]>([]);
   const [streamFilter, setStreamFilter] = useState("all");
 
-  const isAdmin = session?.isAdmin ?? false;
+  const can = useCan();
+  // Importing and the fees block are office work, by different offices.
+  const isAdmin = can("manage_learners");
+  const canFees = can("manage_fees");
 
   const loadRoster = useCallback(async () => {
     if (!classId) return;
@@ -387,7 +389,7 @@ export function LearnersScreen() {
           )}
         </Card>
 
-        {isAdmin && (
+        {canFees && (
           <Card
             title="Fees block"
             subtitle="When this is on, learners you flag get no exam permit and no report card"

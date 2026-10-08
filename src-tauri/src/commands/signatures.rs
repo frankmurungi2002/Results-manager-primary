@@ -29,7 +29,7 @@ use crate::domain::ids::new_id;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::ink::{self, Mark};
-use crate::security::Session;
+use crate::security::{Office, Permission, Session};
 use crate::state::AppState;
 
 const ID_PREFIX: &str = "sig";
@@ -70,13 +70,25 @@ impl Kind {
     }
 }
 
+fn may_set_head_signature(session: &Session) -> bool {
+    session.has(Permission::ManageSchool) || session.office == Some(Office::HeadTeacher)
+}
+
 /// Who may set or remove which mark. Decided here and nowhere else.
 fn authorize(session: &Session, kind: Kind, user_id: Option<&str>) -> AppResult<()> {
     match kind {
-        Kind::HeadTeacher | Kind::Stamp => session.require_admin(),
+        Kind::Stamp => session.require(Permission::ManageSchool),
+        // The headteacher sets their own; the office may set it for them.
+        Kind::HeadTeacher => {
+            if may_set_head_signature(session) {
+                Ok(())
+            } else {
+                Err(AppError::Forbidden)
+            }
+        }
         Kind::Staff => {
             let user_id = user_id.ok_or_else(|| AppError::validation("Whose signature is this?"))?;
-            if session.is_admin() || session.user_id == user_id {
+            if session.has(Permission::ManageStaff) || session.user_id == user_id {
                 Ok(())
             } else {
                 Err(AppError::Forbidden)
@@ -250,6 +262,8 @@ pub struct SignatureOverview {
     pub head_teacher: Option<String>,
     pub stamp: Option<String>,
     pub can_manage_school: bool,
+    /// The office, or the headteacher for their own signature.
+    pub can_set_head_signature: bool,
     /// Every active staff member for the office; just yourself otherwise.
     pub staff: Vec<StaffSignature>,
 }
@@ -258,7 +272,9 @@ pub struct SignatureOverview {
 pub fn get_signatures(state: State<'_, AppState>) -> AppResult<SignatureOverview> {
     let session = state.sessions.require()?;
     let conn = state.db.lock();
-    let admin = session.is_admin();
+    let school = session.has(Permission::ManageSchool);
+    let head = may_set_head_signature(&session);
+    let all_staff = session.has(Permission::ManageStaff);
     let mut stmt = conn.prepare(
         "SELECT u.id, u.full_name, s.png
          FROM users u
@@ -268,7 +284,7 @@ pub fn get_signatures(state: State<'_, AppState>) -> AppResult<SignatureOverview
          ORDER BY u.full_name COLLATE NOCASE",
     )?;
     let staff = stmt
-        .query_map(params![admin, session.user_id], |r| {
+        .query_map(params![all_staff, session.user_id], |r| {
             let png: Option<Vec<u8>> = r.get(2)?;
             Ok(StaffSignature {
                 user_id: r.get(0)?,
@@ -279,9 +295,10 @@ pub fn get_signatures(state: State<'_, AppState>) -> AppResult<SignatureOverview
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(SignatureOverview {
         print_signatures: printing_on(&conn)?,
-        head_teacher: if admin { active(&conn, Kind::HeadTeacher, None)?.map(|b| data_url(&b)) } else { None },
-        stamp: if admin { active(&conn, Kind::Stamp, None)?.map(|b| data_url(&b)) } else { None },
-        can_manage_school: admin,
+        head_teacher: if head { active(&conn, Kind::HeadTeacher, None)?.map(|b| data_url(&b)) } else { None },
+        stamp: if school { active(&conn, Kind::Stamp, None)?.map(|b| data_url(&b)) } else { None },
+        can_manage_school: school,
+        can_set_head_signature: head,
         staff,
     })
 }
@@ -289,7 +306,7 @@ pub fn get_signatures(state: State<'_, AppState>) -> AppResult<SignatureOverview
 #[tauri::command]
 pub fn set_print_signatures(state: State<'_, AppState>, on: bool) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
     let conn = state.db.lock();
     repo::set_setting(&conn, PRINT_SETTING, if on { "1" } else { "0" })?;
     audit::record(
@@ -306,24 +323,13 @@ pub fn set_print_signatures(state: State<'_, AppState>, on: bool) -> AppResult<(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     use crate::db::Database;
+    use crate::security::session::test_session;
     use crate::security::Role;
 
     fn person(id: &str, role: Role) -> Session {
-        Session {
-            user_id: id.into(),
-            username: id.into(),
-            full_name: id.into(),
-            role,
-            must_change_password: false,
-            mode: None,
-            class_ids: HashSet::new(),
-            class_teacher_of: HashSet::new(),
-            signed_in_at: Utc::now(),
-            last_activity: Utc::now(),
-        }
+        test_session(id, role, None, &[])
     }
 
     fn db() -> Database {
@@ -347,6 +353,15 @@ mod tests {
             assert!(matches!(authorize(&teacher, kind, None), Err(AppError::Forbidden)));
             assert!(authorize(&admin, kind, None).is_ok());
         }
+    }
+
+    #[test]
+    fn the_headteacher_sets_their_own_signature_but_not_the_stamp() {
+        let head = test_session("h", Role::Teacher, Some(crate::security::Office::HeadTeacher), &[]);
+        assert!(authorize(&head, Kind::HeadTeacher, None).is_ok());
+        assert!(authorize(&head, Kind::Stamp, None).is_err());
+        let bursar = test_session("b", Role::Teacher, Some(crate::security::Office::Bursar), &[]);
+        assert!(authorize(&bursar, Kind::HeadTeacher, None).is_err());
     }
 
     #[test]

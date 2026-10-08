@@ -89,7 +89,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | ID | Requirement | Status | Milestone | Notes |
 | --- | --- | --- | --- | --- |
 | FR-B0 | Hardware binding (PC lock) | ⏸ | M4 | SRS 16.4: licence key tied to institution ID instead |
-| FR-B1 | One login frame, role-based routing | ✅ | — | |
+| FR-B1 | One login frame, role-based routing | ✅ | — | Offices on top of accounts: Headteacher, Director of Studies, Secretary, Bursar, each with its own permissions, sidebar and dashboard desk. Every command names the permission it needs; see [`ROLES.md`](ROLES.md), which a test keeps in step with the code |
 | FR-B2 | Institution name, logo, accent colour | ✅ | — | |
 | FR-B3 | Academic calendar: 3 terms, BOT/MID/EOT | ✅ | — | Opening a term closes the others |
 | FR-B4 | Up to three School Admins | ✅ | — | Enforced in the backend |
@@ -248,6 +248,7 @@ or consciously rejected.
 | 2026-09-27 | M1 is SRS Phase 0 **minus the Custom Report Builder** (FR-G1), which moves to M2. M1 ships one fixed, well-designed report card |
 | 2026-09-27 | Excel marks upload (FR-C3) supports **both** layouts: one sheet per subject, and one workbook per class with all subjects |
 | 2026-09-27 | M0 fixes ship in their own pull request, separate from this roadmap |
+| 2026-10-08 | Roles: a person holds one account (School Admin or Teacher) and at most one office (Headteacher, Director of Studies, Secretary, Bursar). Access is by named permission, never by "is admin". Nobody may reset, retire or re-office an account more powerful than their own |
 
 ## Decisions still needed from the product owner
 

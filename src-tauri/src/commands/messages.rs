@@ -32,7 +32,7 @@ use crate::audit;
 use crate::domain::ids::new_id;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
-use crate::security::Session;
+use crate::security::{Permission, Session};
 use crate::sms::{self, Encoding};
 use crate::state::AppState;
 
@@ -75,7 +75,7 @@ impl AudiencePart {
 /// passes through here and nowhere else, so who may text whom is decided in
 /// one place.
 fn authorize(conn: &Connection, session: &Session, part: &AudiencePart) -> AppResult<()> {
-    if session.is_admin() {
+    if session.has(Permission::SendMessages) {
         return Ok(());
     }
 
@@ -490,7 +490,7 @@ pub fn list_sms_audiences(state: State<'_, AppState>) -> AppResult<AudienceOptio
          ORDER BY g.name COLLATE NOCASE",
     )?;
     let groups = stmt
-        .query_map(params![session.is_admin(), session.user_id], |r| {
+        .query_map(params![session.has(Permission::SendMessages), session.user_id], |r| {
             Ok(AudienceGroup { id: r.get(0)?, name: r.get(1)?, members: r.get(2)? })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -505,7 +505,7 @@ pub fn list_sms_audiences(state: State<'_, AppState>) -> AppResult<AudienceOptio
     let settings = sms::load_settings(&conn)?;
     let sms_ready = settings.provider != "off" && !settings.api_key.is_empty();
 
-    let blocked_reason = if classes.is_empty() && groups.is_empty() && !session.is_admin() {
+    let blocked_reason = if classes.is_empty() && groups.is_empty() && !session.has(Permission::SendMessages) {
         let check = authorize(&conn, &session, &AudiencePart { kind: "school".into(), id: None });
         Some(match check {
             Err(AppError::Validation(msg)) => msg,
@@ -516,8 +516,8 @@ pub fn list_sms_audiences(state: State<'_, AppState>) -> AppResult<AudienceOptio
     };
 
     Ok(AudienceOptions {
-        can_text_school: session.is_admin(),
-        can_text_staff: session.is_admin(),
+        can_text_school: session.has(Permission::SendMessages),
+        can_text_staff: session.has(Permission::SendMessages),
         classes,
         groups,
         sms_ready,
@@ -763,7 +763,7 @@ pub fn list_sms_broadcasts(state: State<'_, AppState>) -> AppResult<Vec<Broadcas
          ORDER BY b.created_at DESC LIMIT 100",
     )?;
     let rows = stmt
-        .query_map(params![session.is_admin(), session.user_id], |r| {
+        .query_map(params![session.has(Permission::SendMessages), session.user_id], |r| {
             Ok(BroadcastRow {
                 id: r.get(0)?,
                 audience_label: r.get(1)?,
@@ -821,7 +821,7 @@ pub fn list_learner_groups(state: State<'_, AppState>) -> AppResult<Vec<GroupRow
          ORDER BY g.name COLLATE NOCASE",
     )?;
     let rows = stmt
-        .query_map(params![session.is_admin(), session.user_id], |r| {
+        .query_map(params![session.has(Permission::SendMessages), session.user_id], |r| {
             Ok(GroupRow {
                 id: r.get(0)?,
                 name: r.get(1)?,
@@ -865,7 +865,7 @@ pub struct GroupInput {
 #[tauri::command]
 pub fn create_learner_group(state: State<'_, AppState>, input: GroupInput) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::SendMessages)?;
     let name = input.name.trim();
     if name.is_empty() {
         return Err(AppError::validation("Give the group a name, such as Football team."));
@@ -902,7 +902,7 @@ pub fn update_learner_group(
     input: GroupInput,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::SendMessages)?;
     let name = input.name.trim();
     if name.is_empty() {
         return Err(AppError::validation("A group needs a name."));
@@ -928,7 +928,7 @@ pub fn update_learner_group(
 #[tauri::command]
 pub fn retire_learner_group(state: State<'_, AppState>, group_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::SendMessages)?;
     let conn = state.db.lock();
     let tx = conn.unchecked_transaction()?;
     let name: String = tx
@@ -958,7 +958,7 @@ fn require_group_keeper(conn: &Connection, session: &Session, group_id: &str) ->
         )
         .optional()?
         .ok_or_else(|| AppError::not_found("group"))?;
-    if session.is_admin() || leader.as_deref() == Some(session.user_id.as_str()) {
+    if session.has(Permission::SendMessages) || leader.as_deref() == Some(session.user_id.as_str()) {
         Ok(name)
     } else {
         Err(AppError::Forbidden)
@@ -1055,10 +1055,9 @@ pub fn change_group_members(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
-
     use crate::db::Database;
-    use crate::security::Role;
+    use crate::security::session::test_session;
+    use crate::security::{Office, Role};
 
     /// A small school: P3 and P5, last year's leaver, a family with children
     /// in both classes, a learner with no phone, a teacher who is also a
@@ -1105,19 +1104,7 @@ mod tests {
     }
 
     fn person(id: &str, role: Role, class_teacher_of: &[&str]) -> Session {
-        let classes: HashSet<String> = class_teacher_of.iter().map(|c| c.to_string()).collect();
-        Session {
-            user_id: id.into(),
-            username: id.into(),
-            full_name: id.into(),
-            role,
-            must_change_password: false,
-            mode: None,
-            class_ids: classes.clone(),
-            class_teacher_of: classes,
-            signed_in_at: Utc::now(),
-            last_activity: Utc::now(),
-        }
+        test_session(id, role, None, class_teacher_of)
     }
 
     fn admin() -> Session {
@@ -1184,6 +1171,15 @@ mod tests {
         let coach = person("coach", Role::Teacher, &[]);
         assert_eq!(preview(&db, &coach, &[part("group", Some("football"))], "Training at 4").unwrap().recipients, 2);
         assert!(preview(&db, &coach, &[part("class", Some("p5"))], "Hi").is_err());
+    }
+
+    #[test]
+    fn the_front_office_texts_anyone_and_the_dos_only_their_own_class() {
+        let db = school();
+        let secretary = test_session("sec", Role::Teacher, Some(Office::Secretary), &[]);
+        assert!(preview(&db, &secretary, &[part("school", None), part("staff", None)], "Closing early").is_ok());
+        let dos = test_session("dos", Role::Teacher, Some(Office::DirectorOfStudies), &[]);
+        assert!(matches!(preview(&db, &dos, &[part("school", None)], "Hi"), Err(AppError::Forbidden)));
     }
 
     #[test]

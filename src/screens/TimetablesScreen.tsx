@@ -41,7 +41,7 @@ import type {
   TimetableDocument,
   UserSummary,
 } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import {
   Alert,
   Badge,
@@ -80,7 +80,7 @@ type Printable =
   | { kind: "exam"; envelope: DocumentEnvelope<ExamTimetableDocument> };
 
 export function TimetablesScreen() {
-  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
+  const isAdmin = useCan()("manage_academics");
   const [tab, setTab] = useState<Tab>("class");
   const [printing, setPrinting] = useState<Printable | null>(null);
 
@@ -230,7 +230,7 @@ function WeekGrid({
 function ClassTab({ onPrint }: { onPrint: (printable: Printable) => void }) {
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
-  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
+  const isAdmin = useCan()("manage_academics");
   const features = useStore((state) => state.features);
 
   const [classes, setClasses] = useState<ClassRow[]>([]);
@@ -644,7 +644,7 @@ function SlotModal({
 function TeacherTab({ onPrint }: { onPrint: (printable: Printable) => void }) {
   const reportError = useStore((state) => state.reportError);
   const session = useStore((state) => state.session);
-  const isAdmin = session?.isAdmin ?? false;
+  const isAdmin = useCan()("manage_academics");
 
   const [staff, setStaff] = useState<UserSummary[]>([]);
   const [userId, setUserId] = useState(session?.userId ?? "");
@@ -726,7 +726,7 @@ function TeacherTab({ onPrint }: { onPrint: (printable: Printable) => void }) {
 function ExamTab({ onPrint }: { onPrint: (printable: Printable) => void }) {
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
-  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
+  const isAdmin = useCan()("manage_academics");
 
   const [years, setYears] = useState<AcademicYearRow[]>([]);
   const [termId, setTermId] = useState("");

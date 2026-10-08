@@ -8,7 +8,7 @@ import { BookOpenCheck, Pencil, Plus, Star, Trash2 } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { ClassRow, ClassSubjectRow, GradingSystem, SubjectRow } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import { StreamsCard } from "../components/StreamsCard";
 import {
   Alert,
@@ -26,7 +26,6 @@ import {
 
 export function ClassesScreen() {
   const features = useStore((state) => state.features);
-  const session = useStore((state) => state.session);
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
 
@@ -41,7 +40,8 @@ export function ClassesScreen() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<ClassSubjectRow | null>(null);
 
-  const isAdmin = session?.isAdmin ?? false;
+  const can = useCan();
+  const isAdmin = can("manage_academics");
 
   const loadClasses = useCallback(async () => {
     try {

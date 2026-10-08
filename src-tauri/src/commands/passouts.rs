@@ -19,6 +19,7 @@ use crate::domain::ids::new_id;
 use crate::error::{AppError, AppResult};
 use crate::sms::{self, FlushResult, SmsSettings};
 use crate::state::AppState;
+use crate::security::Permission;
 
 const ID_PREFIX: &str = "pas";
 
@@ -166,7 +167,7 @@ pub fn list_pass_outs(state: State<'_, AppState>) -> AppResult<Vec<PassOutRow>> 
         .collect::<rusqlite::Result<_>>()?;
     drop(stmt);
 
-    if session.is_admin() {
+    if session.has(Permission::IssuePassOuts) {
         return Ok(rows);
     }
     // A teacher sees the classes they manage.
@@ -291,7 +292,11 @@ pub fn create_pass_out(
         )
         .optional()?
         .ok_or_else(|| AppError::validation("That learner is not enrolled in a class."))?;
-    session.require_manage_class(&class_id)?;
+    // The gate (secretary, headteacher, office) issues for any class; a
+    // Class Teacher for their own.
+    if !session.has(Permission::IssuePassOuts) {
+        session.require_manage_class(&class_id)?;
+    }
 
     let already_out: Option<i64> = conn
         .query_row(
@@ -437,7 +442,9 @@ pub fn mark_pass_out_returned(
         )
         .optional()?
         .ok_or_else(|| AppError::not_found("That pass-out"))?;
-    session.require_manage_class(&class_id)?;
+    if !session.has(Permission::IssuePassOuts) {
+        session.require_manage_class(&class_id)?;
+    }
 
     if status != "out" {
         return Err(AppError::conflict(format!(
@@ -536,7 +543,7 @@ const MASK: &str = "••••••••";
 #[tauri::command]
 pub fn get_sms_settings(state: State<'_, AppState>) -> AppResult<SmsSettings> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
     let conn = state.db.lock();
     let mut settings = sms::load_settings(&conn)?;
     // The key never travels back to the screen.
@@ -553,7 +560,7 @@ pub fn save_sms_settings(
     settings: SmsSettings,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
     let conn = state.db.lock();
 
     let mut settings = settings;
@@ -593,7 +600,7 @@ pub struct SmsOutboxRow {
 #[tauri::command]
 pub fn list_sms_outbox(state: State<'_, AppState>) -> AppResult<Vec<SmsOutboxRow>> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::SendMessages)?;
     let conn = state.db.lock();
     let mut stmt = conn.prepare(
         "SELECT id, to_phone, body, kind, status, attempts, last_error, created_at, sent_at
@@ -622,7 +629,7 @@ pub fn list_sms_outbox(state: State<'_, AppState>) -> AppResult<Vec<SmsOutboxRow
 #[tauri::command]
 pub async fn send_queued_sms(state: State<'_, AppState>) -> AppResult<FlushResult> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::SendMessages)?;
     {
         // Give failed messages another chance when someone asks explicitly,
         // except those that are out of date: a late pass-out text helps nobody.
@@ -640,7 +647,7 @@ pub async fn send_queued_sms(state: State<'_, AppState>) -> AppResult<FlushResul
 #[tauri::command]
 pub async fn send_test_sms(state: State<'_, AppState>, phone: String) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
 
     let to = sms::normalize_phone(&phone).ok_or_else(|| {
         AppError::validation(format!("\"{phone}\" is not a mobile number that can receive an SMS."))

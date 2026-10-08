@@ -3,7 +3,7 @@
 import { create } from "zustand";
 
 import { ApiError, api } from "../lib/api";
-import type { FeatureFlags, Institution, SessionView, TeacherMode } from "../lib/types";
+import type { FeatureFlags, Institution, Permission, SessionView, TeacherMode } from "../lib/types";
 
 export type ScreenId =
   | "dashboard"
@@ -21,6 +21,15 @@ export type ScreenId =
   | "grading"
   | "audit"
   | "settings";
+
+/**
+ * Whether the signed-in person may do something school-wide. The backend
+ * checks every command again; this only decides what the interface offers.
+ */
+export function useCan(): (permission: Permission) => boolean {
+  const permissions = useStore((state) => state.session?.permissions);
+  return (permission) => permissions?.includes(permission) ?? false;
+}
 
 export interface Toast {
   id: number;

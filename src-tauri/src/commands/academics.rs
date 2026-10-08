@@ -17,6 +17,7 @@ use crate::domain::models::{
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::Permission;
 
 // ---------------------------------------------------------------------------
 // Classes
@@ -66,8 +67,9 @@ pub fn list_classes(state: State<'_, AppState>) -> AppResult<Vec<ClassRow>> {
     let mut classes = Vec::new();
     for row in rows {
         let class = row?;
-        // FR-C1: a teacher only ever sees their own classes in any list.
-        if session.may_view_class(&class.id) {
+        // FR-C1: a teacher only ever sees their own classes in any list. The
+        // list carries no marks, so the bursar and secretary see every class.
+        if session.may_view_learners_of(&class.id) {
             classes.push(class);
         }
     }
@@ -91,7 +93,7 @@ pub struct SaveClassRequest {
 #[tauri::command]
 pub fn save_class(state: State<'_, AppState>, request: SaveClassRequest) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
 
     if request.name.trim().is_empty() {
         return Err(AppError::validation("A class needs a name."));
@@ -165,7 +167,7 @@ pub fn save_class(state: State<'_, AppState>, request: SaveClassRequest) -> AppR
 #[tauri::command]
 pub fn retire_class(state: State<'_, AppState>, class_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
 
     let conn = state.db.lock();
 
@@ -211,7 +213,7 @@ pub fn retire_class(state: State<'_, AppState>, class_id: String) -> AppResult<(
 #[tauri::command]
 pub fn list_subjects(state: State<'_, AppState>) -> AppResult<Vec<SubjectRow>> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
 
     let conn = state.db.lock();
     let mut stmt = conn.prepare(
@@ -262,7 +264,7 @@ fn fifty() -> f64 {
 #[tauri::command]
 pub fn save_subject(state: State<'_, AppState>, request: SaveSubjectRequest) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
 
     if request.name.trim().is_empty() {
         return Err(AppError::validation("A subject needs a name."));
@@ -646,7 +648,7 @@ pub fn save_grading_system(
     request: SaveGradingSystemRequest,
 ) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
 
     if request.name.trim().is_empty() {
         return Err(AppError::validation("A grading system needs a name."));
@@ -850,7 +852,7 @@ pub fn list_academic_years(state: State<'_, AppState>) -> AppResult<Vec<Academic
 #[tauri::command]
 pub fn open_term(state: State<'_, AppState>, term_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageCalendar)?;
 
     let mut conn = state.db.lock();
     let now = Utc::now().to_rfc3339();
@@ -895,7 +897,7 @@ pub fn open_term(state: State<'_, AppState>, term_id: String) -> AppResult<()> {
 #[tauri::command]
 pub fn close_term(state: State<'_, AppState>, term_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageCalendar)?;
 
     let conn = state.db.lock();
     let now = Utc::now().to_rfc3339();
@@ -955,7 +957,7 @@ pub fn get_features(state: State<'_, AppState>) -> AppResult<FeatureFlags> {
 #[tauri::command]
 pub fn set_feature(state: State<'_, AppState>, key: String, enabled: bool) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
 
     if !matches!(
         key.as_str(),

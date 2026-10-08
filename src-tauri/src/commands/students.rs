@@ -14,6 +14,7 @@ use crate::domain::models::StudentRow;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::Permission;
 
 const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
 
@@ -25,7 +26,7 @@ pub fn list_class_roster(
     include_dropped: Option<bool>,
 ) -> AppResult<Vec<StudentRow>> {
     let session = state.sessions.require()?;
-    session.require_view_class(&class_id)?;
+    session.require_view_learners_of(&class_id)?;
 
     let conn = state.db.lock();
     let year_id = repo::current_academic_year_id(&conn)?
@@ -98,8 +99,8 @@ pub fn search_students(state: State<'_, AppState>, query: String) -> AppResult<V
         // A teacher searching institution-wide still only sees their own
         // classes' learners (FR-C1). An unenrolled learner is admin-only.
         let visible = match student.class_id.as_deref() {
-            Some(class_id) => session.may_view_class(class_id),
-            None => session.is_admin(),
+            Some(class_id) => session.may_view_learners_of(class_id),
+            None => session.has(Permission::ViewAllLearners),
         };
         if visible {
             out.push(student);
@@ -193,9 +194,11 @@ pub fn save_student(
                 )
                 .optional()?;
 
-            match class_id.as_deref() {
-                Some(class) => session.require_manage_class(class)?,
-                None => session.require_admin()?,
+            if !session.has(Permission::ManageLearners) {
+                match class_id.as_deref() {
+                    Some(class) => session.require_manage_class(class)?,
+                    None => return Err(AppError::Forbidden),
+                }
             }
 
             tx.execute(
@@ -260,7 +263,9 @@ pub fn save_student(
                 .class_id
                 .clone()
                 .ok_or_else(|| AppError::validation("Choose a class for the new learner."))?;
-            session.require_manage_class(&class_id)?;
+            if !session.has(Permission::ManageLearners) {
+                session.require_manage_class(&class_id)?;
+            }
 
             let tx = conn.transaction()?;
 
@@ -379,7 +384,9 @@ pub fn drop_student(
         .optional()?
         .ok_or_else(|| AppError::not_found("An active enrollment for that learner"))?;
 
-    session.require_manage_class(&class_id)?;
+    if !session.has(Permission::ManageLearners) {
+        session.require_manage_class(&class_id)?;
+    }
 
     tx.execute(
         "UPDATE enrollments SET status = 'dropped', left_at = ?1, drop_reason = ?2, updated_at = ?1
@@ -414,7 +421,9 @@ pub fn readmit_student(
     stream_id: Option<String>,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_manage_class(&class_id)?;
+    if !session.has(Permission::ManageLearners) {
+        session.require_manage_class(&class_id)?;
+    }
 
     let mut conn = state.db.lock();
     let tx = conn.transaction()?;
@@ -512,7 +521,7 @@ pub fn transfer_student(
     stream_id: Option<String>,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageLearners)?;
 
     let conn = state.db.lock();
     let now = Utc::now().to_rfc3339();
@@ -590,9 +599,11 @@ pub fn set_student_photo(
             |row| row.get(0),
         )
         .optional()?;
-    match class_id.as_deref() {
-        Some(class) => session.require_manage_class(class)?,
-        None => session.require_admin()?,
+    if !session.has(Permission::ManageLearners) {
+        match class_id.as_deref() {
+            Some(class) => session.require_manage_class(class)?,
+            None => return Err(AppError::Forbidden),
+        }
     }
 
     conn.execute(

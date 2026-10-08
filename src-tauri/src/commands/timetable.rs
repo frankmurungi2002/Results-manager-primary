@@ -24,6 +24,7 @@ use crate::domain::ids::new_id;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::Permission;
 
 pub const DAY_NAMES: &[&str] = &["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const KINDS: &[&str] = &["lesson", "break", "lunch", "assembly", "games", "prep"];
@@ -114,7 +115,7 @@ pub fn save_timetable_setup(
     days: i64,
 ) -> AppResult<TimetableSetup> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     if !(days == 5 || days == 6) {
         return Err(AppError::validation("A school week is 5 or 6 days."));
     }
@@ -409,7 +410,7 @@ pub struct SaveSlotRequest {
 #[tauri::command]
 pub fn save_timetable_slot(state: State<'_, AppState>, request: SaveSlotRequest) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let conn = state.db.lock();
 
     if !(1..=6).contains(&request.day) {
@@ -480,7 +481,7 @@ pub fn save_timetable_slot(state: State<'_, AppState>, request: SaveSlotRequest)
 #[tauri::command]
 pub fn set_lessons_per_week(state: State<'_, AppState>, class_subject_id: String, lessons: i64) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     if !(0..=15).contains(&lessons) {
         return Err(AppError::validation("A subject gets 0 to 15 lessons a week."));
     }
@@ -495,7 +496,7 @@ pub fn set_lessons_per_week(state: State<'_, AppState>, class_subject_id: String
 #[tauri::command]
 pub fn clear_timetable(state: State<'_, AppState>, class_id: String, stream_id: Option<String>) -> AppResult<usize> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let conn = state.db.lock();
     let removed = conn.execute(
         "DELETE FROM timetable_slots WHERE class_id = ?1 AND stream_id IS ?2",
@@ -544,7 +545,7 @@ pub struct AutoFillResult {
 #[tauri::command]
 pub fn auto_fill_timetable(state: State<'_, AppState>, request: AutoFillRequest) -> AppResult<AutoFillResult> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let conn = state.db.lock();
     let tx = conn.unchecked_transaction()?;
 
@@ -744,7 +745,7 @@ pub fn teacher_timetable_of(conn: &Connection, user_id: &str) -> AppResult<Teach
 pub fn load_teacher_timetable(state: State<'_, AppState>, user_id: String) -> AppResult<TeacherTimetable> {
     let session = state.sessions.require()?;
     if session.user_id != user_id {
-        session.require_admin()?;
+        session.require(Permission::ViewAllClasses)?;
     }
     let conn = state.db.lock();
     teacher_timetable_of(&conn, &user_id)
@@ -870,12 +871,12 @@ pub fn build_timetable_document(
         "teacher" => {
             let user_id = request.user_id.as_deref().ok_or_else(|| AppError::validation("Pick a teacher."))?;
             if session.user_id != user_id {
-                session.require_admin()?;
+                session.require(Permission::ViewAllClasses)?;
             }
             ("Teacher's Timetable".to_string(), vec![teacher_grid(&conn, user_id)?])
         }
         "school" => {
-            session.require_admin()?;
+            session.require(Permission::ViewAllClasses)?;
             let mut stmt = conn.prepare(
                 "SELECT DISTINCT ts.class_id, ts.stream_id FROM timetable_slots ts
                  JOIN classes c ON c.id = ts.class_id
@@ -893,7 +894,7 @@ pub fn build_timetable_document(
             ("Class Timetables".to_string(), grids)
         }
         "teachers" => {
-            session.require_admin()?;
+            session.require(Permission::ViewAllClasses)?;
             let mut stmt = conn.prepare(
                 "SELECT DISTINCT u.id FROM timetable_slots ts JOIN users u ON u.id = ts.teacher_id
                  ORDER BY u.full_name COLLATE NOCASE",
@@ -1098,7 +1099,7 @@ fn paper_clash(
 #[tauri::command]
 pub fn save_exam_paper(state: State<'_, AppState>, request: SaveExamPaperRequest) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let date = NaiveDate::parse_from_str(request.on_date.trim(), "%Y-%m-%d")
         .map_err(|_| AppError::validation("Pick the paper's date."))?;
     let on_date = date.format("%Y-%m-%d").to_string();
@@ -1162,7 +1163,7 @@ pub fn save_exam_paper(state: State<'_, AppState>, request: SaveExamPaperRequest
 #[tauri::command]
 pub fn delete_exam_paper(state: State<'_, AppState>, id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     let conn = state.db.lock();
     let exam_id: String = conn
         .query_row("SELECT exam_id FROM exam_papers WHERE id = ?1", params![id], |row| row.get(0))
@@ -1218,7 +1219,7 @@ pub struct AutoExamResult {
 #[tauri::command]
 pub fn auto_generate_exam_timetable(state: State<'_, AppState>, request: AutoExamRequest) -> AppResult<AutoExamResult> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageAcademics)?;
     if request.sessions.is_empty() || request.sessions.len() > 4 {
         return Err(AppError::validation("Choose 1 to 4 sittings a day."));
     }

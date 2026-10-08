@@ -22,6 +22,7 @@ use crate::domain::grading::{self, GradingSystem};
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::Permission;
 
 // ---------------------------------------------------------------------------
 // PLE projection
@@ -437,7 +438,7 @@ pub fn subject_heatmap(
     term_id: String,
 ) -> AppResult<SubjectHeatmap> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ViewInsights)?;
 
     let conn = state.db.lock();
 

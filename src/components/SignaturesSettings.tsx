@@ -125,11 +125,12 @@ export function SignaturesSettings() {
         straight above the paper. Shadows and grey paper are removed automatically; only the ink is kept.
       </Alert>
 
-      {overview.canManageSchool && (
+      {(overview.canManageSchool || overview.canSetHeadSignature) && (
         <Card
           title="The school's marks"
           subtitle="Printed on report cards and exam permits"
           actions={
+            overview.canManageSchool && (
             <label className="row" style={{ gap: 8 }}>
               <span className="subtle">Print signatures and stamp</span>
               <Switch
@@ -146,11 +147,12 @@ export function SignaturesSettings() {
                 }}
               />
             </label>
+            )
           }
         >
           <div className="sig-grid">
             {slot("head_teacher", null, "Headteacher's signature", overview.headTeacher)}
-            {slot("stamp", null, "School stamp", overview.stamp, true)}
+            {overview.canManageSchool && slot("stamp", null, "School stamp", overview.stamp, true)}
           </div>
           {!overview.printSignatures && (
             <Alert tone="warning">Printing is switched off: documents show blank lines to sign by hand.</Alert>

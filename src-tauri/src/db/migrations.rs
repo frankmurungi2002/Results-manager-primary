@@ -71,6 +71,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "signatures_and_stamp",
         sql: M010_SIGNATURES_AND_STAMP,
     },
+    Migration {
+        version: 11,
+        name: "staff_offices",
+        sql: M011_STAFF_OFFICES,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -912,4 +917,18 @@ CREATE TABLE signature_images (
 
 CREATE UNIQUE INDEX idx_signature_one_active
     ON signature_images (kind, IFNULL(user_id, '-')) WHERE status = 'active';
+"#;
+
+// ---------------------------------------------------------------------------
+// 011 — offices: headteacher, director of studies, secretary, bursar
+// ---------------------------------------------------------------------------
+//
+// An office sits on top of an account rather than replacing its role: the
+// headteacher who also teaches P7 is a teacher with assignments *and* the
+// headteacher's office. What each office may do is decided in Rust
+// (`security::session::permissions_for`), not here.
+
+const M011_STAFF_OFFICES: &str = r#"
+ALTER TABLE users ADD COLUMN office TEXT
+    CHECK (office IN ('head_teacher', 'director_of_studies', 'secretary', 'bursar'));
 "#;

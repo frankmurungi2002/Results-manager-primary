@@ -33,7 +33,7 @@ import type {
   StudentRow,
   TermRow,
 } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import {
   Alert,
   Badge,
@@ -66,7 +66,9 @@ type Preview =
 
 export function ReportsScreen() {
   const reportError = useStore((state) => state.reportError);
-  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
+  const can = useCan();
+  // Staff ID cards are for whoever manages staff.
+  const isAdmin = can("manage_staff");
 
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [years, setYears] = useState<AcademicYearRow[]>([]);

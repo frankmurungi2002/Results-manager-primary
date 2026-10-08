@@ -12,7 +12,7 @@ use crate::audit;
 use crate::domain::ids::{new_id, prefix};
 use crate::domain::models::UserSummary;
 use crate::error::{AppError, AppResult};
-use crate::security::password;
+use crate::security::{Office, Permission, Role, password};
 use crate::state::AppState;
 
 const MAX_SCHOOL_ADMINS: i64 = 3;
@@ -26,7 +26,7 @@ pub fn set_staff_photo(
     png: Option<Vec<u8>>,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageStaff)?;
 
     if let Some(bytes) = &png {
         if bytes.len() > MAX_PHOTO_BYTES {
@@ -87,11 +87,18 @@ pub fn get_staff_photo(state: State<'_, AppState>, user_id: String) -> AppResult
 #[tauri::command]
 pub fn list_staff(state: State<'_, AppState>) -> AppResult<Vec<UserSummary>> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    // Also those who pick a teacher for a timetable slot or an exam paper,
+    // or a teacher in charge of a learner group.
+    if !(session.has(Permission::ManageStaff)
+        || session.has(Permission::ManageAcademics)
+        || session.has(Permission::SendMessages))
+    {
+        return Err(AppError::Forbidden);
+    }
 
     let conn = state.db.lock();
     let mut stmt = conn.prepare(
-        "SELECT id, username, full_name, email, phone, role, status,
+        "SELECT id, username, full_name, email, phone, role, office, status,
                 must_change_password, last_login_at
          FROM users
          WHERE status = 'active'
@@ -110,6 +117,9 @@ pub struct CreateStaffRequest {
     pub full_name: String,
     pub username: String,
     pub role: String,
+    /// headteacher, director_of_studies, secretary or bursar; none for most.
+    #[serde(default)]
+    pub office: Option<String>,
     #[serde(default)]
     pub email: Option<String>,
     #[serde(default)]
@@ -131,7 +141,7 @@ pub fn create_staff(
     request: CreateStaffRequest,
 ) -> AppResult<CreateStaffResult> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageStaff)?;
 
     if request.full_name.trim().is_empty() {
         return Err(AppError::validation("A name is required."));
@@ -146,6 +156,9 @@ pub fn create_staff(
     if !matches!(request.role.as_str(), "school_admin" | "teacher") {
         return Err(AppError::validation("Choose School Admin or Teacher."));
     }
+    let office = request.office.as_deref().filter(|o| !o.is_empty()).map(Office::parse).transpose()?;
+    // Nobody creates an account that can do more than they can.
+    session.require_act_on(Role::parse(&request.role)?, office)?;
 
     let conn = state.db.lock();
 
@@ -181,9 +194,9 @@ pub fn create_staff(
 
     conn.execute(
         "INSERT INTO users
-            (id, username, full_name, email, phone, role, password_hash,
+            (id, username, full_name, email, phone, role, office, password_hash,
              must_change_password, status, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, 'active', ?8, ?8)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?9, ?7, 1, 'active', ?8, ?8)",
         params![
             id,
             username,
@@ -193,6 +206,7 @@ pub fn create_staff(
             request.role,
             hash,
             now,
+            office.map(Office::as_str),
         ],
     )?;
 
@@ -216,23 +230,90 @@ pub fn create_staff(
     })
 }
 
+/// Gives a member of staff an office (headteacher, director of studies,
+/// secretary, bursar), changes it, or takes it away. Both the office they
+/// hold now and the one they are given must be within the changer's own
+/// powers, so nobody can raise anyone above themselves.
+#[tauri::command]
+pub fn set_staff_office(state: State<'_, AppState>, user_id: String, office: Option<String>) -> AppResult<()> {
+    let session = state.sessions.require()?;
+    session.require(Permission::ManageStaff)?;
+    if session.user_id == user_id {
+        return Err(AppError::validation(
+            "You cannot change your own office. Ask another School Admin.",
+        ));
+    }
+    let new_office = office.as_deref().filter(|o| !o.is_empty()).map(Office::parse).transpose()?;
+
+    let conn = state.db.lock();
+    let (full_name, role, current): (String, String, Option<String>) = conn
+        .query_row(
+            "SELECT full_name, role, office FROM users WHERE id = ?1 AND status = 'active'",
+            params![user_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?
+        .ok_or_else(|| AppError::not_found("That account"))?;
+    let role = Role::parse(&role)?;
+    let current = current.as_deref().map(Office::parse).transpose()?;
+    session.require_act_on(role, current)?;
+    session.require_act_on(role, new_office)?;
+
+    // One headteacher at a time: two would each sign every report card.
+    if new_office == Some(Office::HeadTeacher) && current != Some(Office::HeadTeacher) {
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT full_name FROM users WHERE office = 'head_teacher' AND status = 'active' AND id <> ?1",
+                params![user_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if let Some(name) = existing {
+            return Err(AppError::conflict(format!(
+                "{name} is already the Headteacher. Take the office from them first."
+            )));
+        }
+    }
+
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "UPDATE users SET office = ?1, updated_at = ?2 WHERE id = ?3",
+        params![new_office.map(Office::as_str), Utc::now().to_rfc3339(), user_id],
+    )?;
+    audit::record(
+        &tx,
+        Some(&session),
+        "user.office",
+        "user",
+        &user_id,
+        match (current, new_office) {
+            (_, Some(o)) => format!("Made {full_name} {}", o.title()),
+            (Some(o), None) => format!("Removed {full_name} as {}", o.title()),
+            (None, None) => format!("Left {full_name} without an office"),
+        },
+    )?;
+    tx.commit()?;
+    Ok(())
+}
+
 /// Retires an account. Never deletes: the audit trail must keep resolving the
 /// person who made a change years ago (SRS 14.5).
 #[tauri::command]
 pub fn retire_staff(state: State<'_, AppState>, user_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageStaff)?;
 
     if session.user_id == user_id {
         return Err(AppError::validation("You cannot retire your own account."));
     }
 
     let conn = state.db.lock();
-    let (full_name, role): (String, String) = conn.query_row(
-        "SELECT full_name, role FROM users WHERE id = ?1",
+    let (full_name, role, office): (String, String, Option<String>) = conn.query_row(
+        "SELECT full_name, role, office FROM users WHERE id = ?1",
         params![user_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
+    session.require_act_on(Role::parse(&role)?, office.as_deref().map(Office::parse).transpose()?)?;
 
     if role == "school_admin" {
         let admins: i64 =
@@ -297,7 +378,9 @@ pub fn list_assignments(
     if let Some(class) = class_id.as_deref() {
         session.require_view_class(class)?;
     } else {
-        session.require_admin()?;
+        if !session.has(Permission::ManageStaff) {
+            session.require(Permission::ViewAllClasses)?;
+        }
     }
 
     let conn = state.db.lock();
@@ -348,7 +431,7 @@ pub struct AssignRequest {
 #[tauri::command]
 pub fn assign_teacher(state: State<'_, AppState>, request: AssignRequest) -> AppResult<String> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageStaff)?;
 
     if !matches!(
         request.role.as_str(),
@@ -436,7 +519,7 @@ pub fn assign_teacher(state: State<'_, AppState>, request: AssignRequest) -> App
 #[tauri::command]
 pub fn unassign_teacher(state: State<'_, AppState>, assignment_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageStaff)?;
 
     let conn = state.db.lock();
     let (teacher_name, class_name, role): (String, String, String) = conn.query_row(

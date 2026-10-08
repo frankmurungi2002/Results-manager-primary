@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  Office,
   SignatureKind,
   SignatureOverview,
   AudienceOptions,
@@ -233,10 +234,14 @@ export const api = {
     fullName: string;
     username: string;
     role: string;
+    office?: Office | null;
     email?: string | null;
     phone?: string | null;
   }) => call<CreateStaffResult>("create_staff", { request }),
   retireStaff: (userId: string) => call<void>("retire_staff", { userId }),
+  /** Gives, changes or (with null) removes an office: headteacher, DOS, secretary, bursar. */
+  setStaffOffice: (userId: string, office: Office | null) =>
+    call<void>("set_staff_office", { userId, office }),
   listAssignments: (classId?: string) =>
     call<AssignmentRow[]>("list_assignments", { classId: classId ?? null }),
   assignTeacher: (request: {

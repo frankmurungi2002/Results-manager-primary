@@ -9,7 +9,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   DatabaseBackup,
-  FileText,
   GraduationCap,
   LayoutGrid,
   Table2,
@@ -19,12 +18,14 @@ import {
 } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { AcademicYearRow, ClassRow, DashboardSummary } from "../lib/types";
-import { useStore, type ScreenId } from "../state/store";
+import type { AcademicYearRow, ClassRow, DashboardSummary, Permission } from "../lib/types";
+import { useCan, useStore, type ScreenId } from "../state/store";
+import { YourDesk, deskActions } from "../components/YourDesk";
 import { Alert, Button, EmptyState, formatDate, initials, relativeTime } from "../components/ui";
 
 export function DashboardScreen() {
   const session = useStore((state) => state.session);
+  const can = useCan();
   const navigate = useStore((state) => state.navigate);
   const reportError = useStore((state) => state.reportError);
 
@@ -47,13 +48,13 @@ export function DashboardScreen() {
   if (loading) return <DashboardSkeleton />;
   if (!summary || !session) return null;
 
-  const isAdmin = session.isAdmin;
+  const actions = deskActions(session, can);
   const marksPercent =
     summary.marksExpectedThisTerm > 0
       ? Math.round((summary.marksEnteredThisTerm / summary.marksExpectedThisTerm) * 100)
       : 0;
   const openTerm = years.flatMap((year) => year.terms).find((term) => term.status === "open") ?? null;
-  const attention = attentionItems(summary, isAdmin, marksPercent);
+  const attention = attentionItems(summary, can, marksPercent);
 
   return (
     <div className="page">
@@ -74,14 +75,20 @@ export function DashboardScreen() {
             </p>
           </div>
           <div className="dash-actions">
-            <Button icon={<ClipboardList size={15} />} onClick={() => navigate("marks")}>
-              Enter marks
-            </Button>
-            <Button variant="primary" icon={<FileText size={15} />} onClick={() => navigate("reports")}>
-              Print reports
-            </Button>
+            {actions.map((action, index) => (
+              <Button
+                key={action.label}
+                variant={index === actions.length - 1 ? "primary" : undefined}
+                icon={action.icon}
+                onClick={() => navigate(action.screen, action.params)}
+              >
+                {action.label}
+              </Button>
+            ))}
           </div>
         </header>
+
+        <YourDesk session={session} summary={summary} onGo={(screen, params) => navigate(screen, params)} />
 
         {/* ---- FR-G22: a learner late back from a pass-out is never missed ---- */}
         {summary.overduePassOuts.length > 0 && (
@@ -129,14 +136,17 @@ export function DashboardScreen() {
             value={summary.teachers.toLocaleString()}
             meta={summary.teachers === 0 ? "None added yet" : "Active accounts"}
           />
-          <StatCard
-            tone="mint"
-            icon={<ClipboardCheck size={20} />}
-            label="Marks this term"
-            value={`${marksPercent}%`}
-            meta={`${summary.marksEnteredThisTerm.toLocaleString()} of ${summary.marksExpectedThisTerm.toLocaleString()} entered`}
-            meter={marksPercent}
-          />
+          {/* Marks are academic business: the bursar's dashboard leaves them out. */}
+          {(session.classIds.length > 0 || can("view_all_classes")) && (
+            <StatCard
+              tone="mint"
+              icon={<ClipboardCheck size={20} />}
+              label="Marks this term"
+              value={`${marksPercent}%`}
+              meta={`${summary.marksEnteredThisTerm.toLocaleString()} of ${summary.marksExpectedThisTerm.toLocaleString()} entered`}
+              meter={marksPercent}
+            />
+          )}
         </section>
 
         {/* ---- Charts, activity, calendar, attention ---- */}
@@ -144,27 +154,33 @@ export function DashboardScreen() {
           <div className="dash-col">
             <LearnersByClass classes={classes} />
             <NeedsAttention items={attention} onGo={(screen, params) => navigate(screen, params)} />
-            {isAdmin && (
+            {can("view_audit") && (
               <RecentActivity entries={summary.recentActivity} onViewAll={() => navigate("audit")} />
             )}
           </div>
 
           <div className="dash-col">
-            {isAdmin && (
+            {(can("manage_learners") || can("manage_staff") || can("manage_backups")) && (
               <div className="dash-quick">
-                <Button icon={<UserPlus size={15} />} onClick={() => navigate("learners")}>
-                  Add learner
-                </Button>
-                <Button icon={<Users size={15} />} onClick={() => navigate("staff")}>
-                  Add teacher
-                </Button>
-                <Button
-                  icon={<DatabaseBackup size={15} />}
-                  onClick={() => navigate("settings", { tab: "backup" })}
-                  className="dash-quick-wide"
-                >
-                  Back up now
-                </Button>
+                {can("manage_learners") && (
+                  <Button icon={<UserPlus size={15} />} onClick={() => navigate("learners")}>
+                    Add learner
+                  </Button>
+                )}
+                {can("manage_staff") && (
+                  <Button icon={<Users size={15} />} onClick={() => navigate("staff")}>
+                    Add teacher
+                  </Button>
+                )}
+                {can("manage_backups") && (
+                  <Button
+                    icon={<DatabaseBackup size={15} />}
+                    onClick={() => navigate("settings", { tab: "backup" })}
+                    className="dash-quick-wide"
+                  >
+                    Back up now
+                  </Button>
+                )}
               </div>
             )}
             <BoysAndGirls boys={summary.boys} girls={summary.girls} total={summary.learners} />
@@ -533,13 +549,17 @@ interface AttentionItem {
   params?: Record<string, string>;
 }
 
-function attentionItems(summary: DashboardSummary, isAdmin: boolean, marksPercent: number): AttentionItem[] {
+function attentionItems(
+  summary: DashboardSummary,
+  can: (p: Permission) => boolean,
+  marksPercent: number,
+): AttentionItem[] {
   const items: AttentionItem[] = [];
   const backupAgeDays = summary.lastBackupAt
     ? (Date.now() - new Date(summary.lastBackupAt).getTime()) / 86_400_000
     : Infinity;
 
-  if (isAdmin && backupAgeDays > 3) {
+  if (can("manage_backups") && backupAgeDays > 3) {
     items.push({
       key: "backup",
       tone: "danger",
@@ -575,7 +595,7 @@ function attentionItems(summary: DashboardSummary, isAdmin: boolean, marksPercen
       screen: "learners",
     });
   }
-  if (isAdmin && summary.teachers === 0) {
+  if (can("manage_staff") && summary.teachers === 0) {
     items.push({
       key: "teachers",
       tone: "info",

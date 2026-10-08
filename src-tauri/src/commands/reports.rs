@@ -24,6 +24,7 @@ use crate::domain::ids::{new_id, prefix};
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::{Permission, Session};
 
 // ---------------------------------------------------------------------------
 // FR-D4 — the global print pipeline
@@ -1070,7 +1071,7 @@ pub fn build_class_list(
     class_id: String,
 ) -> AppResult<DocumentEnvelope<ClassListBody>> {
     let session = state.sessions.require()?;
-    session.require_view_class(&class_id)?;
+    session.require_view_learners_of(&class_id)?;
 
     let conn = state.db.lock();
     let year_id = repo::current_academic_year_id(&conn)?
@@ -1214,7 +1215,7 @@ pub fn build_id_cards(
                 .class_id
                 .as_deref()
                 .ok_or_else(|| AppError::validation("Pick a class first."))?;
-            session.require_view_class(class_id)?;
+            session.require_view_learners_of(class_id)?;
             let year_id = year_id
                 .as_deref()
                 .ok_or_else(|| AppError::validation("No academic year is active yet."))?;
@@ -1252,7 +1253,7 @@ pub fn build_id_cards(
             collected
         }
         "staff" => {
-            session.require_admin()?;
+            session.require(Permission::ManageStaff)?;
 
             let mut stmt = conn.prepare(
                 "SELECT u.id, u.full_name, u.username, u.role, u.phone, u.photo_png,
@@ -1375,7 +1376,7 @@ pub fn build_exam_permits(
     request: ExamPermitRequest,
 ) -> AppResult<DocumentEnvelope<ExamPermitBatch>> {
     let session = state.sessions.require()?;
-    session.require_view_class(&request.class_id)?;
+    session.require_view_learners_of(&request.class_id)?;
     let conn = state.db.lock();
 
     if !repo::feature_enabled(&conn, "exam_permits")? {
@@ -1568,7 +1569,9 @@ pub fn build_pass_out_slip(
         })
         .optional()?
         .ok_or_else(|| AppError::not_found("That pass-out"))?;
-    session.require_manage_class(&class_id)?;
+    if !session.has(Permission::IssuePassOuts) {
+        session.require_manage_class(&class_id)?;
+    }
 
     let photos_on = repo::feature_enabled(&conn, "student_photos")?;
     let slip = conn.query_row(
@@ -1758,6 +1761,35 @@ pub fn get_report_comment(
     })
 }
 
+type StoredComments = (Option<String>, Option<String>, Option<String>);
+
+/// Who may make this change, judged by what it changes. The same save carries
+/// the Class Teacher's and the headteacher's comments; changing the
+/// headteacher's needs the headteacher's permission, so a Class Teacher
+/// cannot put words in the headteacher's mouth.
+fn authorize_comment(
+    session: &Session,
+    class_id: Option<&str>,
+    request: &SaveReportCommentRequest,
+    (stored_class, stored_head, stored_conduct): StoredComments,
+) -> AppResult<()> {
+    let norm = |v: &Option<String>| v.as_deref().map(str::trim).filter(|t| !t.is_empty()).map(str::to_string);
+    let same = |a: &Option<String>, b: &Option<String>| norm(a) == norm(b);
+
+    if !same(&request.head_teacher_comment, &stored_head) {
+        session.require(Permission::HeadTeacherComment)?;
+    }
+    let class_part_changed = !same(&request.class_teacher_comment, &stored_class)
+        || !same(&request.conduct_comment, &stored_conduct)
+        || request.activity_ratings.is_some();
+    match class_id {
+        Some(class) if class_part_changed => session.require_manage_class(class),
+        Some(class) => session.require_view_class(class),
+        None if class_part_changed => session.require(Permission::ManageAllClasses),
+        None => Ok(()),
+    }
+}
+
 /// A picked comment can still be edited per learner before printing; the edit
 /// is stored as free text and never writes back into the shared pool (FR-G11).
 #[tauri::command]
@@ -1776,10 +1808,18 @@ pub fn save_report_comment(
         )
         .optional()?;
 
-    match class_id.as_deref() {
-        Some(class) => session.require_manage_class(class)?,
-        None => session.require_admin()?,
-    }
+    // Who wrote what is decided by what changed, not by the request: the
+    // same save carries both comments, and a Class Teacher must not be able
+    // to put words in the headteacher's mouth.
+    let stored: Option<(Option<String>, Option<String>, Option<String>)> = conn
+        .query_row(
+            "SELECT class_teacher_comment, head_teacher_comment, conduct_comment
+             FROM report_comments WHERE student_id = ?1 AND term_id = ?2",
+            params![request.student_id, request.term_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    authorize_comment(&session, class_id.as_deref(), &request, stored.unwrap_or((None, None, None)))?;
 
     if let Some(list) = &request.activity_ratings {
         if let Some(bad) = list.iter().find(|r| !RATINGS.contains(&r.rating.as_str())) {
@@ -1870,7 +1910,7 @@ pub fn save_report_settings(
     settings: ReportSettings,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
 
     let activities: Vec<String> = settings
         .nursery_activities
@@ -1913,7 +1953,7 @@ pub fn set_fees_block(
     note: Option<String>,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageFees)?;
 
     let conn = state.db.lock();
     let full_name: String = conn.query_row(
@@ -1950,7 +1990,7 @@ pub fn set_fees_block(
 #[tauri::command]
 pub fn set_fees_rule(state: State<'_, AppState>, enabled: bool) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageFees)?;
 
     let conn = state.db.lock();
     repo::set_setting(&conn, "rule.fees_block", if enabled { "on" } else { "off" })?;
@@ -2042,6 +2082,42 @@ mod tests {
             weekly: vec![],
             activities: vec![],
         }
+    }
+
+    fn comment(class: Option<&str>, head: Option<&str>) -> SaveReportCommentRequest {
+        SaveReportCommentRequest {
+            student_id: "s".into(),
+            term_id: "t".into(),
+            class_teacher_comment: class.map(str::to_string),
+            head_teacher_comment: head.map(str::to_string),
+            conduct_comment: None,
+            activity_ratings: None,
+        }
+    }
+
+    #[test]
+    fn a_class_teacher_cannot_write_the_headteachers_comment() {
+        use crate::security::session::test_session;
+        use crate::security::{Office, Role};
+        let teacher = test_session("t", Role::Teacher, None, &["p5"]);
+        let stored = (None, Some("A good term.".to_string()), None);
+
+        // Their own comment, the head's left as it was: fine.
+        assert!(authorize_comment(&teacher, Some("p5"), &comment(Some("Works hard."), Some("A good term.")), stored.clone()).is_ok());
+        // Whitespace is not a change.
+        assert!(authorize_comment(&teacher, Some("p5"), &comment(None, Some("  A good term. ")), stored.clone()).is_ok());
+        // Rewriting the head's comment: refused.
+        assert!(matches!(
+            authorize_comment(&teacher, Some("p5"), &comment(None, Some("Excellent!")), stored.clone()),
+            Err(AppError::Forbidden)
+        ));
+        // Another class: refused.
+        assert!(authorize_comment(&teacher, Some("p6"), &comment(Some("Hi"), Some("A good term.")), stored.clone()).is_err());
+
+        let head = test_session("h", Role::Teacher, Some(Office::HeadTeacher), &[]);
+        assert!(authorize_comment(&head, Some("p6"), &comment(None, Some("Excellent!")), stored.clone()).is_ok());
+        let secretary = test_session("s", Role::Teacher, Some(Office::Secretary), &[]);
+        assert!(authorize_comment(&secretary, Some("p5"), &comment(None, Some("Excellent!")), stored).is_err());
     }
 
     #[test]

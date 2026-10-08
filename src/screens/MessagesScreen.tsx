@@ -34,7 +34,7 @@ import type {
   StudentRow,
   UserSummary,
 } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import {
   Alert,
   Badge,
@@ -62,7 +62,7 @@ interface Chosen extends AudiencePart {
 const key = (part: AudiencePart) => `${part.kind}:${part.id ?? ""}`;
 
 export function MessagesScreen() {
-  const session = useStore((state) => state.session);
+  const can = useCan();
   const [tab, setTab] = useState<Tab>("compose");
 
   return (
@@ -95,7 +95,7 @@ export function MessagesScreen() {
 
         {tab === "compose" && <Compose onSent={() => setTab("sent")} />}
         {tab === "sent" && <SentList />}
-        {tab === "groups" && <Groups isAdmin={Boolean(session?.isAdmin)} />}
+        {tab === "groups" && <Groups isAdmin={can("send_messages")} />}
       </div>
     </div>
   );
@@ -109,7 +109,8 @@ function Compose({ onSent }: { onSent: () => void }) {
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
   const navigate = useStore((state) => state.navigate);
-  const isAdmin = useStore((state) => Boolean(state.session?.isAdmin));
+  // Only whoever owns the SMS settings can be sent to fix them.
+  const isAdmin = useCan()("manage_school");
 
   const [options, setOptions] = useState<AudienceOptions | null>(null);
   const [chosen, setChosen] = useState<Chosen[]>([]);

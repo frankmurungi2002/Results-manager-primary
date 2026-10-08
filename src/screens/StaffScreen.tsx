@@ -4,14 +4,16 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Camera, Copy, KeyRound, UserPlus, UserX, UsersRound } from "lucide-react";
+import { Briefcase, Camera, Copy, KeyRound, UserPlus, UserX, UsersRound } from "lucide-react";
 
 import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
+import { OFFICE_TITLES } from "../lib/types";
 import type {
   AssignmentRow,
   ClassRow,
   ClassSubjectRow,
+  Office,
   StreamRow,
   UserSummary,
 } from "../lib/types";
@@ -49,6 +51,7 @@ export function StaffScreen() {
   const [addOpen, setAddOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [photoFor, setPhotoFor] = useState<UserSummary | null>(null);
+  const [officeFor, setOfficeFor] = useState<UserSummary | null>(null);
   const [credentials, setCredentials] = useState<{
     name: string;
     username: string;
@@ -163,11 +166,14 @@ export function StaffScreen() {
                         </td>
                         <td className="mono muted">{person.username}</td>
                         <td>
-                          <Badge
-                            tone={person.role === "school_admin" ? "accent" : "neutral"}
-                          >
-                            {person.role === "school_admin" ? "School Admin" : "Teacher"}
-                          </Badge>
+                          <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>
+                            <Badge
+                              tone={person.role === "school_admin" ? "accent" : "neutral"}
+                            >
+                              {person.role === "school_admin" ? "School Admin" : "Teacher"}
+                            </Badge>
+                            {person.office && <Badge tone="info">{OFFICE_TITLES[person.office]}</Badge>}
+                          </div>
                           {person.mustChangePassword && (
                             <div style={{ marginTop: 4 }}>
                               <Badge tone="warning">Password not yet changed</Badge>
@@ -183,6 +189,13 @@ export function StaffScreen() {
                               icon={<Camera size={14} />}
                               title="Photo"
                               onClick={() => setPhotoFor(person)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={<Briefcase size={14} />}
+                              title="Office"
+                              onClick={() => setOfficeFor(person)}
                             />
                             <Button
                               size="sm"
@@ -308,6 +321,17 @@ export function StaffScreen() {
         onClose={() => setPhotoFor(null)}
       />
 
+      {officeFor && (
+        <OfficeModal
+          person={officeFor}
+          onClose={() => setOfficeFor(null)}
+          onSaved={() => {
+            setOfficeFor(null);
+            void reload();
+          }}
+        />
+      )}
+
       <AddStaffModal
         open={addOpen}
         adminCount={admins.length}
@@ -411,6 +435,7 @@ function AddStaffModal({
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("teacher");
+  const [office, setOffice] = useState<Office | "">("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
@@ -420,6 +445,7 @@ function AddStaffModal({
       setFullName("");
       setUsername("");
       setRole("teacher");
+      setOffice("");
       setEmail("");
       setPhone("");
     }
@@ -455,6 +481,7 @@ function AddStaffModal({
                   fullName,
                   username,
                   role,
+                  office: office || null,
                   email: email.trim() || null,
                   phone: phone.trim() || null,
                 })
@@ -494,6 +521,19 @@ function AddStaffModal({
           <option value="school_admin" disabled={adminCount >= 3}>
             School Admin
           </option>
+        </SelectInput>
+        <SelectInput
+          label="Office (optional)"
+          value={office}
+          onChange={(event) => setOffice(event.target.value as Office | "")}
+          hint="What they do beyond teaching. Each office sees its own screens."
+        >
+          <option value="">None — teaching only</option>
+          {(Object.keys(OFFICE_TITLES) as Office[]).map((key) => (
+            <option key={key} value={key}>
+              {OFFICE_TITLES[key]}
+            </option>
+          ))}
         </SelectInput>
         <TextInput
           label="Email (optional)"
@@ -667,6 +707,84 @@ function AssignModal({
           </SelectInput>
         )}
       </div>
+    </Modal>
+  );
+}
+
+/**
+ * Gives a member of staff an office, changes it or takes it away. The backend
+ * refuses anything that would give someone powers the changer lacks.
+ */
+function OfficeModal({
+  person,
+  onClose,
+  onSaved,
+}: {
+  person: UserSummary;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+  const [office, setOffice] = useState<Office | "">(person.office ?? "");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <Modal
+      open
+      title={`${person.fullName}'s office`}
+      description="An office adds screens and powers on top of any classes they teach."
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            variant="primary"
+            loading={busy}
+            disabled={office === (person.office ?? "")}
+            onClick={() => {
+              setBusy(true);
+              api
+                .setStaffOffice(person.id, office || null)
+                .then(() => {
+                  toast(
+                    "success",
+                    office ? `${person.fullName} is now ${OFFICE_TITLES[office]}.` : `${person.fullName} no longer holds an office.`,
+                  );
+                  onSaved();
+                })
+                .catch(reportError)
+                .finally(() => setBusy(false));
+            }}
+          >
+            Save
+          </Button>
+        </>
+      }
+    >
+      <SelectInput label="Office" value={office} onChange={(event) => setOffice(event.target.value as Office | "")}>
+        <option value="">None — teaching only</option>
+        {(Object.keys(OFFICE_TITLES) as Office[]).map((key) => (
+          <option key={key} value={key}>
+            {OFFICE_TITLES[key]}
+          </option>
+        ))}
+      </SelectInput>
+      <ul className="office-help">
+        <li>
+          <strong>Headteacher</strong> — every class, staff, fees, messages, the headteacher's comment. Not backups or
+          marks.
+        </li>
+        <li>
+          <strong>Director of Studies</strong> — every class's marks, timetables, terms and exams.
+        </li>
+        <li>
+          <strong>Secretary</strong> — admissions, pass-outs, messages, printing report cards. Never edits marks.
+        </li>
+        <li>
+          <strong>Bursar</strong> — the fees block and class lists. Does not see marks.
+        </li>
+      </ul>
     </Modal>
   );
 }

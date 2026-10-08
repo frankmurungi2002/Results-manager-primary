@@ -3,7 +3,7 @@
 //! FR-B2, FR-B9, FR-B10, FR-E2, and the simplified backup from SRS 16.1.
 
 use chrono::Utc;
-use rusqlite::params;
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -13,6 +13,7 @@ use crate::domain::models::Institution;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use crate::security::{Permission, Session};
 
 const MAX_LOGO_BYTES: usize = 2 * 1024 * 1024;
 
@@ -54,7 +55,7 @@ pub fn update_institution(
     request: UpdateInstitutionRequest,
 ) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
 
     // FR-B2: the name is compulsory. The logo never is.
     if request.name.trim().is_empty() {
@@ -98,7 +99,7 @@ pub fn update_institution(
 #[tauri::command]
 pub fn set_institution_logo(state: State<'_, AppState>, png: Option<Vec<u8>>) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
 
     if let Some(bytes) = &png {
         if bytes.len() > MAX_LOGO_BYTES {
@@ -156,7 +157,7 @@ pub fn get_login_images(state: State<'_, AppState>) -> AppResult<Vec<Option<Stri
 #[tauri::command]
 pub fn set_login_image(state: State<'_, AppState>, slot: usize, path: Option<String>) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageSchool)?;
     if !(1..=LOGIN_IMAGE_SLOTS).contains(&slot) {
         return Err(AppError::validation("There are four sign-in pictures."));
     }
@@ -231,7 +232,7 @@ pub fn search_audit_log(
     offset: Option<i64>,
 ) -> AppResult<Vec<AuditEntry>> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ViewAudit)?;
 
     let conn = state.db.lock();
     audit::search(
@@ -276,7 +277,7 @@ pub fn backup_status(state: State<'_, AppState>) -> AppResult<BackupStatus> {
 #[tauri::command]
 pub fn set_mirror_path(state: State<'_, AppState>, path: Option<String>) -> AppResult<()> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageBackups)?;
 
     let conn = state.db.lock();
     match path.as_deref().map(str::trim).filter(|p| !p.is_empty()) {
@@ -321,7 +322,7 @@ pub fn set_mirror_path(state: State<'_, AppState>, path: Option<String>) -> AppR
 #[tauri::command]
 pub fn run_backup(state: State<'_, AppState>) -> AppResult<BackupResult> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageBackups)?;
     backup::take(&state, Some(&session), Trigger::Manual)
 }
 
@@ -329,7 +330,7 @@ pub fn run_backup(state: State<'_, AppState>) -> AppResult<BackupResult> {
 #[tauri::command]
 pub fn list_backups(state: State<'_, AppState>) -> AppResult<Vec<BackupFile>> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageBackups)?;
     backup::list(&state)
 }
 
@@ -337,7 +338,7 @@ pub fn list_backups(state: State<'_, AppState>) -> AppResult<Vec<BackupFile>> {
 #[tauri::command]
 pub fn inspect_backup(state: State<'_, AppState>, path: String) -> AppResult<BackupSummary> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageBackups)?;
     backup::inspect(std::path::Path::new(&path))
 }
 
@@ -346,7 +347,7 @@ pub fn inspect_backup(state: State<'_, AppState>, path: String) -> AppResult<Bac
 #[tauri::command]
 pub fn restore_backup(state: State<'_, AppState>, path: String) -> AppResult<BackupSummary> {
     let session = state.sessions.require()?;
-    session.require_admin()?;
+    session.require(Permission::ManageBackups)?;
     backup::restore(&state, &session, std::path::Path::new(&path))
 }
 
@@ -373,6 +374,122 @@ pub struct DashboardSummary {
     /// FR-G22: learners out on a pass-out right now, and those overdue.
     pub pass_outs_out: i64,
     pub overdue_pass_outs: Vec<crate::commands::passouts::OverduePassOut>,
+    /// What each office needs on its own dashboard. Every field is filled only
+    /// for someone allowed to see it, so a bursar's dashboard never carries
+    /// a class's marks.
+    pub desk: Desk,
+}
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Desk {
+    /// Learners under the fees block (whoever manages fees).
+    pub fees_blocked: Option<i64>,
+    /// The classes furthest behind with this term's marks (academic offices).
+    pub marks_behind: Vec<ClassMarks>,
+    /// Registers taken today across the school (school-wide view).
+    pub registers_today: Option<RegistersToday>,
+    /// The signed-in teacher's own classes with no register yet today.
+    pub my_registers_pending: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassMarks {
+    pub class_id: String,
+    pub class_name: String,
+    pub entered: i64,
+    pub expected: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistersToday {
+    pub taken: i64,
+    pub classes: i64,
+}
+
+fn desk(conn: &Connection, session: &Session, term_id: &Option<String>, year_id: &Option<String>) -> AppResult<Desk> {
+    let mut desk = Desk::default();
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+
+    if session.has(Permission::ManageFees) {
+        desk.fees_blocked = Some(conn.query_row(
+            "SELECT COUNT(*) FROM students WHERE status = 'active' AND fees_blocked = 1",
+            [],
+            |row| row.get(0),
+        )?);
+    }
+
+    if session.has(Permission::ManageAcademics) || session.has(Permission::EditAllMarks) {
+        if let (Some(term), Some(year)) = (term_id, year_id) {
+            let mut stmt = conn.prepare(
+                "SELECT c.id, c.name,
+                        (SELECT COUNT(*) FROM marks m
+                          JOIN class_subjects cs ON cs.id = m.class_subject_id
+                          JOIN exams e ON e.id = m.exam_id
+                          WHERE cs.class_id = c.id AND e.term_id = ?1),
+                        (SELECT COUNT(*) FROM enrollments en
+                          WHERE en.class_id = c.id AND en.academic_year_id = ?2 AND en.status = 'active')
+                        * (SELECT COUNT(*) FROM class_subjects cs WHERE cs.class_id = c.id AND cs.status = 'active')
+                        * (SELECT COUNT(*) FROM exams ex WHERE ex.term_id = ?1)
+                 FROM classes c WHERE c.status = 'active'",
+            )?;
+            let mut rows = stmt
+                .query_map(params![term, year], |row| {
+                    Ok(ClassMarks {
+                        class_id: row.get(0)?,
+                        class_name: row.get(1)?,
+                        entered: row.get(2)?,
+                        expected: row.get(3)?,
+                    })
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            rows.retain(|c| c.expected > 0 && c.entered < c.expected);
+            rows.sort_by(|a, b| {
+                let share = |c: &ClassMarks| c.entered as f64 / c.expected as f64;
+                share(a).total_cmp(&share(b))
+            });
+            rows.truncate(5);
+            desk.marks_behind = rows;
+        }
+    }
+
+    if session.has(Permission::ViewAllClasses) {
+        let taken: i64 = conn.query_row(
+            "SELECT COUNT(DISTINCT class_id) FROM attendance WHERE on_date = ?1",
+            params![today],
+            |row| row.get(0),
+        )?;
+        let classes: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM classes WHERE status = 'active'",
+            [],
+            |row| row.get(0),
+        )?;
+        desk.registers_today = Some(RegistersToday { taken, classes });
+    }
+
+    if !session.class_teacher_of.is_empty() {
+        let mut stmt = conn.prepare(
+            "SELECT c.name FROM classes c
+             WHERE c.id = ?1 AND NOT EXISTS (
+                 SELECT 1 FROM attendance a WHERE a.class_id = c.id AND a.on_date = ?2)",
+        )?;
+        let mut pending = Vec::new();
+        let mut mine: Vec<&String> = session.class_teacher_of.iter().collect();
+        mine.sort();
+        for class_id in mine {
+            if let Some(name) = stmt
+                .query_row(params![class_id, today], |row| row.get::<_, String>(0))
+                .optional()?
+            {
+                pending.push(name);
+            }
+        }
+        desk.my_registers_pending = pending;
+    }
+
+    Ok(desk)
 }
 
 #[tauri::command]
@@ -469,7 +586,7 @@ pub fn dashboard_summary(state: State<'_, AppState>) -> AppResult<DashboardSumma
     };
 
     // Teachers see the school's shape but not its audit trail.
-    let recent_activity = if session.is_admin() {
+    let recent_activity = if session.has(Permission::ViewAudit) {
         audit::search(&conn, None, 8, 0)?
     } else {
         Vec::new()
@@ -495,6 +612,7 @@ pub fn dashboard_summary(state: State<'_, AppState>) -> AppResult<DashboardSumma
             |row| row.get(0),
         )?,
         overdue_pass_outs: crate::commands::passouts::overdue(&conn)?,
+        desk: desk(&conn, &session, &term_id, &year_id)?,
     })
 }
 

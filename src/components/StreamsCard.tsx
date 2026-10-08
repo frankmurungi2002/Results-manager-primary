@@ -9,13 +9,14 @@ import { Pencil, Plus, Split, Trash2 } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { StreamRow } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import { Button, Card, EmptyState, TextInput } from "./ui";
 
 export function StreamsCard({ classId, className }: { classId: string; className: string }) {
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
-  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
+  const can = useCan();
+  const isAdmin = can("manage_academics");
 
   const [streams, setStreams] = useState<StreamRow[]>([]);
   const [name, setName] = useState("");

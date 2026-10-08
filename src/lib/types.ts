@@ -10,13 +10,49 @@
 export type Role = "school_admin" | "teacher";
 export type TeacherMode = "subject_teacher" | "class_teacher";
 
+/** An office some staff hold on top of their account. */
+export type Office = "head_teacher" | "director_of_studies" | "secretary" | "bursar";
+
+export const OFFICE_TITLES: Record<Office, string> = {
+  head_teacher: "Headteacher",
+  director_of_studies: "Director of Studies",
+  secretary: "Secretary",
+  bursar: "Bursar",
+};
+
+/**
+ * What a person may do across the whole school. Mirrors `Permission` in
+ * `security/session.rs`, which decides; the interface only uses these to
+ * choose what to show. Class and Subject Teachers need none of them.
+ */
+export type Permission =
+  | "manage_school"
+  | "manage_backups"
+  | "manage_staff"
+  | "view_audit"
+  | "manage_calendar"
+  | "manage_academics"
+  | "view_all_learners"
+  | "view_all_classes"
+  | "manage_all_classes"
+  | "edit_all_marks"
+  | "manage_learners"
+  | "issue_pass_outs"
+  | "manage_fees"
+  | "send_messages"
+  | "head_teacher_comment"
+  | "view_insights";
+
 export interface SessionView {
   userId: string;
   username: string;
   fullName: string;
   role: Role;
+  office: Office | null;
+  permissions: Permission[];
   mode: TeacherMode | null;
   mustChangePassword: boolean;
+  /** The account that runs the system (FR-B4). Never use it to decide access. */
   isAdmin: boolean;
   canSwitchToClassTeacher: boolean;
   classIds: string[];
@@ -235,6 +271,7 @@ export interface UserSummary {
   email: string | null;
   phone: string | null;
   role: Role;
+  office: Office | null;
   status: string;
   mustChangePassword: boolean;
   lastLoginAt: string | null;
@@ -798,6 +835,8 @@ export interface SignatureOverview {
   headTeacher: string | null;
   stamp: string | null;
   canManageSchool: boolean;
+  /** The office, or the headteacher for their own signature. */
+  canSetHeadSignature: boolean;
   staff: StaffSignature[];
 }
 
@@ -894,6 +933,25 @@ export interface BackupSummary {
   compatible: boolean;
 }
 
+export interface ClassMarks {
+  classId: string;
+  className: string;
+  entered: number;
+  expected: number;
+}
+
+export interface RegistersToday {
+  taken: number;
+  classes: number;
+}
+
+export interface Desk {
+  feesBlocked: number | null;
+  marksBehind: ClassMarks[];
+  registersToday: RegistersToday | null;
+  myRegistersPending: string[];
+}
+
 export interface DashboardSummary {
   institutionName: string;
   academicYear: string | null;
@@ -910,6 +968,8 @@ export interface DashboardSummary {
   recentActivity: AuditEntry[];
   passOutsOut: number;
   overduePassOuts: OverduePassOut[];
+  /** Each office's own figures; a field is absent for whoever may not see it. */
+  desk: Desk;
 }
 
 // --- Pass-outs (FR-G22) and SMS (FR-G8) --------------------------------------

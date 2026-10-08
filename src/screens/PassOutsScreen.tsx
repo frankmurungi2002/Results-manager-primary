@@ -24,7 +24,7 @@ import type {
   PassOutSlip,
   StudentRow,
 } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
 import {
   Alert,
   Badge,
@@ -78,7 +78,9 @@ function relativeBack(iso: string, now: number): string {
 export function PassOutsScreen() {
   const reportError = useStore((state) => state.reportError);
   const toast = useStore((state) => state.toast);
-  const isAdmin = useStore((state) => state.session?.isAdmin ?? false);
+  const can = useCan();
+  // Only the SMS settings' owner can check them, or fix them.
+  const isAdmin = can("manage_school");
   const navigate = useStore((state) => state.navigate);
 
   const [rows, setRows] = useState<PassOutRow[] | null>(null);

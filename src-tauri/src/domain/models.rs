@@ -51,6 +51,8 @@ pub struct UserSummary {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub role: String,
+    /// headteacher, director_of_studies, secretary or bursar; none for most.
+    pub office: Option<String>,
     pub status: String,
     pub must_change_password: bool,
     pub last_login_at: Option<String>,
@@ -65,6 +67,7 @@ impl UserSummary {
             email: row.get("email")?,
             phone: row.get("phone")?,
             role: row.get("role")?,
+            office: row.get("office")?,
             status: row.get("status")?,
             must_change_password: row.get::<_, i64>("must_change_password")? != 0,
             last_login_at: row.get("last_login_at")?,

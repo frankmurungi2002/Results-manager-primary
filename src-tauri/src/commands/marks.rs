@@ -386,7 +386,7 @@ pub fn save_marks(
 
     // FR-C1 again, one level finer: a Subject Teacher may only write marks for
     // the subject they were assigned. Being in the class is not enough.
-    if !session.is_admin() && !session.may_manage_class(&class_id) {
+    if !session.may_write_all_marks_in(&class_id) {
         let assigned: i64 = conn.query_row(
             "SELECT COUNT(*) FROM teacher_assignments ta
              JOIN class_subjects cs ON cs.subject_id = ta.subject_id AND cs.class_id = ta.class_id
