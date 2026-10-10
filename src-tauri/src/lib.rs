@@ -149,6 +149,8 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::registration::export_sports_team,
         commands::registration::build_correction_letter,
         commands::exports::save_export,
+        commands::invites::invite_staff,
+        commands::invites::accept_invite,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,

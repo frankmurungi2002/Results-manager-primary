@@ -55,6 +55,7 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  Invite,
   PleCheck,
   SportsTeam,
   CorrectionLetter,
@@ -2574,6 +2575,33 @@ export function CorrectionLetterSheet({ envelope }: { envelope: DocumentEnvelope
           </div>
           <Stamp src={branding.stampDataUrl} />
         </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** An invite handed over on paper. */
+export function InviteSlipSheet({ envelope }: { envelope: DocumentEnvelope<Invite> }) {
+  const { branding, footer, body } = envelope;
+  const expires = new Date(body.expiresAt);
+  return (
+    <Sheet branding={branding} footer={footer} variant="compact" title="Your Phantom School Manager Account" subtitle={body.fullName}>
+      <div className="rg-letter">
+        <p>Dear {body.fullName},</p>
+        <p>Your account on the school computer is ready. Set your own password with this one-time invite code.</p>
+        <table className="rg-facts" style={{ maxWidth: "120mm" }}>
+          <tbody>
+            <tr><th>Username</th><td className="rg-name mono">{body.username}</td></tr>
+            <tr><th>Invite code</th><td className="rg-name mono">{body.code}</td></tr>
+            <tr><th>Use it before</th><td>{expires.toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</td></tr>
+          </tbody>
+        </table>
+        <ol>
+          <li>On the sign-in screen, choose <strong>I have an invite code</strong>.</li>
+          <li>Type your username and the invite code.</li>
+          <li>Choose a password of at least 10 characters that nobody else knows, and type it twice.</li>
+        </ol>
+        <p>The code works once. Keep your password to yourself: everything you record is signed with your name.</p>
       </div>
     </Sheet>
   );

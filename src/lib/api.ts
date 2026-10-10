@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  Invite,
   LearnerFix,
   PleCheck,
   EmisCheck,
@@ -737,4 +738,7 @@ export const api = {
   exportSportsTeam: (eventId: string) => call<StagedFile[]>("export_sports_team", { eventId }),
   buildCorrectionLetter: (input: LetterInput) => call<DocumentEnvelope<CorrectionLetter>>("build_correction_letter", { input }),
   saveExport: (file: string, destination: string) => call<string>("save_export", { file, destination }),
+  inviteStaff: (userId: string, sendSms: boolean) => call<DocumentEnvelope<Invite>>("invite_staff", { userId, sendSms }),
+  acceptInvite: (username: string, code: string, newPassword: string) =>
+    call<string>("accept_invite", { username, code, newPassword }),
 };

@@ -21,7 +21,7 @@ export function LoginScreen() {
   const [showHelp, setShowHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"password" | "station" | "recover">("password");
+  const [tab, setTab] = useState<"password" | "station" | "recover" | "invite">("password");
   const [stationOn, setStationOn] = useState(false);
 
   // The sign-in station is offered only once the school has switched it on.
@@ -64,7 +64,7 @@ export function LoginScreen() {
             {institutionName && <div className="login-school">{institutionName}</div>}
 
             <div className="login-panel">
-              <h2 className="login-title">{tab === "station" ? "Arriving or leaving?" : tab === "recover" ? "Recovery code" : "Welcome back."}</h2>
+              <h2 className="login-title">{tab === "station" ? "Arriving or leaving?" : tab === "recover" ? "Recovery code" : tab === "invite" ? "Set your password" : "Welcome back."}</h2>
 
               <div className="login-tabs" role="tablist">
                 <button type="button" role="tab" className={tab === "password" ? "login-tab is-active" : "login-tab"} onClick={() => setTab("password")}>
@@ -80,7 +80,9 @@ export function LoginScreen() {
               {tab === "station" ? (
                 <StaffStation />
               ) : tab === "recover" ? (
-                <RecoverForm onDone={() => setTab("password")} />
+                <RecoverForm kind="recover" onDone={() => setTab("password")} />
+              ) : tab === "invite" ? (
+                <RecoverForm kind="invite" onDone={() => setTab("password")} />
               ) : (
               <form className="login-form" onSubmit={onSubmit} noValidate>
 
@@ -157,7 +159,12 @@ export function LoginScreen() {
               )}
             </div>
 
-            <p className="login-after">New staff? Your School Admin creates your account.</p>
+            <p className="login-after" style={{ visibility: tab === "invite" ? "hidden" : undefined }}>
+              New staff?{" "}
+              <button type="button" className="login-link" onClick={() => setTab("invite")}>
+                I have an invite code
+              </button>
+            </p>
           </div>
 
           <footer className="login-foot">Version {appVersion}</footer>
@@ -169,8 +176,11 @@ export function LoginScreen() {
   );
 }
 
-/** A School Admin's printed recovery code sets a new password. */
-function RecoverForm({ onDone }: { onDone: () => void }) {
+/**
+ * A one-time code sets a new password: a School Admin's printed recovery
+ * code, or the invite code a new member of staff was sent.
+ */
+function RecoverForm({ kind, onDone }: { kind: "recover" | "invite"; onDone: () => void }) {
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
   const [next, setNext] = useState("");
@@ -182,7 +192,11 @@ function RecoverForm({ onDone }: { onDone: () => void }) {
   if (done) {
     return (
       <div className="station">
-        <Alert tone="success">Your password is set and the recovery code is spent. Sign in, then print a new recovery sheet under Settings → My account.</Alert>
+        <Alert tone="success">
+          {kind === "invite"
+            ? "Your password is set. Sign in with your username and the password you just chose."
+            : "Your password is set and the recovery code is spent. Sign in, then print a new recovery sheet under Settings → My account."}
+        </Alert>
         <Button variant="primary" block className="login-submit" onClick={onDone}>
           Sign in
         </Button>
@@ -200,8 +214,7 @@ function RecoverForm({ onDone }: { onDone: () => void }) {
         }
         setBusy(true);
         setError(null);
-        api
-          .useRecoveryCode(username, code, next)
+        (kind === "invite" ? api.acceptInvite(username, code, next).then(() => undefined) : api.useRecoveryCode(username, code, next))
           .then(() => setDone(true))
           .catch((caught) => setError(caught instanceof ApiError ? caught.message : "That did not work."))
           .finally(() => setBusy(false));
@@ -209,10 +222,16 @@ function RecoverForm({ onDone }: { onDone: () => void }) {
     >
       {error && <Alert tone="danger">{error}</Alert>}
       <input className="login-input" placeholder="Your username" value={username} onChange={(e) => setUsername(e.target.value)} />
-      <input className="login-input" placeholder="RCV-XXXX-XXXX-XXXX-XXXX" value={code} onChange={(e) => setCode(e.target.value)} />
+      {kind === "invite" && <p className="login-help">Type the username and invite code from your SMS or slip, then choose your own password.</p>}
+      <input
+        className="login-input"
+        placeholder={kind === "invite" ? "INV-XXXX-XXXX" : "RCV-XXXX-XXXX-XXXX-XXXX"}
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+      />
       <input className="login-input" type="password" placeholder="New password (10+ characters)" value={next} onChange={(e) => setNext(e.target.value)} />
       <input className="login-input" type="password" placeholder="New password again" value={again} onChange={(e) => setAgain(e.target.value)} />
-      <Button type="submit" variant="primary" block loading={busy} disabled={!username || code.length < 16 || next.length < 10} className="login-submit">
+      <Button type="submit" variant="primary" block loading={busy} disabled={!username || code.length < (kind === "invite" ? 8 : 16) || next.length < 10} className="login-submit">
         Set my new password
       </Button>
       <button type="button" className="login-link" onClick={onDone}>

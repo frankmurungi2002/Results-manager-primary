@@ -2152,3 +2152,14 @@ export interface StagedFile {
   kind: string;
   detail: string;
 }
+
+export interface Invite {
+  userId: string;
+  fullName: string;
+  username: string;
+  code: string;
+  expiresAt: string;
+  message: string;
+  phone: string | null;
+  smsQueued: boolean;
+}

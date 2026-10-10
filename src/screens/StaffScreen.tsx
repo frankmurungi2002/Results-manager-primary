@@ -4,12 +4,14 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Briefcase, Camera, Copy, KeyRound, UserPlus, UserX, UsersRound } from "lucide-react";
+import { ArrowLeft, Briefcase, Camera, Copy, KeyRound, Printer, Send, UserPlus, UserX, UsersRound } from "lucide-react";
 
 import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
 import { OFFICE_TITLES } from "../lib/types";
 import type {
+  DocumentEnvelope,
+  Invite,
   AssignmentRow,
   ClassRow,
   ClassSubjectRow,
@@ -19,6 +21,7 @@ import type {
 } from "../lib/types";
 import { useStore } from "../state/store";
 import { StaffRegister } from "../components/StaffRegister";
+import { InviteSlipSheet, PrintPreview } from "../components/PrintDocument";
 import {
   Alert,
   Badge,
@@ -54,10 +57,13 @@ export function StaffScreen() {
   const [photoFor, setPhotoFor] = useState<UserSummary | null>(null);
   const [officeFor, setOfficeFor] = useState<UserSummary | null>(null);
   const [credentials, setCredentials] = useState<{
+    id: string;
     name: string;
     username: string;
     password: string;
   } | null>(null);
+  const [inviteFor, setInviteFor] = useState<UserSummary | null>(null);
+  const [slip, setSlip] = useState<DocumentEnvelope<Invite> | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -82,6 +88,16 @@ export function StaffScreen() {
 
   const admins = staff.filter((person) => person.role === "school_admin");
   const teachers = staff.filter((person) => person.role === "teacher");
+
+  if (slip) {
+    return (
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <PrintPreview actions={<Button variant="ghost" icon={<ArrowLeft size={15} />} onClick={() => setSlip(null)}>Back</Button>}>
+          <InviteSlipSheet envelope={slip} />
+        </PrintPreview>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -209,6 +225,13 @@ export function StaffScreen() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              icon={<Send size={14} />}
+                              title="Invite to set their own password"
+                              onClick={() => setInviteFor(person)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               icon={<KeyRound size={14} />}
                               title="Reset password"
                               onClick={() => {
@@ -222,6 +245,7 @@ export function StaffScreen() {
                                   .resetUserPassword(person.id)
                                   .then((password) =>
                                     setCredentials({
+                                      id: person.id,
                                       name: person.fullName,
                                       username: person.username,
                                       password,
@@ -330,6 +354,17 @@ export function StaffScreen() {
         onClose={() => setPhotoFor(null)}
       />
 
+      {inviteFor && (
+        <InviteModal
+          person={inviteFor}
+          onClose={() => setInviteFor(null)}
+          onPrint={(made) => {
+            setInviteFor(null);
+            setSlip(made);
+          }}
+        />
+      )}
+
       {officeFor && (
         <OfficeModal
           person={officeFor}
@@ -347,7 +382,7 @@ export function StaffScreen() {
         onClose={() => setAddOpen(false)}
         onCreated={(result, name) => {
           setAddOpen(false);
-          setCredentials({ name, username: result.username, password: result.initialPassword });
+          setCredentials({ id: result.id, name, username: result.username, password: result.initialPassword });
           void reload();
         }}
       />
@@ -369,9 +404,23 @@ export function StaffScreen() {
         description="Phantom School Manager shows an initial password once and stores only a hash of it. There is no way to see it again."
         onClose={() => setCredentials(null)}
         footer={
-          <Button variant="primary" onClick={() => setCredentials(null)}>
-            I have written it down
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              icon={<Send size={15} />}
+              onClick={() => {
+                const person = staff.find((p) => p.id === credentials?.id);
+                setCredentials(null);
+                if (person) setInviteFor(person);
+              }}
+            >
+              Send an invite instead
+            </Button>
+            <span className="grow" />
+            <Button variant="primary" onClick={() => setCredentials(null)}>
+              I have written it down
+            </Button>
+          </>
         }
       >
         {credentials && (
@@ -386,6 +435,110 @@ export function StaffScreen() {
         )}
       </Modal>
     </div>
+  );
+}
+
+/**
+ * An invite: a one-time code the person uses to set their own password, sent
+ * by SMS when the school is online, and always shown so it can be printed or
+ * pasted into WhatsApp or email.
+ */
+function InviteModal({ person, onClose, onPrint }: { person: UserSummary; onClose: () => void; onPrint: (slip: DocumentEnvelope<Invite>) => void }) {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+  const offlineOnly = useStore((state) => state.offlineOnly);
+  const canText = Boolean(person.phone) && !offlineOnly;
+  const [bySms, setBySms] = useState(canText);
+  const [made, setMade] = useState<DocumentEnvelope<Invite> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const invite = made?.body;
+
+  return (
+    <Modal
+      open
+      title={`Invite ${person.fullName}`}
+      description="They set their own password with a one-time code: nobody else ever knows it. The code works once and lasts three days."
+      onClose={onClose}
+      footer={
+        invite ? (
+          <>
+            <Button variant="ghost" icon={<Printer size={15} />} onClick={() => made && onPrint(made)}>
+              Print slip
+            </Button>
+            <span className="grow" />
+            <Button variant="primary" onClick={onClose}>
+              Done
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="grow" />
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              icon={<Send size={15} />}
+              loading={busy}
+              onClick={() => {
+                setBusy(true);
+                api
+                  .inviteStaff(person.id, bySms)
+                  .then(setMade)
+                  .catch(reportError)
+                  .finally(() => setBusy(false));
+              }}
+            >
+              Create invite
+            </Button>
+          </>
+        )
+      }
+    >
+      {invite ? (
+        <div className="stack">
+          <Alert tone={invite.smsQueued ? "success" : "info"}>
+            {invite.smsQueued
+              ? `Sent by SMS to ${invite.phone}. It goes as soon as the computer is online.`
+              : "Not sent by SMS. Print the slip, or copy the message into WhatsApp or an email."}
+          </Alert>
+          <CredentialLine label="Username" value={invite.username} />
+          <CredentialLine label="Invite code" value={invite.code} />
+          <div className="field">
+            <span className="field-label">Message</span>
+            <div className="row" style={{ alignItems: "flex-start" }}>
+              <p className="grow selectable" style={{ margin: 0, padding: "var(--space-3)", background: "var(--bg-sunken)", borderRadius: "var(--radius-md)", fontSize: 13 }}>
+                {invite.message}
+              </p>
+              <Button
+                icon={<Copy size={15} />}
+                title="Copy the message"
+                onClick={() =>
+                  void navigator.clipboard
+                    .writeText(invite.message)
+                    .then(() => toast("success", "Message copied."))
+                    .catch(() => toast("error", "Could not copy."))
+                }
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="stack">
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" checked={bySms} disabled={!canText} onChange={(e) => setBySms(e.target.checked)} />
+            <span>
+              Send the code by SMS{person.phone ? ` to ${person.phone}` : ""}
+              {!person.phone && <span className="subtle"> (no phone number on their account)</span>}
+              {person.phone && offlineOnly && <span className="subtle"> (this computer is set to offline only)</span>}
+            </span>
+          </label>
+          <p className="subtle" style={{ margin: 0 }}>
+            Any earlier invite for {person.fullName} stops working. Their current password keeps working until they use the code.
+          </p>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -435,7 +588,7 @@ function AddStaffModal({
   adminCount: number;
   onClose: () => void;
   onCreated: (
-    result: { username: string; initialPassword: string },
+    result: { id: string; username: string; initialPassword: string },
     name: string,
   ) => void;
 }) {

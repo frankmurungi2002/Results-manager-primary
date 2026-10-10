@@ -126,6 +126,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "registrations",
         sql: M021_REGISTRATIONS,
     },
+    Migration {
+        version: 22,
+        name: "staff_invites",
+        sql: M022_STAFF_INVITES,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1338,5 +1343,25 @@ CREATE TABLE sports_athletes (
     added_by    TEXT REFERENCES users (id),
     updated_at  TEXT NOT NULL,
     PRIMARY KEY (event_id, student_id)
+);
+"#;
+
+// ---------------------------------------------------------------------------
+// 022 — staff invites
+// ---------------------------------------------------------------------------
+//
+// A member of staff sets their own password with a one-time code sent by SMS
+// or handed over on a slip, instead of being told a password by the School
+// Admin. One live invite per account; the code is stored only as a hash,
+// lasts three days, and five wrong tries spend it.
+const M022_STAFF_INVITES: &str = r#"
+CREATE TABLE staff_invites (
+    user_id          TEXT PRIMARY KEY REFERENCES users (id),
+    code_hash        TEXT NOT NULL,
+    expires_at       TEXT NOT NULL,
+    failed_attempts  INTEGER NOT NULL DEFAULT 0,
+    used_at          TEXT,
+    created_by       TEXT REFERENCES users (id),
+    created_at       TEXT NOT NULL
 );
 "#;

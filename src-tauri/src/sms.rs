@@ -237,6 +237,8 @@ pub fn policy(kind: &str) -> (i64, Option<chrono::Duration>) {
             (PRIORITY_BULK, Some(chrono::Duration::hours(24)))
         }
         "test" => (PRIORITY_URGENT, None),
+        // An invite code is useless after three days.
+        "invite" => (PRIORITY_URGENT, Some(chrono::Duration::hours(72))),
         "bulk" => (PRIORITY_BULK, None),
         _ => (PRIORITY_NORMAL, None),
     }

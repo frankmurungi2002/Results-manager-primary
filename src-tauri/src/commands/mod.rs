@@ -8,6 +8,7 @@ pub mod exports;
 pub mod fees;
 pub mod importer;
 pub mod insights;
+pub mod invites;
 pub mod marks;
 pub mod messages;
 pub mod newyear;
