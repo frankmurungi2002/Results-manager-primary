@@ -83,11 +83,22 @@ impl GradingSystem {
     /// Bounds are inclusive at both ends, which is how a school writes them
     /// ("75–79 is D2"). `validate` guarantees no overlap, so inclusivity at
     /// both ends is unambiguous.
+    ///
+    /// Whole-number bands leave gaps (79 is D2, 80 is D1, so 79.4 is in
+    /// neither), and fractions are common: a term mark that blends mid-term
+    /// and end-of-term, or 31 out of 40 (77.5%). A percentage in a gap is
+    /// rounded to the nearest whole percent, the way a teacher does it by
+    /// hand, and graded again; failing that it takes the highest band it has
+    /// passed the bottom of.
     pub fn band_for(&self, percentage: f64) -> Option<&Band> {
         let clamped = percentage.clamp(0.0, 100.0);
-        self.bands
-            .iter()
-            .find(|band| clamped >= band.lower_bound && clamped <= band.upper_bound)
+        let within = |value: f64| self.bands.iter().find(|band| value >= band.lower_bound && value <= band.upper_bound);
+        within(clamped).or_else(|| within(clamped.round())).or_else(|| {
+            self.bands
+                .iter()
+                .filter(|band| band.lower_bound <= clamped)
+                .max_by(|a, b| a.lower_bound.total_cmp(&b.lower_bound))
+        })
     }
 
     /// Grades one mark against this system.
@@ -387,6 +398,22 @@ mod tests {
         assert_eq!(system.band_for(0.0).unwrap().label, "F9");
         assert_eq!(system.band_for(44.0).unwrap().label, "F9");
         assert_eq!(system.band_for(45.0).unwrap().label, "P8");
+    }
+
+    #[test]
+    fn a_fraction_between_two_bands_rounds_to_the_nearest_whole_percent() {
+        let system = uneb();
+        assert_eq!(system.band_for(79.4).unwrap().label, "D2");
+        assert_eq!(system.band_for(79.5).unwrap().label, "D1");
+        assert_eq!(system.band_for(44.6).unwrap().label, "P8");
+        assert_eq!(system.band_for(44.2).unwrap().label, "F9");
+        // 31 out of 40 is 77.5%, inside D2.
+        assert_eq!(system.grade(Some(31.0), false, 40.0, None).grade_label, "D2");
+        // A term mark of 0.4 x 70 + 0.6 x 87 = 80.2... and 0.4 x 79 + 0.6 x 80 = 79.6.
+        assert_eq!(system.grade(Some(79.6), false, 100.0, None).points, Some(1.0));
+        for tenth in 0..=1000 {
+            assert!(system.band_for(tenth as f64 / 10.0).is_some(), "{} has no grade", tenth as f64 / 10.0);
+        }
     }
 
     #[test]
