@@ -48,7 +48,7 @@ because each one broke something the README already listed as built.
 | M0.4 | There was no way to restore a backup | ✅ Settings → Backup: preview, then restore; the replaced data is saved first | `src-tauri/src/backup.rs`, `src/screens/SettingsScreen.tsx` |
 | M0.5 | Nothing ran the checks automatically | ✅ CI runs `verify.py`, typecheck + build, and `cargo test` on every pull request | `.github/workflows/ci.yml` |
 | M0.6 | README said onboarding import was not built, but its backend exists | ✅ Fixed | `README.md` |
-| M0.7 | A first real Windows build and install, checked by hand, including the restore screen | ⬜ Needs a Windows PC | `npm run app:build` |
+| M0.7 | A first real Windows build and install, checked by hand, including the restore screen | ⬜ Needs a Windows PC | `npm run app:build`. The installer carries the WebView2 offline installer (about 127 MB more), so it installs on a PC with no internet |
 
 Found and fixed along the way:
 
@@ -242,7 +242,7 @@ or consciously rejected.
 | X4 | **Save as PDF** for every document, not only paper | Schools email and WhatsApp report cards | M1 |
 | X5 | **Printer and paper handling**: A4 vs A5 report cards, margins, one learner per page | Report cards are the product; print layout problems appear on real printers only | M1 |
 | X6 | **Seeded demo data** for sales demos and performance tests | SRS 14.6 says the 30-minute demo decides the sale | M1 |
-| X7 | **Error reporting**: a local log file the school can send to support | Offline product; support needs something to read | M1 |
+| X7 | **Error reporting**: a local log file the school can send to support | ✅ A rotating log (five files of 2 MB) in `%LOCALAPPDATA%\ug.co.termbook\logs`, crashes included; Settings → My account → Save the log for support | M1 |
 | X8 | **Installer signing** on Windows | Unsigned installers trigger SmartScreen warnings, which frighten a headteacher | M2 |
 | X9 | **Data retention for dropped learners and retired staff** | Never-delete keeps data forever; a school may need to answer what is kept and why | M3 |
 | X10 | **Class-level position and subject position on report cards** (a common Ugandan request) | Confirm with Rainbow Nursery and Primary School | M1 decision |

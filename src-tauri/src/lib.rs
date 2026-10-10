@@ -21,6 +21,7 @@ pub mod network;
 pub mod security;
 pub mod sms;
 pub mod state;
+pub mod support;
 pub mod updater;
 pub mod verify;
 
@@ -149,6 +150,7 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::registration::export_sports_team,
         commands::registration::build_correction_letter,
         commands::exports::save_export,
+        support::save_support_log,
         commands::invites::invite_staff,
         commands::invites::accept_invite,
         commands::cashbook::record_cash_entry,
@@ -300,9 +302,14 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(support::plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            if let Ok(log_dir) = app.path().app_log_dir() {
+                support::init(log_dir);
+            }
+            log::info!("Termbook {} starting", env!("CARGO_PKG_VERSION"));
             let data_dir = app
                 .path()
                 .app_data_dir()

@@ -38,6 +38,7 @@ import { SmsBalanceLine } from "../components/SmsBalance";
 import { PrintPreview, RecoverySheetDocument } from "../components/PrintDocument";
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import { SubscriptionSettings } from "../components/Subscription";
+import { SupportCard } from "../components/SupportCard";
 import {
   Alert,
   Badge,
@@ -1334,6 +1335,7 @@ function AccountTab() {
           machine left unattended in a shared office does not stay open.
         </p>
       </Card>
+      <SupportCard />
     </div>
   );
 }

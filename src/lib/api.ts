@@ -766,4 +766,5 @@ export const api = {
   recordConduct: (input: ConductInput) => call<ConductSaved>("record_conduct", { input }),
   withdrawConduct: (id: string, reason: string) => call<void>("withdraw_conduct", { id, reason }),
   conductLog: (classId: string | null, studentId: string | null) => call<ConductLog>("conduct_log", { classId, studentId }),
+  saveSupportLog: () => call<StagedFile>("save_support_log"),
 };
