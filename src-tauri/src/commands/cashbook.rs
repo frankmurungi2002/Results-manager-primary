@@ -326,7 +326,7 @@ pub fn summary(conn: &Connection, from: NaiveDate, to: NaiveDate) -> AppResult<C
     }
     let ranked = |m: BTreeMap<String, (i64, i64)>| {
         let mut v: Vec<CategoryTotal> = m.into_iter().map(|(category, (amount, entries))| CategoryTotal { category, amount, entries }).collect();
-        v.sort_by(|x, y| y.amount.cmp(&x.amount));
+        v.sort_by_key(|x| std::cmp::Reverse(x.amount));
         v
     };
     let day_before = from.pred_opt().unwrap_or(from).format("%Y-%m-%d").to_string();
