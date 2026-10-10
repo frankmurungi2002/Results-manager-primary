@@ -11,6 +11,7 @@ pub mod marks;
 pub mod messages;
 pub mod newyear;
 pub mod passouts;
+pub mod recovery;
 pub mod reports;
 pub mod setup;
 pub mod signatures;

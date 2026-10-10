@@ -113,6 +113,10 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         // --- A new school year -------------------------------------------
         commands::newyear::get_promotion_plan,
         commands::newyear::start_new_year,
+        // --- Recovery code ---------------------------------------------
+        commands::recovery::create_recovery_code,
+        commands::recovery::recovery_status,
+        commands::recovery::use_recovery_code,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,

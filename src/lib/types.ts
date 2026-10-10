@@ -1868,3 +1868,19 @@ export interface NewYearResult {
   left: number;
   firstTerm: string;
 }
+
+// ---------------------------------------------------------------------------
+// Recovery code
+// ---------------------------------------------------------------------------
+
+export interface RecoverySheet {
+  code: string;
+  username: string;
+  fullName: string;
+  createdAt: string;
+}
+
+export interface RecoveryStatus {
+  mayHaveCode: boolean;
+  createdAt: string | null;
+}

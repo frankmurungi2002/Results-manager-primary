@@ -2495,3 +2495,23 @@
   font-size: 8pt;
   color: var(--ink-soft);
 }
+
+.rec-sheet {
+  font-size: 11pt;
+  max-width: 150mm;
+  margin: 10mm auto;
+}
+
+.rec-code {
+  font: 700 22pt/1.2 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-align: center;
+  border: 2px dashed var(--ink);
+  padding: 8mm;
+  margin: 8mm 0;
+}
+
+.rec-made {
+  color: var(--ink-soft);
+  font-size: 9pt;
+}

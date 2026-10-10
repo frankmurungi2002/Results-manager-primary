@@ -55,6 +55,7 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  RecoverySheet,
   StaffMonth,
   DayBook,
   Collections,
@@ -2302,6 +2303,31 @@ export function StaffRegisterSheet({ envelope }: { envelope: DocumentEnvelope<St
         <div>
           <span>Date</span>
         </div>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// A School Admin's recovery sheet
+// ---------------------------------------------------------------------------
+
+export function RecoverySheetDocument({ envelope }: { envelope: DocumentEnvelope<RecoverySheet> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} title="School Admin Recovery Sheet" subtitle="Keep in the school safe" pageNumber={1} pageCount={1}>
+      <div className="rec-sheet">
+        <p>
+          If <strong>{body.fullName}</strong> (username <strong>{body.username}</strong>) ever forgets their password,
+          this code sets a new one. On the sign-in screen choose <em>Forgot?</em> then <em>Use my recovery code</em>.
+        </p>
+        <div className="rec-code">{body.code}</div>
+        <ul>
+          <li>It works once. After it is used, sign in and print a new sheet.</li>
+          <li>Printing a new sheet makes this one useless.</li>
+          <li>Anyone holding this paper can take over the account: keep it locked away, never in a drawer or on a phone.</li>
+        </ul>
+        <p className="rec-made">Made {printDate(body.createdAt)}.</p>
       </div>
     </Sheet>
   );

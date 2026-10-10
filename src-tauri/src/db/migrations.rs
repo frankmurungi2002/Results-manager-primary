@@ -106,6 +106,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "automatic_texts",
         sql: M017_AUTOMATIC_TEXTS,
     },
+    Migration {
+        version: 18,
+        name: "recovery_codes",
+        sql: M018_RECOVERY_CODES,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1220,4 +1225,19 @@ WHERE EXISTS (SELECT 1 FROM sms_outbox WHERE kind = 'absence');
 -- "EgoSMS" now means EgoSMS Comms (comms.egosms.co), where new accounts are
 -- opened. A school already set up on the older API keeps it, by its new name.
 UPDATE settings SET value = 'egosms_classic' WHERE key = 'sms.provider' AND value = 'egosms';
+"#;
+
+// ---------------------------------------------------------------------------
+// 018 — a School Admin's printed recovery code
+// ---------------------------------------------------------------------------
+//
+// Nobody can reset a School Admin's password from inside Phantom: that is the
+// point of the subset rule. So a School Admin prints a one-time recovery code
+// and keeps it in the school safe. Only its hash is stored.
+
+const M018_RECOVERY_CODES: &str = r#"
+ALTER TABLE users ADD COLUMN recovery_hash TEXT;
+ALTER TABLE users ADD COLUMN recovery_created_at TEXT;
+ALTER TABLE users ADD COLUMN recovery_failed_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN recovery_locked_until TEXT;
 "#;

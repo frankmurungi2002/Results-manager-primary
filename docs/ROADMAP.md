@@ -230,7 +230,7 @@ or consciously rejected.
 | # | Need | Why | Suggested milestone |
 | --- | --- | --- | --- |
 | X1 | **Restore from backup** in the interface, with a preview of what the backup contains and its date | The SRS specifies backing up but never restoring | ✅ Done in M0 |
-| X2 | **Admin locked out**: recovery when the only School Admin forgets their password | A second admin can reset (FR-B4), but a school with one admin has no path. Options: a recovery code printed at setup, or support-issued reset tied to the activation key | M1 |
+| X2 | **Admin locked out**: recovery when the only School Admin forgets their password | ✅ Settings → My account → Print my recovery sheet: a one-time 80-bit code, shown once and stored as a hash; sign-in screen → Forgot? → use my recovery code sets a new password and spends the code; a new sheet replaces the old; five wrong codes lock recovery for an hour | M1 |
 | X3 | **Start a new academic year** (years, terms, exams created from the previous year's pattern) | ✅ Done with FR-E3 | M2, with FR-E3 |
 | X4 | **Save as PDF** for every document, not only paper | Schools email and WhatsApp report cards | M1 |
 | X5 | **Printer and paper handling**: A4 vs A5 report cards, margins, one learner per page | Report cards are the product; print layout problems appear on real printers only | M1 |

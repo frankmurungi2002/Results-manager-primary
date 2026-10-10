@@ -21,7 +21,7 @@ export function LoginScreen() {
   const [showHelp, setShowHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"password" | "station">("password");
+  const [tab, setTab] = useState<"password" | "station" | "recover">("password");
   const [stationOn, setStationOn] = useState(false);
 
   // The sign-in station is offered only once the school has switched it on.
@@ -64,7 +64,7 @@ export function LoginScreen() {
             {institutionName && <div className="login-school">{institutionName}</div>}
 
             <div className="login-panel">
-              <h2 className="login-title">{tab === "station" ? "Arriving or leaving?" : "Welcome back."}</h2>
+              <h2 className="login-title">{tab === "station" ? "Arriving or leaving?" : tab === "recover" ? "Recovery code" : "Welcome back."}</h2>
 
               <div className="login-tabs" role="tablist">
                 <button type="button" role="tab" className={tab === "password" ? "login-tab is-active" : "login-tab"} onClick={() => setTab("password")}>
@@ -79,6 +79,8 @@ export function LoginScreen() {
 
               {tab === "station" ? (
                 <StaffStation />
+              ) : tab === "recover" ? (
+                <RecoverForm onDone={() => setTab("password")} />
               ) : (
               <form className="login-form" onSubmit={onSubmit} noValidate>
 
@@ -133,7 +135,11 @@ export function LoginScreen() {
               {showHelp && (
                 <p className="login-help">
                   A School Admin can set a new password for you from the Staff
-                  screen.
+                  screen. A School Admin who has forgotten their own password:{" "}
+                  <button type="button" className="login-link" onClick={() => setTab("recover")}>
+                    use my recovery code
+                  </button>
+                  .
                 </p>
               )}
 
@@ -160,5 +166,58 @@ export function LoginScreen() {
         <LoginShowcase />
       </div>
     </div>
+  );
+}
+
+/** A School Admin's printed recovery code sets a new password. */
+function RecoverForm({ onDone }: { onDone: () => void }) {
+  const [username, setUsername] = useState("");
+  const [code, setCode] = useState("");
+  const [next, setNext] = useState("");
+  const [again, setAgain] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (done) {
+    return (
+      <div className="station">
+        <Alert tone="success">Your password is set and the recovery code is spent. Sign in, then print a new recovery sheet under Settings → My account.</Alert>
+        <Button variant="primary" block className="login-submit" onClick={onDone}>
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="login-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (next !== again) {
+          setError("The two passwords do not match.");
+          return;
+        }
+        setBusy(true);
+        setError(null);
+        api
+          .useRecoveryCode(username, code, next)
+          .then(() => setDone(true))
+          .catch((caught) => setError(caught instanceof ApiError ? caught.message : "That did not work."))
+          .finally(() => setBusy(false));
+      }}
+    >
+      {error && <Alert tone="danger">{error}</Alert>}
+      <input className="login-input" placeholder="Your username" value={username} onChange={(e) => setUsername(e.target.value)} />
+      <input className="login-input" placeholder="RCV-XXXX-XXXX-XXXX-XXXX" value={code} onChange={(e) => setCode(e.target.value)} />
+      <input className="login-input" type="password" placeholder="New password (10+ characters)" value={next} onChange={(e) => setNext(e.target.value)} />
+      <input className="login-input" type="password" placeholder="New password again" value={again} onChange={(e) => setAgain(e.target.value)} />
+      <Button type="submit" variant="primary" block loading={busy} disabled={!username || code.length < 16 || next.length < 10} className="login-submit">
+        Set my new password
+      </Button>
+      <button type="button" className="login-link" onClick={onDone}>
+        Back to sign in
+      </button>
+    </form>
   );
 }

@@ -9,6 +9,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  RecoverySheet,
+  RecoveryStatus,
   NewYearRequest,
   NewYearResult,
   PromotionPlan,
@@ -674,4 +676,9 @@ export const api = {
 
   getPromotionPlan: (repeatBelow: number) => call<PromotionPlan>("get_promotion_plan", { repeatBelow }),
   startNewYear: (request: NewYearRequest) => call<NewYearResult>("start_new_year", { request }),
+
+  createRecoveryCode: () => call<DocumentEnvelope<RecoverySheet>>("create_recovery_code"),
+  recoveryStatus: () => call<RecoveryStatus>("recovery_status"),
+  useRecoveryCode: (username: string, code: string, newPassword: string) =>
+    call<void>("use_recovery_code", { username, code, newPassword }),
 };

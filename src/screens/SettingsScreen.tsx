@@ -22,6 +22,9 @@ import type {
   BackupFile,
   BackupStatus,
   BackupSummary,
+  DocumentEnvelope,
+  RecoverySheet,
+  RecoveryStatus,
   FeatureFlags,
   Institution,
   SmsOutboxRow,
@@ -31,6 +34,7 @@ import { useCan, useStore } from "../state/store";
 import { InternetSettings } from "../components/InternetSettings";
 import { AutoSmsCard } from "../components/AutoTexts";
 import { SmsBalanceLine } from "../components/SmsBalance";
+import { PrintPreview, RecoverySheetDocument } from "../components/PrintDocument";
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import { SubscriptionSettings } from "../components/Subscription";
 import {
@@ -1308,6 +1312,8 @@ function AccountTab() {
 
       <PinCard />
 
+      <RecoveryCard />
+
       <Card title="This session">
         <div className="stack">
           <Row label="Name" value={session.fullName} />
@@ -1367,6 +1373,70 @@ function PinCard() {
         <TextInput label="PIN (4 to 6 digits)" type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
         <TextInput label="Again" type="password" inputMode="numeric" maxLength={6} value={again} onChange={(e) => setAgain(e.target.value.replace(/\D/g, ""))} error={mismatch ? "The two PINs do not match." : null} />
       </div>
+    </Card>
+  );
+}
+
+/** A School Admin prints a one-time recovery code for the school safe. */
+function RecoveryCard() {
+  const reportError = useStore((state) => state.reportError);
+  const [status, setStatus] = useState<RecoveryStatus | null>(null);
+  const [sheet, setSheet] = useState<DocumentEnvelope<RecoverySheet> | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api.recoveryStatus().then(setStatus).catch(() => setStatus(null));
+  }, []);
+
+  if (!status?.mayHaveCode) return null;
+  if (sheet) {
+    return (
+      <div className="recovery-preview">
+        <PrintPreview
+          actions={
+            <Button variant="ghost" onClick={() => setSheet(null)}>
+              Done
+            </Button>
+          }
+        >
+          <RecoverySheetDocument envelope={sheet} />
+        </PrintPreview>
+      </div>
+    );
+  }
+  return (
+    <Card
+      title="Recovery code"
+      subtitle="Nobody inside Phantom can reset a School Admin's password. A printed recovery code can."
+      footer={
+        <div className="row-between">
+          <span className="field-hint">
+            {status.createdAt ? `Your current sheet was printed ${formatDateTime(status.createdAt)}.` : "You have no recovery sheet yet."}
+          </span>
+          <Button
+            variant="primary"
+            loading={busy}
+            onClick={() => {
+              if (status.createdAt && !window.confirm("A new sheet makes the old code useless. Continue?")) return;
+              setBusy(true);
+              api
+                .createRecoveryCode()
+                .then((envelope) => {
+                  setSheet(envelope);
+                  setStatus({ ...status, createdAt: envelope.body.createdAt });
+                })
+                .catch(reportError)
+                .finally(() => setBusy(false));
+            }}
+          >
+            {status.createdAt ? "Print a new sheet" : "Print my recovery sheet"}
+          </Button>
+        </div>
+      }
+    >
+      <p className="subtle" style={{ margin: 0 }}>
+        The code is shown once, on the sheet. Print it and keep it in the school safe.
+      </p>
     </Card>
   );
 }
