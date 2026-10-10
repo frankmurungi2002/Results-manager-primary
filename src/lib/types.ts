@@ -1884,3 +1884,12 @@ export interface RecoveryStatus {
   mayHaveCode: boolean;
   createdAt: string | null;
 }
+
+export interface UpdateInfo {
+  currentVersion: string;
+  configured: boolean;
+  offlineOnly: boolean;
+  lastChecked: string | null;
+  availableVersion: string | null;
+  availableNotes: string | null;
+}

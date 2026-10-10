@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  UpdateInfo,
   RecoverySheet,
   RecoveryStatus,
   NewYearRequest,
@@ -681,4 +682,8 @@ export const api = {
   recoveryStatus: () => call<RecoveryStatus>("recovery_status"),
   useRecoveryCode: (username: string, code: string, newPassword: string) =>
     call<void>("use_recovery_code", { username, code, newPassword }),
+
+  updateStatus: () => call<UpdateInfo>("update_status"),
+  checkForUpdate: () => call<UpdateInfo>("check_for_update"),
+  installUpdate: () => call<void>("install_update"),
 };

@@ -21,6 +21,7 @@ pub mod network;
 pub mod security;
 pub mod sms;
 pub mod state;
+pub mod updater;
 pub mod verify;
 
 use tauri::Manager;
@@ -117,6 +118,10 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::recovery::create_recovery_code,
         commands::recovery::recovery_status,
         commands::recovery::use_recovery_code,
+        // --- Updates -----------------------------------------------------
+        updater::update_status,
+        updater::check_for_update,
+        updater::install_update,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,
@@ -252,6 +257,7 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let data_dir = app
                 .path()
@@ -270,6 +276,7 @@ pub fn run() {
             backup::spawn_scheduler(app.handle().clone());
             sms::spawn_scheduler(app.handle().clone());
             jobs::spawn_scheduler(app.handle().clone());
+            updater::spawn_daily_check(app.handle().clone());
             Ok(())
         })
         .invoke_handler(invoke_handler())

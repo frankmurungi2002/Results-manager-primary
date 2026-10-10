@@ -35,7 +35,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "publisher": "Phantom School Manager",
     "copyright": "Phantom School Manager",
     "category": "Education",
@@ -50,7 +52,20 @@
     "windows": {
       "nsis": {
         "installMode": "perMachine",
-        "languages": ["English"]
+        "languages": [
+          "English"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/frankmurungi2002/Results-manager-primary/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

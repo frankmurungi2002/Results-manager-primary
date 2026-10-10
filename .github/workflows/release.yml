@@ -1,0 +1,41 @@
+name: Release
+
+# Builds the Windows installer, signs it for automatic updates and publishes
+# it as a GitHub release with latest.json, which every installed copy checks
+# once a day. Runs when a version tag is pushed, e.g. `git tag v0.2.0`.
+# Needs the repository secrets TAURI_SIGNING_PRIVATE_KEY and
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD (see docs/UPDATES.md).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Phantom School Manager ${{ github.ref_name }}
+          releaseBody: See the changes in this release below.
+          releaseDraft: false
+          includeUpdaterJson: true
+          args: --config '{"bundle":{"createUpdaterArtifacts":true}}'

@@ -32,6 +32,7 @@ import type {
 } from "../lib/types";
 import { useCan, useStore } from "../state/store";
 import { InternetSettings } from "../components/InternetSettings";
+import { UpdatesCard } from "../components/Updates";
 import { AutoSmsCard } from "../components/AutoTexts";
 import { SmsBalanceLine } from "../components/SmsBalance";
 import { PrintPreview, RecoverySheetDocument } from "../components/PrintDocument";
@@ -125,7 +126,11 @@ export function SettingsScreen() {
             <AutoSmsCard />
           </>
         )}
-        {tab === "internet" && allowed("internet") && <InternetSettings />}
+        {tab === "internet" && allowed("internet") && (
+          <InternetSettings>
+            <UpdatesCard />
+          </InternetSettings>
+        )}
         {tab === "signatures" && <SignaturesSettings />}
         {tab === "subscription" && allowed("subscription") && <SubscriptionSettings />}
         {tab === "backup" && allowed("backup") && <BackupTab />}

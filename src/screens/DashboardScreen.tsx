@@ -35,6 +35,13 @@ export function DashboardScreen() {
   const [years, setYears] = useState<AcademicYearRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [lowCredit, setLowCredit] = useState<SmsBalance | null>(null);
+  const [update, setUpdate] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .updateStatus()
+      .then((u) => setUpdate(u.availableVersion))
+      .catch(() => setUpdate(null));
+  }, []);
   useEffect(() => {
     api
       .getSmsBalance()
@@ -97,6 +104,14 @@ export function DashboardScreen() {
         </header>
 
         <YourDesk session={session} summary={summary} onGo={(screen, params) => navigate(screen, params)} />
+
+        {update && can("manage_school") && (
+          <Alert tone="info" title={`Phantom ${update} is ready to install`}>
+            <Button size="sm" onClick={() => navigate("settings", { tab: "internet" })}>
+              Open Settings → Internet &amp; updates
+            </Button>
+          </Alert>
+        )}
 
         {lowCredit && lowCredit.amount !== null && (
           <Alert tone="warning" title="SMS credit is running low">

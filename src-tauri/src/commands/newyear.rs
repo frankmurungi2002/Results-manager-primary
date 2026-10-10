@@ -19,7 +19,6 @@ use tauri::State;
 
 use crate::audit;
 use crate::domain::ids::{new_id, prefix};
-use crate::domain::repo;
 use crate::error::{AppError, AppResult};
 use crate::security::{Permission, Session};
 use crate::state::AppState;
@@ -360,6 +359,7 @@ pub fn start_new_year(state: State<'_, AppState>, request: NewYearRequest) -> Ap
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::repo;
     use crate::fees::tests::fee_school;
     use crate::security::session::test_session;
     use crate::security::{Office, Role};
