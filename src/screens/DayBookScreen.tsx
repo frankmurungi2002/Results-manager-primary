@@ -43,6 +43,7 @@ function isQuiet(day: DayRow): boolean {
     (day.spent ?? 0) === 0 &&
     day.registers === 0 &&
     day.passOuts === 0 &&
+    day.visitors === 0 &&
     day.textsSent === 0 &&
     day.learnersAdmitted === 0 &&
     day.learnersLeft === 0 &&
@@ -135,7 +136,7 @@ export function DayBookScreen() {
                 value={t.attendancePercent === null ? "—" : `${t.attendancePercent}%`}
                 meta={`${t.absent} absences in ${t.registers} registers`}
               />
-              <StatTile label="Pass-outs" value={t.passOuts} />
+              <StatTile label="Pass-outs" value={t.passOuts} meta={t.visitors ? `${t.visitors} visitors` : undefined} />
               <StatTile label="Texts sent" value={t.textsSent} meta={t.textsFailed ? `${t.textsFailed} failed` : undefined} />
             </div>
 

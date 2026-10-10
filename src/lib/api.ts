@@ -9,6 +9,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  Visitor,
+  VisitorInput,
+  VisitorBook,
+  ConductInput,
+  ConductSaved,
+  ConductLog,
   ExportSection,
   CashEntry,
   CashEntryInput,
@@ -752,4 +758,12 @@ export const api = {
   buildVoucher: (id: string) => call<DocumentEnvelope<CashEntry>>("build_voucher", { id }),
   exportSections: () => call<ExportSection[]>("export_sections"),
   exportSchoolData: (sections: string[]) => call<StagedFile>("export_school_data", { sections }),
+  signInVisitor: (input: VisitorInput) => call<DocumentEnvelope<Visitor>>("sign_in_visitor", { input }),
+  signOutVisitor: (id: string) => call<Visitor>("sign_out_visitor", { id }),
+  visitorBook: (from: string, to: string) => call<VisitorBook>("visitor_book", { from, to }),
+  buildVisitorBook: (from: string, to: string) => call<DocumentEnvelope<VisitorBook>>("build_visitor_book", { from, to }),
+  buildVisitorSlip: (id: string) => call<DocumentEnvelope<Visitor>>("build_visitor_slip", { id }),
+  recordConduct: (input: ConductInput) => call<ConductSaved>("record_conduct", { input }),
+  withdrawConduct: (id: string, reason: string) => call<void>("withdraw_conduct", { id, reason }),
+  conductLog: (classId: string | null, studentId: string | null) => call<ConductLog>("conduct_log", { classId, studentId }),
 };

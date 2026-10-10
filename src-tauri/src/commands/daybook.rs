@@ -55,6 +55,8 @@ pub struct DayRow {
     /// Present and late, out of everyone marked; `None` when nobody was marked.
     pub attendance_percent: Option<f64>,
     pub pass_outs: i64,
+    /// Visitors signed in at the gate.
+    pub visitors: i64,
     pub texts_sent: i64,
     pub texts_failed: i64,
     pub learners_admitted: i64,
@@ -74,6 +76,7 @@ impl DayRow {
             && self.spent.unwrap_or(0) == 0
             && self.registers == 0
             && self.pass_outs == 0
+            && self.visitors == 0
             && self.texts_sent == 0
             && self.learners_admitted == 0
             && self.learners_left == 0
@@ -175,6 +178,14 @@ pub fn day_rows(conn: &Connection, from: NaiveDate, to: NaiveDate, money: bool) 
         },
     )?;
     each(conn, &a, &b, &mut days,
+        "SELECT date(time_in, 'localtime') AS d, COUNT(*) FROM visitors
+         WHERE date(time_in, 'localtime') BETWEEN ?1 AND ?2 GROUP BY d",
+        &mut |day, r| {
+            day.visitors = r.get(1)?;
+            Ok(())
+        },
+    )?;
+    each(conn, &a, &b, &mut days,
         "SELECT date(COALESCE(sent_at, last_attempt_at, created_at), 'localtime') AS d,
                 SUM(status = 'sent'), SUM(status = 'failed')
          FROM sms_outbox
@@ -257,6 +268,7 @@ pub fn day_book(conn: &Connection, from: NaiveDate, to: NaiveDate, money: bool) 
         totals.registers += day.registers;
         totals.absent += day.absent;
         totals.pass_outs += day.pass_outs;
+        totals.visitors += day.visitors;
         totals.texts_sent += day.texts_sent;
         totals.texts_failed += day.texts_failed;
         totals.learners_admitted += day.learners_admitted;

@@ -1694,6 +1694,7 @@ export interface DayRow {
   late: number;
   attendancePercent: number | null;
   passOuts: number;
+  visitors: number;
   textsSent: number;
   textsFailed: number;
   learnersAdmitted: number;
@@ -2224,4 +2225,94 @@ export interface ExportSection {
   id: string;
   label: string;
   allowed: boolean;
+}
+
+// --- Visitors and conduct --------------------------------------------------
+
+export interface Visitor {
+  id: string;
+  slip: string;
+  fullName: string;
+  phone: string | null;
+  idNumber: string | null;
+  organisation: string | null;
+  purpose: string;
+  toSee: string | null;
+  studentId: string | null;
+  studentName: string | null;
+  className: string | null;
+  vehicle: string | null;
+  note: string | null;
+  timeIn: string;
+  timeOut: string | null;
+  signedInBy: string | null;
+}
+
+export interface VisitorInput {
+  fullName: string;
+  phone: string | null;
+  idNumber: string | null;
+  organisation: string | null;
+  purpose: string;
+  toSee: string | null;
+  studentId: string | null;
+  vehicle: string | null;
+  note: string | null;
+}
+
+export interface VisitorBook {
+  from: string;
+  to: string;
+  inside: Visitor[];
+  visitors: Visitor[];
+}
+
+export const VISIT_PURPOSES: { id: string; label: string }[] = [
+  { id: "parent", label: "Parent visiting a learner" },
+  { id: "meeting", label: "Meeting someone at school" },
+  { id: "official", label: "Official or inspector" },
+  { id: "delivery", label: "Delivery or supplier" },
+  { id: "job", label: "Looking for work" },
+  { id: "other", label: "Other" },
+];
+
+export interface ConductEntry {
+  id: string;
+  studentId: string;
+  studentName: string;
+  classId: string;
+  className: string;
+  onDate: string;
+  /** commendation or incident */
+  kind: string;
+  category: string;
+  description: string;
+  actionTaken: string | null;
+  parentInformed: boolean;
+  status: string;
+  withdrawnReason: string | null;
+  recordedBy: string | null;
+}
+
+export interface ConductInput {
+  studentId: string;
+  onDate: string | null;
+  kind: string;
+  category: string;
+  description: string;
+  actionTaken: string | null;
+  parentInformed: boolean;
+  textParent: boolean;
+}
+
+export interface ConductSaved {
+  entry: ConductEntry;
+  texted: boolean;
+}
+
+export interface ConductLog {
+  entries: ConductEntry[];
+  incidents: string[];
+  commendations: string[];
+  actions: string[];
 }

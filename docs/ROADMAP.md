@@ -156,7 +156,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | ID | Requirement | Status | Milestone | Notes |
 | --- | --- | --- | --- | --- |
 | FR-G1 | Document generator: Custom Builder / Template Upload, letters, certificates | ⬜ | M2 (Custom Builder), M3 (Template Upload + letters + certificates) | Moved out of the pilot (decided 2026-09-27): M1 ships one fixed, well-designed report card instead. Must reuse `DocumentEnvelope`; the report card becomes one template of this engine |
-| FR-G2 | Visitor log and visitation slip | ⬜ | M2 | |
+| FR-G2 | Visitor log and visitation slip | ✅ | M2 | Visitors screen: signed in with a numbered slip (VS-) to carry, the learner a parent came to see, who is still on the compound whatever day they came, signed out at the gate; the day's book prints; visitors count in the Day Book |
 | FR-G3 | School overview dashboard | 🟡 | M4 | `dashboard_summary` exists; the full version waits for attendance, fees and staff data |
 | FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | 🟡 | M3 | Attendance done: staff sign in and out at the office computer with a PIN from the sign-in screen (no Phantom sign-in, names only); late after the school's start time; the office records someone with a reason; day view, month view and a printed monthly register. Leave and contracts remain |
 | FR-G5 | Fees ledger; drives the fees block automatically | ✅ | **M2** | Fees screen: fee structure per class per term (every learner, or optional items such as lunch and transport with sign-ups), copy a term's fees; bursaries, discounts and waivers (amount or %), extra charges and opening balances; payments with numbered two-copy receipts (amount in words, balance after, QR proof) that the database refuses to change or delete, one receipt per Mobile Money/bank reference, voiding only by the head or School Admin and never one's own; balances carried term to term; promises to pay; invoices, statements, who-owes list and collections for banking; optional receipt SMS; balance and next term's fees on report cards; automatic fees block above a limit |
@@ -168,7 +168,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G11 | Comment bank | ✅ | — | |
 | FR-G12 | Bulk print with skipped-learner summary | ✅ (class scope) | M2 adds stream and whole-school scope, with progress | |
 | FR-G13 | Onboarding import of learners and staff | 🟡 | **M1** (staff) | Learner import done: Learners → Import spreadsheet (choose file, match columns, check every row, import). Missing: staff import, and offering it from the setup wizard |
-| FR-G14 | Discipline and conduct log | ⬜ | M3 | |
+| FR-G14 | Discipline and conduct log | ✅ | M3 | Conduct screen: commendations as well as incidents, the corrective action taken (corporal punishment is banned, so it is not offered), whether the parent was told, and an optional SMS to the parent; kept by the Class Teacher and the school-wide offices only; withdrawn with a reason, never deleted |
 | FR-G15 | Boarding module (toggle) | ⬜ | M4 | Only when a boarding school signs up |
 | FR-G16 | Student and staff ID cards | ✅ | **M1** | Learners by class or selection, and staff; 8 per A4 sheet or CR80 card printer; photos when the toggle is on |
 | FR-G17 | Admissions pipeline | ⬜ | M2 | |

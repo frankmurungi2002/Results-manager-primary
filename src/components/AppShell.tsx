@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import {
   Award,
+  UserCheck,
+  Scale,
   Wallet,
   ChartColumnBig,
   Banknote,
@@ -78,6 +80,12 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
         icon: ChartColumnBig,
         show: (can, s) => can("view_insights") || s.classIds.length > 0,
       },
+      {
+        id: "conduct",
+        label: "Conduct",
+        icon: Scale,
+        show: (can, s) => can("manage_all_classes") || runsAClass(s),
+      },
       { id: "requirements", label: "Requirements", icon: ClipboardCheck, show: (can, s) => runsAClass(s) || can("view_all_learners") },
       { id: "passouts", label: "Pass-outs", icon: DoorOpen, show: (can, s) => runsAClass(s) || can("issue_pass_outs") },
       { id: "messages", label: "Messages", icon: MessageSquare },
@@ -100,6 +108,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
       { id: "daybook", label: "Day Book", icon: BookText, show: (can) => can("view_finance") || can("view_all_classes") },
       { id: "fees", label: "Fees", icon: Banknote, show: (can) => can("view_finance") || can("manage_fees") },
       { id: "expenses", label: "Expenses", icon: Wallet, show: (can) => can("view_finance") || can("manage_fees") },
+      { id: "visitors", label: "Visitors", icon: UserCheck, show: (can) => can("issue_pass_outs") || can("manage_learners") || can("view_audit") },
       { id: "verify", label: "Check a document", icon: ScanLine },
       {
         id: "registrations",
@@ -135,6 +144,8 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   registrations: "Registrations: PLE, EMIS and sports",
   insights: "Insights",
   expenses: "Expenses and cash",
+  visitors: "Visitors\u2019 book",
+  conduct: "Conduct",
   settings: "Settings",
 };
 

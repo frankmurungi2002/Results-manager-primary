@@ -55,6 +55,8 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  Visitor,
+  VisitorBook,
   CashEntry,
   CashSummary,
   Invite,
@@ -2726,6 +2728,106 @@ export function CashSummarySheet({ envelope }: { envelope: DocumentEnvelope<Cash
         <div className="rg-certify-sign"><SignatureBlock ink={null} name="Bursar" /></div>
         <div className="rg-certify-sign"><SignatureBlock ink={branding.headSignatureDataUrl} name="Headteacher" /></div>
       </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Visitors: the slip they carry, and the day's book
+// ---------------------------------------------------------------------------
+
+function timeOf(t: string | null): string {
+  return t ? new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+}
+
+const VISIT_LABEL: Record<string, string> = {
+  parent: "Parent visit",
+  meeting: "Meeting",
+  official: "Official visit",
+  delivery: "Delivery",
+  job: "Looking for work",
+  other: "Other",
+};
+
+export function VisitorSlipSheet({ envelope }: { envelope: DocumentEnvelope<Visitor> }) {
+  const { branding, footer, body: v } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} variant="compact" title="Visitor's Slip" subtitle={`${v.slip}  •  ${printDate(v.timeIn.slice(0, 10))}`} pageNumber={1} pageCount={1}>
+      <div className="po-sheet" style={{ "--doc-accent": branding.accentColor } as CSSProperties}>
+        <section className="po-copy rc-copy">
+          <header className="po-copy-head">
+            <span className="po-copy-kind">VISITOR</span>
+            <span className="po-copy-number">{v.slip}</span>
+          </header>
+          <div className="rc-body">
+            <dl className="po-facts rc-facts">
+              <dt>Name</dt>
+              <dd><strong>{v.fullName}</strong></dd>
+              <dt>Came for</dt>
+              <dd>{VISIT_LABEL[v.purpose] ?? v.purpose}</dd>
+              <dt>To see</dt>
+              <dd>{v.studentName ? `${v.studentName} (${v.className ?? ""})` : v.toSee ?? "\u00a0"}</dd>
+              {v.vehicle && (
+                <>
+                  <dt>Vehicle</dt>
+                  <dd>{v.vehicle}</dd>
+                </>
+              )}
+              <dt>Time in</dt>
+              <dd>{timeOf(v.timeIn)}</dd>
+            </dl>
+          </div>
+          <footer className="po-copy-foot vc-foot">
+            <div className="po-sign">
+              {v.signedInBy ?? ""}
+              <span>Signed in by</span>
+            </div>
+            <div className="po-sign">
+              <span>Seen by (name and signature)</span>
+            </div>
+            <div className="po-sign">
+              <span>Time out</span>
+            </div>
+          </footer>
+          <div className="po-note">Carry this slip while on the school compound and hand it back at the gate when you leave.</div>
+        </section>
+      </div>
+    </Sheet>
+  );
+}
+
+export function VisitorBookSheet({ envelope }: { envelope: DocumentEnvelope<VisitorBook> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} title="Visitors' Book" subtitle={body.from === body.to ? printDate(body.from) : `${printDate(body.from)} to ${printDate(body.to)}`} landscape>
+      <table className="cl-table">
+        <thead>
+          <tr>
+            <th>Slip</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Came for</th>
+            <th>To see</th>
+            <th>Vehicle</th>
+            <th>In</th>
+            <th>Out</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...body.visitors].reverse().map((v) => (
+            <tr key={v.id}>
+              <td className="mono">{v.slip}</td>
+              <td>{v.fullName}</td>
+              <td>{v.phone ?? ""}</td>
+              <td>{VISIT_LABEL[v.purpose] ?? v.purpose}</td>
+              <td>{v.studentName ? `${v.studentName} (${v.className ?? ""})` : v.toSee ?? ""}</td>
+              <td>{v.vehicle ?? ""}</td>
+              <td>{timeOf(v.timeIn)}</td>
+              <td>{v.timeOut ? timeOf(v.timeOut) : "Not signed out"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </Sheet>
   );
 }

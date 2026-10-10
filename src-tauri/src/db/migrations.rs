@@ -136,6 +136,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "cash_book",
         sql: M023_CASH_BOOK,
     },
+    Migration {
+        version: 24,
+        name: "visitors_and_conduct",
+        sql: M024_VISITORS_AND_CONDUCT,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1421,5 +1426,59 @@ CREATE TRIGGER trg_cash_entries_no_delete
 BEFORE DELETE ON cash_entries
 BEGIN
     SELECT RAISE(ABORT, 'vouchers are never deleted');
+END;
+"#;
+
+// ---------------------------------------------------------------------------
+// 024 — the visitors' book and the conduct log (FR-G2, FR-G14)
+// ---------------------------------------------------------------------------
+const M024_VISITORS_AND_CONDUCT: &str = r#"
+CREATE TABLE visitors (
+    id            TEXT PRIMARY KEY,
+    slip_no       INTEGER NOT NULL UNIQUE,
+    full_name     TEXT NOT NULL,
+    phone         TEXT,
+    id_number     TEXT,
+    organisation  TEXT,
+    purpose       TEXT NOT NULL CHECK (purpose IN ('parent', 'official', 'delivery', 'meeting', 'job', 'other')),
+    to_see        TEXT,
+    -- A parent visiting their child.
+    student_id    TEXT REFERENCES students (id),
+    vehicle       TEXT,
+    note          TEXT,
+    time_in       TEXT NOT NULL,
+    time_out      TEXT,
+    signed_in_by  TEXT REFERENCES users (id),
+    signed_out_by TEXT REFERENCES users (id),
+    created_at    TEXT NOT NULL
+);
+
+CREATE INDEX idx_visitors_day ON visitors (time_in);
+
+-- Good conduct as well as bad: a record that only ever lists offences
+-- teaches nothing. Withdrawn (with a reason), never deleted.
+CREATE TABLE conduct_entries (
+    id              TEXT PRIMARY KEY,
+    student_id      TEXT NOT NULL REFERENCES students (id),
+    class_id        TEXT NOT NULL REFERENCES classes (id),
+    on_date         TEXT NOT NULL,
+    kind            TEXT NOT NULL CHECK (kind IN ('commendation', 'incident')),
+    category        TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    action_taken    TEXT,
+    parent_informed INTEGER NOT NULL DEFAULT 0,
+    status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'withdrawn')),
+    withdrawn_reason TEXT,
+    recorded_by     TEXT REFERENCES users (id),
+    created_at      TEXT NOT NULL,
+    CHECK (status = 'active' OR withdrawn_reason IS NOT NULL)
+);
+
+CREATE INDEX idx_conduct_student ON conduct_entries (student_id, on_date);
+
+CREATE TRIGGER trg_conduct_no_delete
+BEFORE DELETE ON conduct_entries
+BEGIN
+    SELECT RAISE(ABORT, 'conduct entries are withdrawn, never deleted');
 END;
 "#;

@@ -23,6 +23,8 @@ import { RequirementsScreen } from "./screens/RequirementsScreen";
 import { RegistrationsScreen } from "./screens/RegistrationsScreen";
 import { InsightsScreen } from "./screens/InsightsScreen";
 import { ExpensesScreen } from "./screens/ExpensesScreen";
+import { VisitorsScreen } from "./screens/VisitorsScreen";
+import { ConductScreen } from "./screens/ConductScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SetupWizard } from "./screens/SetupWizard";
 import { StaffScreen } from "./screens/StaffScreen";
@@ -142,6 +144,10 @@ function renderScreen(screen: string) {
       return <InsightsScreen />;
     case "expenses":
       return <ExpensesScreen />;
+    case "visitors":
+      return <VisitorsScreen />;
+    case "conduct":
+      return <ConductScreen />;
     default:
       return <DashboardScreen />;
   }

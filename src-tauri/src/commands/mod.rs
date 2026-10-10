@@ -11,6 +11,7 @@ pub mod fees;
 pub mod importer;
 pub mod insights;
 pub mod invites;
+pub mod logs;
 pub mod marks;
 pub mod messages;
 pub mod newyear;

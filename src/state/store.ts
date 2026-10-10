@@ -27,6 +27,8 @@ export type ScreenId =
   | "registrations"
   | "insights"
   | "expenses"
+  | "visitors"
+  | "conduct"
   | "settings";
 
 /**
