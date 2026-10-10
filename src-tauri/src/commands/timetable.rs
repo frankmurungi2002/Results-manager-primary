@@ -385,7 +385,9 @@ pub fn load_class_timetable(
     stream_id: Option<String>,
 ) -> AppResult<ClassTimetable> {
     let session = state.sessions.require()?;
-    session.require_view_class(&class_id)?;
+    // A timetable is not a mark: the office that reads every class list
+    // (bursar, secretary) may read it too.
+    session.require_view_learners_of(&class_id)?;
     let conn = state.db.lock();
     class_timetable(&conn, &class_id, stream_id.as_deref())
 }

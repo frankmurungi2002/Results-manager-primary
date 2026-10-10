@@ -740,7 +740,8 @@ function ExamTab({ onPrint }: { onPrint: (printable: Printable) => void }) {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.listAcademicYears(), api.listClasses(), api.listSubjects()])
+    // Subjects are only needed to edit papers; readers without that power just see the timetable.
+    Promise.all([api.listAcademicYears(), api.listClasses(), isAdmin ? api.listSubjects() : Promise.resolve([] as SubjectRow[])])
       .then(([loadedYears, loadedClasses, loadedSubjects]) => {
         setYears(loadedYears);
         setClasses(loadedClasses);
