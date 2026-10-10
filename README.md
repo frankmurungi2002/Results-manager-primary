@@ -72,14 +72,29 @@ Nothing leaves this folder unless someone exports or backs up.
 | FR-G12 | Bulk print for a whole class with a skipped-learner summary |
 | SRS 4.2 | Grading engine, UNEB Primary and Nursery Descriptive presets, Custom Band Builder |
 
+### School office (added October 2026)
+
+| Area | What it does |
+| --- | --- |
+| Fees (FR-G5) | Fee structure, bursaries, receipts (immutable, numbered, duplicate references refused), invoices, statements, balances carried across terms, promises to pay, SchoolPay statement import, QR-verifiable receipts |
+| Expenses (FR-G20) | Spending, other income and banking on numbered vouchers kept like receipts; surplus and the cash that should be in the drawer; payment vouchers and the income and spending statement |
+| Day Book | Each day's money, attendance, pass-outs, visitors, texts and staff sign-ins, with the head's note; optional evening SMS to the owner, off by default |
+| Registrations | PLE candidate checker with parents' checking slips, the EMIS census workbook with staff NIN/TMIS, and the UPSSA sports helper (eligibility, portal sheet and photos, draft album, correction letter) |
+| Insights | PLE projection with the learners nearest the next division, a projector view, and the subject heat map |
+| Requirements | The term's list (reams, brooms, books), ticked as it arrives, printed on report cards |
+| Visitors and conduct (FR-G2, FR-G14) | Visitors' book with slips; conduct log with commendations, corrective actions and optional parent SMS |
+| Staff | Sign-in register, invites so staff set their own passwords, admin recovery codes |
+| New school year | Promotion and the new calendar in one step |
+| Export (FR-G10) | The school's data in one Excel workbook, each sheet only for a reader allowed to see it |
+| Internet | One "offline only" switch; SMS, invites and updates are the only network uses, and all are optional. Automatic updates are signed and off until the owner's key is set ([`docs/UPDATES.md`](docs/UPDATES.md)) |
+
 ### Not built yet
 
 Following SRS 16 and 17 deliberately: no payment gateway, no hardware
 fingerprint, no transactional dual-SSD mirror, no owner admin panel, no
-worldwide grading presets beyond the two Uganda actually uses. Excel upload
-(the third FR-C3 method), exam permits, streams, weekly assignments, promotion,
-ID cards and the onboarding import screen (its backend is built) are the next
-items in the plan. [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks every requirement.
+worldwide grading presets beyond the two Uganda actually uses. Email delivery
+of invites waits for the school's online account. [`docs/ROADMAP.md`](docs/ROADMAP.md)
+tracks every requirement.
 
 ---
 
