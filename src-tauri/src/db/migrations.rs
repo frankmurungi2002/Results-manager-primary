@@ -101,6 +101,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "staff_register",
         sql: M016_STAFF_REGISTER,
     },
+    Migration {
+        version: 17,
+        name: "automatic_texts",
+        sql: M017_AUTOMATIC_TEXTS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1197,4 +1202,18 @@ CREATE TABLE staff_attendance (
 );
 
 CREATE INDEX idx_staff_attendance_date ON staff_attendance (on_date);
+"#;
+
+// ---------------------------------------------------------------------------
+// 017 — automatic texts are each switched on by the school
+// ---------------------------------------------------------------------------
+//
+// Absence texts used to be offered on every register. They are now one of
+// the automatic texts a school switches on. A school that has already sent
+// absence texts keeps them on, so nothing it relied on stops without notice.
+
+const M017_AUTOMATIC_TEXTS: &str = r#"
+INSERT OR IGNORE INTO settings (key, value, updated_at)
+SELECT 'auto_sms.absence', '1', datetime('now')
+WHERE EXISTS (SELECT 1 FROM sms_outbox WHERE kind = 'absence');
 "#;

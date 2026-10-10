@@ -378,7 +378,7 @@ pub fn build_report_cards(
             summary.push_str(&format!(", aggregate {points}"));
         }
         if let Some(division) = &card.division {
-            summary.push_str(&format!(", division {division}"));
+            summary.push_str(&format!(", {}", division_words(division)));
         }
         if let Some(mean) = card.mean_percentage {
             summary.push_str(&format!(", average {mean:.1}%"));
@@ -426,6 +426,56 @@ pub fn build_report_cards(
     )?;
 
     envelope(&conn, "report_card", batch)
+}
+
+/// "Division 1" whether the grading system calls it "Division 1" or "1".
+fn division_words(division: &str) -> String {
+    if division.to_lowercase().starts_with("div") || division.chars().all(|c| !c.is_ascii_digit()) {
+        division.to_string()
+    } else {
+        format!("Division {division}")
+    }
+}
+
+/// One learner's results in words, for a text to their parent.
+pub struct CardText {
+    pub phone: Option<String>,
+    pub summary: String,
+}
+
+/// The class's results for a term as one line per learner: "Nakato Sarah
+/// (P5) Term 3 2026: aggregate 14, division II, position 9 of 42". Learners
+/// whose report card is held back for fees get no text either.
+pub fn cards_for_texting(conn: &Connection, class_id: &str, term_id: &str) -> AppResult<Vec<CardText>> {
+    let batch = compute_report_cards(conn, class_id, term_id, &[], false)?;
+    let mut out = Vec::new();
+    for card in &batch.cards {
+        let phone: Option<String> =
+            conn.query_row("SELECT guardian_phone FROM students WHERE id = ?1", params![card.student_id], |r| r.get(0))?;
+        let mut facts = Vec::new();
+        if let Some(points) = card.total_points {
+            facts.push(format!("aggregate {}", points as i64));
+        }
+        if let Some(division) = &card.division {
+            facts.push(division_words(division));
+        }
+        if card.total_points.is_none() {
+            if let Some(mean) = card.mean_percentage {
+                facts.push(format!("average {mean:.0}%"));
+            }
+        }
+        if let Some(position) = card.position {
+            facts.push(format!("position {position} of {}", card.class_size));
+        }
+        if facts.is_empty() {
+            continue;
+        }
+        out.push(CardText {
+            phone,
+            summary: format!("{} ({}) {} {}: {}", card.full_name, card.class_name, batch.term_name, batch.academic_year, facts.join(", ")),
+        });
+    }
+    Ok(out)
 }
 
 /// Every learner's card for one class and term, ranked.
@@ -2159,6 +2209,13 @@ mod tests {
             verification_code: None,
             verification_qr: None,
         }
+    }
+
+    #[test]
+    fn a_division_reads_the_same_in_a_text_whatever_the_scale_calls_it() {
+        assert_eq!(division_words("Division 1"), "Division 1");
+        assert_eq!(division_words("2"), "Division 2");
+        assert_eq!(division_words("U"), "U");
     }
 
     fn comment(class: Option<&str>, head: Option<&str>) -> SaveReportCommentRequest {

@@ -12,12 +12,14 @@ import {
   FileText,
   IdCard as IdCardIcon,
   List,
+  MessageSquare,
   MessageSquareText,
   Printer,
   Ticket,
 } from "lucide-react";
 
 import { api } from "../lib/api";
+import { TextPlanModal } from "../components/AutoTexts";
 import type {
   AcademicYearRow,
   ClassListBody,
@@ -87,6 +89,12 @@ export function ReportsScreen() {
   const [streams, setStreams] = useState<StreamRow[]>([]);
   const [streamId, setStreamId] = useState("");
   const [permitExamId, setPermitExamId] = useState("");
+  const [resultsTexts, setResultsTexts] = useState(false);
+  const [texting, setTexting] = useState(false);
+  const offlineOnly = useStore((state) => state.offlineOnly);
+  useEffect(() => {
+    api.getAutoSms().then((s) => setResultsTexts(s.results)).catch(() => setResultsTexts(false));
+  }, []);
 
   useEffect(() => {
     Promise.all([api.listClasses(), api.listAcademicYears()])
@@ -446,15 +454,26 @@ export function ReportsScreen() {
                 <span className="field-hint">
                   {scopeLabel}
                 </span>
-                <Button
-                  variant="primary"
-                  icon={<Printer size={15} />}
-                  loading={busy}
-                  disabled={!classId || !termId || roster.length === 0}
-                  onClick={() => void buildReportCards()}
-                >
-                  Build report cards
-                </Button>
+                <div className="row" style={{ gap: 8 }}>
+                  {resultsTexts && !offlineOnly && (
+                    <Button
+                      icon={<MessageSquare size={15} />}
+                      disabled={!classId || !termId || roster.length === 0}
+                      onClick={() => setTexting(true)}
+                    >
+                      Text results to parents
+                    </Button>
+                  )}
+                  <Button
+                    variant="primary"
+                    icon={<Printer size={15} />}
+                    loading={busy}
+                    disabled={!classId || !termId || roster.length === 0}
+                    onClick={() => void buildReportCards()}
+                  >
+                    Build report cards
+                  </Button>
+                </div>
               </div>
             }
             flush
@@ -648,6 +667,14 @@ export function ReportsScreen() {
         nursery={isNursery}
         onClose={() => setCommentsFor(null)}
       />
+      {texting && (
+        <TextPlanModal
+          title="Text results to parents"
+          load={() => api.previewResultsSms(classId, termId)}
+          send={() => api.sendResultsSms(classId, termId)}
+          onClose={() => setTexting(false)}
+        />
+      )}
     </div>
   );
 }

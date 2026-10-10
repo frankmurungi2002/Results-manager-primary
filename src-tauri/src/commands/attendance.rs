@@ -255,7 +255,12 @@ pub fn save_register(
         collected
     };
 
-    let signature = if request.notify_absent { Some(sms::signature(&conn)?) } else { None };
+    // Absence texts go only when the school switched them on (Settings → SMS).
+    let signature = if request.notify_absent && crate::commands::autosms::absence_on(&conn)? {
+        Some(sms::signature(&conn)?)
+    } else {
+        None
+    };
     let pretty_date = date.format("%A %-d %B").to_string();
     let now = Utc::now().to_rfc3339();
 

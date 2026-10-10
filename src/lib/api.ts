@@ -9,6 +9,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AutoSmsSettings,
+  TextPlan,
   OfficeEntry,
   RegisterRow,
   StaffMonth,
@@ -654,4 +656,12 @@ export const api = {
   recordStaffAttendance: (entry: OfficeEntry) => call<void>("record_staff_attendance", { entry }),
   staffRegisterMonth: (month: string) => call<StaffMonth>("staff_register_month", { month }),
   buildStaffRegister: (month: string) => call<DocumentEnvelope<StaffMonth>>("build_staff_register", { month }),
+
+  // --- Automatic texts -------------------------------------------------------
+  getAutoSms: () => call<AutoSmsSettings>("get_auto_sms"),
+  saveAutoSms: (settings: AutoSmsSettings) => call<void>("save_auto_sms", { settings }),
+  previewFeeReminders: (above: number) => call<TextPlan>("preview_fee_reminders", { above }),
+  sendFeeReminders: (above: number) => call<number>("send_fee_reminders", { above }),
+  previewResultsSms: (classId: string, termId: string) => call<TextPlan>("preview_results_sms", { classId, termId }),
+  sendResultsSms: (classId: string, termId: string) => call<number>("send_results_sms", { classId, termId }),
 };

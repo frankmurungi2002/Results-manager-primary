@@ -1775,3 +1775,28 @@ export interface StaffMonth {
   startTime: string;
   rows: MonthRow[];
 }
+
+// ---------------------------------------------------------------------------
+// Automatic texts
+// ---------------------------------------------------------------------------
+
+export interface AutoSmsSettings {
+  absence: boolean;
+  results: boolean;
+  feeReminders: boolean;
+  /** 1 = Monday … 7 = Sunday. */
+  feeReminderDay: number;
+  feeReminderTime: string;
+  feeReminderAbove: number;
+  promiseReminders: boolean;
+  notReported: boolean;
+}
+
+export interface TextPlan {
+  recipients: number;
+  learners: number;
+  withoutPhone: number;
+  smsUnits: number;
+  sample: string | null;
+  skippedRecent: number;
+}

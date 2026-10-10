@@ -103,6 +103,13 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::staffreg::record_staff_attendance,
         commands::staffreg::staff_register_month,
         commands::staffreg::build_staff_register,
+        // --- Automatic texts ---------------------------------------------
+        commands::autosms::get_auto_sms,
+        commands::autosms::save_auto_sms,
+        commands::autosms::preview_fee_reminders,
+        commands::autosms::send_fee_reminders,
+        commands::autosms::preview_results_sms,
+        commands::autosms::send_results_sms,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,

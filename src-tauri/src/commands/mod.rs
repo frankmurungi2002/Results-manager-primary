@@ -1,6 +1,7 @@
 pub mod academics;
 pub mod attendance;
 pub mod auth;
+pub mod autosms;
 pub mod daybook;
 pub mod features;
 pub mod fees;

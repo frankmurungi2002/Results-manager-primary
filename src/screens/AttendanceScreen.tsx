@@ -257,6 +257,10 @@ function MarkRegister({
   const [draft, setDraft] = useState<Draft>({});
   const offlineOnly = useStore((state) => state.offlineOnly);
   const [notify, setNotify] = useState(true);
+  const [absenceTexts, setAbsenceTexts] = useState(false);
+  useEffect(() => {
+    api.getAutoSms().then((s) => setAbsenceTexts(s.absence)).catch(() => setAbsenceTexts(false));
+  }, []);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -304,7 +308,7 @@ function MarkRegister({
         classId,
         streamId,
         onDate: date,
-        notifyAbsent: notify && !offlineOnly,
+        notifyAbsent: notify && absenceTexts && !offlineOnly,
         entries: register.rows
           .filter((row) => draft[row.studentId]?.state)
           .map((row) => ({
@@ -379,7 +383,7 @@ function MarkRegister({
         }
         footer={
           <div className="row-between" style={{ flexWrap: "wrap", gap: "var(--space-3)" }}>
-            <label className="row" style={{ gap: "var(--space-3)" }} hidden={offlineOnly}>
+            <label className="row" style={{ gap: "var(--space-3)" }} hidden={offlineOnly || !absenceTexts}>
               <Switch checked={notify} onChange={setNotify} label="Text guardians of absent learners" />
               <span style={{ fontWeight: 500 }}>Text the guardian of every learner newly marked absent</span>
             </label>

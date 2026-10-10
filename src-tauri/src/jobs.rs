@@ -35,6 +35,9 @@ type Job = fn(&rusqlite::Connection, chrono::NaiveDateTime) -> crate::error::App
 
 const JOBS: &[(&str, Job)] = &[
     ("owner summary", crate::commands::daybook::owner_summary_job),
+    ("fee reminders", crate::commands::autosms::fee_reminder_job),
+    ("promise reminders", crate::commands::autosms::promise_reminder_job),
+    ("not reported", crate::commands::autosms::not_reported_job),
 ];
 
 pub fn spawn_scheduler(app: AppHandle) {

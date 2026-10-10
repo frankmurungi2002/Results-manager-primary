@@ -29,6 +29,7 @@ import type {
 } from "../lib/types";
 import { useCan, useStore } from "../state/store";
 import { InternetSettings } from "../components/InternetSettings";
+import { AutoSmsCard } from "../components/AutoTexts";
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import { SubscriptionSettings } from "../components/Subscription";
 import {
@@ -112,7 +113,13 @@ export function SettingsScreen() {
 
         {tab === "school" && allowed("school") && <SchoolTab />}
         {tab === "features" && allowed("features") && <FeaturesTab />}
-        {tab === "sms" && allowed("sms") && <SmsTab />}
+        {tab === "sms" && allowed("sms") && (
+          <>
+            <SmsTab />
+            <div style={{ height: "var(--space-5)" }} />
+            <AutoSmsCard />
+          </>
+        )}
         {tab === "internet" && allowed("internet") && <InternetSettings />}
         {tab === "signatures" && <SignaturesSettings />}
         {tab === "subscription" && allowed("subscription") && <SubscriptionSettings />}

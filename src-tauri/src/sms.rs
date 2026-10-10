@@ -209,6 +209,10 @@ pub fn policy(kind: &str) -> (i64, Option<chrono::Duration>) {
         "pass_out" | "pass_out_return" | "absence" => {
             (PRIORITY_URGENT, Some(chrono::Duration::hours(12)))
         }
+        // A reminder that arrives days late is worse than none.
+        "fee_reminder" | "promise_reminder" | "not_reported" | "daybook" => {
+            (PRIORITY_BULK, Some(chrono::Duration::hours(24)))
+        }
         "test" => (PRIORITY_URGENT, None),
         "bulk" => (PRIORITY_BULK, None),
         _ => (PRIORITY_NORMAL, None),

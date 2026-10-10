@@ -15,6 +15,7 @@ import {
   Copy,
   FileText,
   HandCoins,
+  MessageSquare,
   Plus,
   Printer,
   Receipt,
@@ -43,6 +44,7 @@ import {
 } from "../lib/types";
 import { useCan, useStore } from "../state/store";
 import { LearnerPicker } from "../components/LearnerPicker";
+import { TextPlanModal } from "../components/AutoTexts";
 import {
   FeeBalancesSheet,
   FeeCollectionsSheet,
@@ -372,6 +374,9 @@ function Balances({ onPrint }: { onPrint: Print }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [invoices, setInvoices] = useState(false);
+  const [reminding, setReminding] = useState(false);
+  const can = useCan();
+  const offlineOnly = useStore((state) => state.offlineOnly);
 
   useEffect(() => {
     api
@@ -430,6 +435,11 @@ function Balances({ onPrint }: { onPrint: Print }) {
           ))}
         </SelectInput>
         <div className="grow" />
+        {can("send_messages") && !offlineOnly && (
+          <Button icon={<MessageSquare size={15} />} onClick={() => setReminding(true)}>
+            Text reminders
+          </Button>
+        )}
         <Button icon={<FileText size={15} />} onClick={() => setInvoices(true)}>
           Print invoices
         </Button>
@@ -520,6 +530,14 @@ function Balances({ onPrint }: { onPrint: Print }) {
       )}
 
       {open && <AccountModal studentId={open} onClose={() => setOpen(null)} onChanged={load} onPrint={onPrint} />}
+      {reminding && (
+        <TextPlanModal
+          title="Text fee reminders"
+          load={() => api.previewFeeReminders(0)}
+          send={() => api.sendFeeReminders(0)}
+          onClose={() => setReminding(false)}
+        />
+      )}
       {invoices && termId && (
         <InvoicesModal
           setup={setup}
