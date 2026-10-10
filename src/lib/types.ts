@@ -1069,13 +1069,17 @@ export interface PassOutSlip {
 }
 
 export interface SmsSettings {
-  provider: "off" | "africastalking" | "egosms";
+  provider: "off" | "africastalking" | "egosms" | "egosms_classic";
   username: string;
   apiKey: string;
   senderId: string;
   signature: string;
   /** Whether Class Teachers and group leaders may text their own parents. */
   teachersMayBroadcast: boolean;
+  /** What one SMS costs, shillings: says how many texts the credit buys. */
+  pricePerSms: number;
+  /** Warn when the credit falls below this. */
+  warnBelow: number;
 }
 
 export interface SmsOutboxRow {
@@ -1799,4 +1803,13 @@ export interface TextPlan {
   smsUnits: number;
   sample: string | null;
   skippedRecent: number;
+}
+
+export interface SmsBalance {
+  amount: number | null;
+  currency: string;
+  checkedAt: string | null;
+  low: boolean;
+  warnBelow: number;
+  textsLeft: number | null;
 }

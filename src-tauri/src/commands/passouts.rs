@@ -640,6 +640,40 @@ pub async fn send_queued_sms(state: State<'_, AppState>) -> AppResult<FlushResul
     sms::flush(&state)
 }
 
+/// The credit left as the gateway last reported it. No network.
+#[tauri::command]
+pub fn get_sms_balance(state: State<'_, AppState>) -> AppResult<sms::SmsBalance> {
+    let session = state.sessions.require()?;
+    if !(session.has(Permission::SendMessages) || session.has(Permission::ManageSchool)) {
+        return Err(AppError::Forbidden);
+    }
+    sms::stored_balance(&state.db.lock())
+}
+
+/// Asks the gateway now. Async, and the database is never locked while the
+/// network is waited on.
+#[tauri::command]
+pub async fn check_sms_balance(state: State<'_, AppState>) -> AppResult<sms::SmsBalance> {
+    let session = state.sessions.require()?;
+    if !(session.has(Permission::SendMessages) || session.has(Permission::ManageSchool)) {
+        return Err(AppError::Forbidden);
+    }
+    let settings = {
+        let conn = state.db.lock();
+        crate::network::require_online_allowed(&conn)?;
+        sms::load_settings(&conn)?
+    };
+    if settings.provider == "off" {
+        return Err(AppError::validation("Choose an SMS provider first."));
+    }
+    let (amount, currency) = sms::fetch_balance(&settings).map_err(|err| match err {
+        sms::SendError::Offline(e) | sms::SendError::Rejected(e) => AppError::validation(e),
+    })?;
+    let conn = state.db.lock();
+    sms::store_balance(&conn, amount, &currency)?;
+    sms::stored_balance(&conn)
+}
+
 /// Sends one test message straight away and says exactly what happened.
 #[tauri::command]
 pub async fn send_test_sms(state: State<'_, AppState>, phone: String) -> AppResult<String> {
@@ -665,6 +699,9 @@ pub async fn send_test_sms(state: State<'_, AppState>, phone: String) -> AppResu
 
     let outcome = sms::send(&settings, &to, &body);
     let conn = state.db.lock();
+    if let Some((amount, currency)) = sms::take_reported_balance() {
+        sms::store_balance(&conn, amount, &currency)?;
+    }
     let now = Utc::now().to_rfc3339();
     let (status, error) = match &outcome {
         Ok(_) => ("sent", None),

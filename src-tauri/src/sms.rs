@@ -36,7 +36,8 @@ pub const ID_PREFIX: &str = "sms";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SmsSettings {
-    /// `off`, `africastalking` or `egosms`.
+    /// `off`, `africastalking`, `egosms` (EgoSMS Comms, comms.egosms.co) or
+    /// `egosms_classic` (accounts on the older www.egosms.co API).
     pub provider: String,
     /// Africa's Talking username (use `sandbox` to test), or EgoSMS username.
     pub username: String,
@@ -51,6 +52,21 @@ pub struct SmsSettings {
     /// their own parents (FR-G23). The office always may.
     #[serde(default = "yes")]
     pub teachers_may_broadcast: bool,
+    /// What the gateway charges for one SMS, to say how many texts the
+    /// credit buys. Shillings.
+    #[serde(default = "default_price")]
+    pub price_per_sms: f64,
+    /// Warn when the credit falls below this.
+    #[serde(default = "default_warn")]
+    pub warn_below: f64,
+}
+
+fn default_price() -> f64 {
+    35.0
+}
+
+fn default_warn() -> f64 {
+    5_000.0
 }
 
 fn yes() -> bool {
@@ -69,11 +85,13 @@ pub fn load_settings(conn: &Connection) -> AppResult<SmsSettings> {
         sender_id: get("sms.sender_id")?,
         signature: get("sms.signature")?,
         teachers_may_broadcast: get("sms.teachers_may_broadcast")? != "0",
+        price_per_sms: get("sms.price")?.parse().unwrap_or_else(|_| default_price()),
+        warn_below: get("sms.balance_warn")?.parse().unwrap_or_else(|_| default_warn()),
     })
 }
 
 pub fn save_settings(conn: &Connection, settings: &SmsSettings) -> AppResult<()> {
-    if !matches!(settings.provider.as_str(), "off" | "africastalking" | "egosms") {
+    if !matches!(settings.provider.as_str(), "off" | "africastalking" | "egosms" | "egosms_classic") {
         return Err(AppError::validation("Unknown SMS provider."));
     }
     repo::set_setting(conn, "sms.provider", &settings.provider)?;
@@ -86,6 +104,11 @@ pub fn save_settings(conn: &Connection, settings: &SmsSettings) -> AppResult<()>
         "sms.teachers_may_broadcast",
         if settings.teachers_may_broadcast { "1" } else { "0" },
     )?;
+    if !(settings.price_per_sms >= 0.0 && settings.warn_below >= 0.0) {
+        return Err(AppError::validation("The price and the warning level must be zero or more."));
+    }
+    repo::set_setting(conn, "sms.price", &settings.price_per_sms.to_string())?;
+    repo::set_setting(conn, "sms.balance_warn", &settings.warn_below.to_string())?;
     Ok(())
 }
 
@@ -455,6 +478,9 @@ fn drain(db: &Database, total: &mut FlushResult, deliver: &Deliver<'_>) -> AppRe
     }
 
     let conn = db.lock();
+    if let Some((amount, currency)) = take_reported_balance() {
+        store_balance(&conn, amount, &currency)?;
+    }
     total.still_queued = conn.query_row(
         "SELECT COUNT(*) FROM sms_outbox WHERE status = 'queued'",
         [],
@@ -544,7 +570,8 @@ fn classify(err: ureq::Error) -> SendError {
 pub fn send(settings: &SmsSettings, to: &str, body: &str) -> Result<String, SendError> {
     match settings.provider.as_str() {
         "africastalking" => send_africastalking(settings, to, body),
-        "egosms" => send_egosms(settings, to, body),
+        "egosms" => send_egosms_comms(settings, to, body),
+        "egosms_classic" => send_egosms(settings, to, body),
         _ => Err(SendError::Rejected("SMS is switched off.".into())),
     }
 }
@@ -592,6 +619,160 @@ fn send_africastalking(settings: &SmsSettings, to: &str, body: &str) -> Result<S
     }
 }
 
+// --- EgoSMS Comms: the JSON API of comms.egosms.co ---------------------------
+//
+// As Pahappa's own SDK (github.com/Pahappa-LTD/comms-go-sdk) speaks it:
+// POST {"method": "SendSms" | "Balance", "userdata": {"username", "password"
+// (the API key)}, "msgdata": [...], "walletType": "Local"}; the reply is
+// {"Status": "OK" | "Failed", "Message", "Cost", "MsgFollowUpUniqueCode",
+// "Balance"}. Every reply carries the balance, so each text sent also tells
+// us how much credit is left.
+
+const EGOSMS_COMMS_URL: &str = "https://comms.egosms.co/api/v1/json";
+
+fn egosms_comms(request: serde_json::Value) -> Result<serde_json::Value, SendError> {
+    let response = agent()
+        .post(EGOSMS_COMMS_URL)
+        .set("Accept", "application/json")
+        .send_json(request)
+        .map_err(classify)?;
+    let text = response.into_string().map_err(|err| SendError::Offline(err.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|_| SendError::Rejected(format!("Unexpected reply from EgoSMS: {}", text.trim())))?;
+    if let Some(balance) = json["Balance"].as_f64() {
+        remember_balance(balance, "UGX");
+    }
+    if json["Status"].as_str() == Some("OK") {
+        Ok(json)
+    } else {
+        Err(SendError::Rejected(format!(
+            "EgoSMS: {}",
+            json["Message"].as_str().unwrap_or("the message was refused")
+        )))
+    }
+}
+
+fn send_egosms_comms(settings: &SmsSettings, to: &str, body: &str) -> Result<String, SendError> {
+    let sender = if settings.sender_id.is_empty() { "EgoSMS" } else { settings.sender_id.as_str() };
+    let reply = egosms_comms(
+        serde_json::json!({
+            "method": "SendSms",
+            "userdata": { "username": settings.username, "password": settings.api_key },
+            "msgdata": [{
+                "number": to.trim_start_matches('+'),
+                "message": body,
+                "senderid": sender,
+                "priority": "0",
+            }],
+            "walletType": "Local",
+        }),
+    )?;
+    Ok(reply["MsgFollowUpUniqueCode"].as_str().unwrap_or("").to_string())
+}
+
+// --- What credit is left ---------------------------------------------------
+
+/// The last balance a gateway told us, set by whichever thread heard it.
+static LAST_BALANCE: std::sync::Mutex<Option<(f64, String)>> = std::sync::Mutex::new(None);
+
+fn remember_balance(amount: f64, currency: &str) {
+    if let Ok(mut last) = LAST_BALANCE.lock() {
+        *last = Some((amount, currency.to_string()));
+    }
+}
+
+/// Takes the balance the gateway last reported, if any arrived since.
+pub fn take_reported_balance() -> Option<(f64, String)> {
+    LAST_BALANCE.lock().ok().and_then(|mut last| last.take())
+}
+
+/// Asks the gateway for the credit left. Network: never call with the
+/// database lock held.
+pub fn fetch_balance(settings: &SmsSettings) -> Result<(f64, String), SendError> {
+    match settings.provider.as_str() {
+        "egosms" => {
+            let reply = egosms_comms(
+                serde_json::json!({
+                    "method": "Balance",
+                    "userdata": { "username": settings.username, "password": settings.api_key },
+                    "walletType": "Local",
+                }),
+            )?;
+            reply["Balance"]
+                .as_f64()
+                .map(|b| (b, "UGX".to_string()))
+                .ok_or_else(|| SendError::Rejected("EgoSMS did not say the balance.".into()))
+        }
+        "africastalking" => {
+            let url = if settings.username == "sandbox" {
+                "https://api.sandbox.africastalking.com/version1/user"
+            } else {
+                "https://api.africastalking.com/version1/user"
+            };
+            let response = agent()
+                .get(url)
+                .query("username", &settings.username)
+                .set("apiKey", &settings.api_key)
+                .set("Accept", "application/json")
+                .call()
+                .map_err(classify)?;
+            let text = response.into_string().map_err(|err| SendError::Offline(err.to_string()))?;
+            let json: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|_| SendError::Rejected(format!("Unexpected reply from Africa's Talking: {text}")))?;
+            // "UGX 1,234.5678"
+            let raw = json["UserData"]["balance"].as_str().unwrap_or_default();
+            parse_money(raw).ok_or_else(|| SendError::Rejected(format!("Africa's Talking said: {raw}")))
+        }
+        "egosms_classic" => Err(SendError::Rejected(
+            "The older EgoSMS API does not report the balance. Check it on egosms.co.".into(),
+        )),
+        _ => Err(SendError::Rejected("SMS is switched off.".into())),
+    }
+}
+
+/// "UGX 1,234.5678" → (1234.5678, "UGX").
+pub fn parse_money(raw: &str) -> Option<(f64, String)> {
+    let currency: String = raw.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+    let number: String = raw.chars().filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-').collect();
+    number.parse().ok().map(|n| (n, if currency.is_empty() { "UGX".into() } else { currency }))
+}
+
+/// Writes a balance the gateway reported to the settings, with the time.
+pub fn store_balance(conn: &Connection, amount: f64, currency: &str) -> AppResult<()> {
+    repo::set_setting(conn, "sms.balance", &format!("{amount}"))?;
+    repo::set_setting(conn, "sms.balance_currency", currency)?;
+    repo::set_setting(conn, "sms.balance_at", &Utc::now().to_rfc3339())?;
+    Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SmsBalance {
+    pub amount: Option<f64>,
+    pub currency: String,
+    /// When the gateway last said it; none if it never has.
+    pub checked_at: Option<String>,
+    /// Below the school's warning level.
+    pub low: bool,
+    pub warn_below: f64,
+    /// Roughly how many more texts, at the school's price per SMS.
+    pub texts_left: Option<i64>,
+}
+
+pub fn stored_balance(conn: &Connection) -> AppResult<SmsBalance> {
+    let amount: Option<f64> = repo::get_setting(conn, "sms.balance")?.and_then(|v| v.parse().ok());
+    let warn_below: f64 = repo::get_setting(conn, "sms.balance_warn")?.and_then(|v| v.parse().ok()).unwrap_or(5_000.0);
+    let price: f64 = repo::get_setting(conn, "sms.price")?.and_then(|v| v.parse().ok()).unwrap_or(35.0);
+    Ok(SmsBalance {
+        amount,
+        currency: repo::get_setting(conn, "sms.balance_currency")?.unwrap_or_else(|| "UGX".into()),
+        checked_at: repo::get_setting(conn, "sms.balance_at")?,
+        low: amount.is_some_and(|a| a < warn_below),
+        warn_below,
+        texts_left: amount.filter(|_| price > 0.0).map(|a| (a / price).floor() as i64),
+    })
+}
+
 fn send_egosms(settings: &SmsSettings, to: &str, body: &str) -> Result<String, SendError> {
     // EgoSMS takes the number without the plus sign.
     let number = to.trim_start_matches('+');
@@ -626,6 +807,26 @@ fn send_egosms(settings: &SmsSettings, to: &str, body: &str) -> Result<String, S
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicUsize;
+
+    #[test]
+    fn balances_are_read_from_how_gateways_write_them() {
+        assert_eq!(parse_money("UGX 1,234.5678"), Some((1234.5678, "UGX".into())));
+        assert_eq!(parse_money("KES 0.00"), Some((0.0, "KES".into())));
+        assert_eq!(parse_money("12000"), Some((12000.0, "UGX".into())));
+        assert_eq!(parse_money("n/a"), None);
+    }
+
+    #[test]
+    fn a_reported_balance_is_kept_with_how_many_texts_it_buys() {
+        let db = Database::open_in_memory().unwrap();
+        let conn = db.lock();
+        assert_eq!(stored_balance(&conn).unwrap().amount, None);
+        store_balance(&conn, 4_200.0, "UGX").unwrap();
+        let balance = stored_balance(&conn).unwrap();
+        assert_eq!((balance.amount, balance.low, balance.texts_left), (Some(4_200.0), true, Some(120)));
+        repo::set_setting(&conn, "sms.balance_warn", "1000").unwrap();
+        assert!(!stored_balance(&conn).unwrap().low);
+    }
 
     #[test]
     fn ugandan_numbers_in_every_common_shape() {

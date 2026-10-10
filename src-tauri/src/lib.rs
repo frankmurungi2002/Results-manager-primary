@@ -212,6 +212,8 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::passouts::list_sms_outbox,
         commands::passouts::send_queued_sms,
         commands::passouts::send_test_sms,
+        commands::passouts::get_sms_balance,
+        commands::passouts::check_sms_balance,
         // --- Signatures and the school stamp ---------------------------
         commands::signatures::prepare_signature_image,
         commands::signatures::save_signature,

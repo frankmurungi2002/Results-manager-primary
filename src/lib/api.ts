@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  SmsBalance,
   AutoSmsSettings,
   TextPlan,
   OfficeEntry,
@@ -664,4 +665,7 @@ export const api = {
   sendFeeReminders: (above: number) => call<number>("send_fee_reminders", { above }),
   previewResultsSms: (classId: string, termId: string) => call<TextPlan>("preview_results_sms", { classId, termId }),
   sendResultsSms: (classId: string, termId: string) => call<number>("send_results_sms", { classId, termId }),
+
+  getSmsBalance: () => call<SmsBalance>("get_sms_balance"),
+  checkSmsBalance: () => call<SmsBalance>("check_sms_balance"),
 };

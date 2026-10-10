@@ -30,6 +30,7 @@ import type {
 import { useCan, useStore } from "../state/store";
 import { InternetSettings } from "../components/InternetSettings";
 import { AutoSmsCard } from "../components/AutoTexts";
+import { SmsBalanceLine } from "../components/SmsBalance";
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import { SubscriptionSettings } from "../components/Subscription";
 import {
@@ -604,8 +605,9 @@ function SmsTab() {
             }
           >
             <option value="off">Off — don't send texts</option>
+            <option value="egosms">EgoSMS (comms.egosms.co)</option>
+            <option value="egosms_classic">EgoSMS, older account (egosms.co)</option>
             <option value="africastalking">Africa's Talking</option>
-            <option value="egosms">EgoSMS</option>
           </SelectInput>
           {settings.provider !== "off" && (
             <>
@@ -616,7 +618,8 @@ function SmsTab() {
                 hint={isAt ? "Use sandbox to try it out without sending real texts." : undefined}
               />
               <TextInput
-                label={isAt ? "API key" : "Password"}
+                label={isAt || settings.provider === "egosms" ? "API key" : "Password"}
+                hint={settings.provider === "egosms" ? "From your EgoSMS dashboard (comms.egosms.co), under API." : undefined}
                 type="password"
                 value={settings.apiKey}
                 onChange={(event) => set({ apiKey: event.target.value })}
@@ -635,6 +638,21 @@ function SmsTab() {
                 placeholder="Your school name"
                 hint="A short name keeps each text to one SMS, e.g. RAINBOW N&P."
               />
+              <TextInput
+                label="Price of one SMS (UGX)"
+                type="number"
+                min={0}
+                value={settings.pricePerSms}
+                onChange={(event) => set({ pricePerSms: Number(event.target.value) || 0 })}
+                hint="To say how many texts the credit buys."
+              />
+              <TextInput
+                label="Warn when credit is below (UGX)"
+                type="number"
+                min={0}
+                value={settings.warnBelow}
+                onChange={(event) => set({ warnBelow: Number(event.target.value) || 0 })}
+              />
               <Switch
                 checked={settings.teachersMayBroadcast}
                 onChange={(on) => set({ teachersMayBroadcast: on })}
@@ -644,6 +662,8 @@ function SmsTab() {
           )}
         </div>
       </Card>
+
+      {settings.provider !== "off" && <SmsBalanceLine />}
 
       {settings.provider !== "off" && (
         <Card title="Send a test" subtitle="Save first, then send one text to your own phone">

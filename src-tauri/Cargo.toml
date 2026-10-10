@@ -43,7 +43,7 @@ rust_xlsxwriter = "0.79"
 
 # HTTPS to the SMS gateway (FR-G8), used only at the moment a queued message
 # is sent. Blocking and rustls-based: no OpenSSL to build, nothing async.
-ureq = { version = "2", default-features = false, features = ["tls"] }
+ureq = { version = "2", default-features = false, features = ["tls", "json"] }
 
 # Signatures and the school stamp (photographed on paper) are decoded and
 # cleaned in Rust: untrusted image files never reach the webview. PNG and

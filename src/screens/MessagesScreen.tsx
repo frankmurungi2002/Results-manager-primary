@@ -35,6 +35,7 @@ import type {
   UserSummary,
 } from "../lib/types";
 import { useCan, useStore } from "../state/store";
+import { SmsBalanceLine } from "../components/SmsBalance";
 import {
   Alert,
   Badge,
@@ -100,7 +101,12 @@ export function MessagesScreen() {
             updates. Groups can still be kept up to date here.
           </Alert>
         )}
-        {tab === "compose" && !offlineOnly && <Compose onSent={() => setTab("sent")} />}
+        {tab === "compose" && !offlineOnly && (
+          <>
+            {can("send_messages") && <SmsBalanceLine />}
+            <Compose onSent={() => setTab("sent")} />
+          </>
+        )}
         {tab === "sent" && <SentList />}
         {tab === "groups" && <Groups isAdmin={can("send_messages")} />}
       </div>

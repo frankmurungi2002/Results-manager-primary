@@ -1216,4 +1216,8 @@ const M017_AUTOMATIC_TEXTS: &str = r#"
 INSERT OR IGNORE INTO settings (key, value, updated_at)
 SELECT 'auto_sms.absence', '1', datetime('now')
 WHERE EXISTS (SELECT 1 FROM sms_outbox WHERE kind = 'absence');
+
+-- "EgoSMS" now means EgoSMS Comms (comms.egosms.co), where new accounts are
+-- opened. A school already set up on the older API keeps it, by its new name.
+UPDATE settings SET value = 'egosms_classic' WHERE key = 'sms.provider' AND value = 'egosms';
 "#;

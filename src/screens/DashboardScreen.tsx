@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { AcademicYearRow, ClassRow, DashboardSummary, Permission } from "../lib/types";
+import type {
+  SmsBalance, AcademicYearRow, ClassRow, DashboardSummary, Permission } from "../lib/types";
 import { useCan, useStore, type ScreenId } from "../state/store";
 import { YourDesk, deskActions } from "../components/YourDesk";
 import { Alert, Button, EmptyState, formatDate, relativeTime } from "../components/ui";
@@ -33,6 +34,13 @@ export function DashboardScreen() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [years, setYears] = useState<AcademicYearRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lowCredit, setLowCredit] = useState<SmsBalance | null>(null);
+  useEffect(() => {
+    api
+      .getSmsBalance()
+      .then((b) => setLowCredit(b.low ? b : null))
+      .catch(() => setLowCredit(null));
+  }, []);
 
   useEffect(() => {
     Promise.all([api.dashboardSummary(), api.listClasses(), api.listAcademicYears()])
@@ -89,6 +97,14 @@ export function DashboardScreen() {
         </header>
 
         <YourDesk session={session} summary={summary} onGo={(screen, params) => navigate(screen, params)} />
+
+        {lowCredit && lowCredit.amount !== null && (
+          <Alert tone="warning" title="SMS credit is running low">
+            {lowCredit.currency} {Math.floor(lowCredit.amount).toLocaleString("en-US")} left
+            {lowCredit.textsLeft !== null ? `, about ${lowCredit.textsLeft} texts` : ""}. Top up before pass-out and
+            absence texts stop going.
+          </Alert>
+        )}
 
         {/* ---- FR-G22: a learner late back from a pass-out is never missed ---- */}
         {summary.overduePassOuts.length > 0 && (
