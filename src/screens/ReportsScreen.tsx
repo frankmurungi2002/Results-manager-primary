@@ -20,6 +20,7 @@ import {
 
 import { api } from "../lib/api";
 import { TextPlanModal } from "../components/AutoTexts";
+import { ExportDataButton } from "../components/ExportData";
 import type {
   AcademicYearRow,
   ClassListBody,
@@ -349,6 +350,7 @@ export function ReportsScreen() {
               learners.
             </p>
           </div>
+          {can("view_all_learners") && <ExportDataButton />}
         </div>
 
         <Card>

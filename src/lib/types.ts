@@ -2219,3 +2219,9 @@ export interface CashSummary {
   expenseCategories: string[];
   incomeCategories: string[];
 }
+
+export interface ExportSection {
+  id: string;
+  label: string;
+  allowed: boolean;
+}

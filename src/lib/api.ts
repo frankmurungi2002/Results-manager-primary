@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  ExportSection,
   CashEntry,
   CashEntryInput,
   CashSummary,
@@ -749,4 +750,6 @@ export const api = {
   cashSummary: (from: string, to: string) => call<CashSummary>("cash_summary", { from, to }),
   buildCashSummary: (from: string, to: string) => call<DocumentEnvelope<CashSummary>>("build_cash_summary", { from, to }),
   buildVoucher: (id: string) => call<DocumentEnvelope<CashEntry>>("build_voucher", { id }),
+  exportSections: () => call<ExportSection[]>("export_sections"),
+  exportSchoolData: (sections: string[]) => call<StagedFile>("export_school_data", { sections }),
 };

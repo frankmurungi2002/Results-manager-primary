@@ -156,6 +156,8 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::cashbook::cash_summary,
         commands::cashbook::build_cash_summary,
         commands::cashbook::build_voucher,
+        commands::dataexport::export_sections,
+        commands::dataexport::export_school_data,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,
