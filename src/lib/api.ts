@@ -9,6 +9,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  ImportChoice,
+  StatementColumns,
+  StatementImported,
+  StatementPlan,
   UpdateInfo,
   RecoverySheet,
   RecoveryStatus,
@@ -686,4 +690,9 @@ export const api = {
   updateStatus: () => call<UpdateInfo>("update_status"),
   checkForUpdate: () => call<UpdateInfo>("check_for_update"),
   installUpdate: () => call<void>("install_update"),
+
+  readSchoolpayStatement: (path: string, columns: StatementColumns | null) =>
+    call<StatementPlan>("read_schoolpay_statement", { path, columns }),
+  importSchoolpayStatement: (path: string, columns: StatementColumns, choices: ImportChoice[]) =>
+    call<StatementImported>("import_schoolpay_statement", { path, columns, choices }),
 };

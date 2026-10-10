@@ -111,6 +111,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "recovery_codes",
         sql: M018_RECOVERY_CODES,
     },
+    Migration {
+        version: 19,
+        name: "schoolpay_codes",
+        sql: M019_SCHOOLPAY_CODES,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1240,4 +1245,16 @@ ALTER TABLE users ADD COLUMN recovery_hash TEXT;
 ALTER TABLE users ADD COLUMN recovery_created_at TEXT;
 ALTER TABLE users ADD COLUMN recovery_failed_attempts INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN recovery_locked_until TEXT;
+"#;
+
+// ---------------------------------------------------------------------------
+// 019 — each learner's SchoolPay payment code
+// ---------------------------------------------------------------------------
+//
+// SchoolPay gives every learner a payment code; parents pay against it. With
+// the code on file, a SchoolPay statement matches itself to learners.
+
+const M019_SCHOOLPAY_CODES: &str = r#"
+ALTER TABLE students ADD COLUMN schoolpay_code TEXT;
+CREATE UNIQUE INDEX idx_students_schoolpay_code ON students (schoolpay_code) WHERE schoolpay_code IS NOT NULL;
 "#;

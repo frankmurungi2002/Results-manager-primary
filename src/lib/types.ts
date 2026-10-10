@@ -1893,3 +1893,53 @@ export interface UpdateInfo {
   availableVersion: string | null;
   availableNotes: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// SchoolPay statements
+// ---------------------------------------------------------------------------
+
+export interface StatementColumns {
+  reference: number | null;
+  amount: number | null;
+  date: number | null;
+  paymentCode: number | null;
+  regNumber: number | null;
+  name: number | null;
+  payer: number | null;
+}
+
+export interface StatementLine {
+  row: number;
+  reference: string;
+  amount: number | null;
+  paidOn: string | null;
+  nameOnStatement: string;
+  paymentCode: string;
+  status: "ready" | "suggested" | "duplicate" | "unmatched" | "invalid";
+  studentId: string | null;
+  studentName: string | null;
+  className: string | null;
+  matchedBy: "code" | "reg" | "name" | null;
+  problem: string | null;
+}
+
+export interface StatementPlan {
+  fileName: string;
+  headers: string[];
+  columns: StatementColumns;
+  lines: StatementLine[];
+  ready: number;
+  readyAmount: number;
+}
+
+export interface ImportChoice {
+  row: number;
+  studentId: string;
+}
+
+export interface StatementImported {
+  receipts: number;
+  amount: number;
+  skipped: number;
+  codesLearned: number;
+}

@@ -122,6 +122,9 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         updater::update_status,
         updater::check_for_update,
         updater::install_update,
+        // --- SchoolPay statements ----------------------------------------
+        commands::schoolpay::read_schoolpay_statement,
+        commands::schoolpay::import_schoolpay_statement,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,

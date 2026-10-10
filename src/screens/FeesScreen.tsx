@@ -13,6 +13,7 @@ import {
   Banknote,
   CalendarClock,
   Copy,
+  FileSpreadsheet,
   FileText,
   HandCoins,
   MessageSquare,
@@ -45,6 +46,7 @@ import {
 import { useCan, useStore } from "../state/store";
 import { LearnerPicker } from "../components/LearnerPicker";
 import { TextPlanModal } from "../components/AutoTexts";
+import { SchoolPayImportModal } from "../components/SchoolPayImport";
 import {
   FeeBalancesSheet,
   FeeCollectionsSheet,
@@ -181,6 +183,7 @@ function Counter({ onPrint }: { onPrint: Print }) {
   const [textGuardian, setTextGuardian] = useState(true);
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<PaymentRow | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     api.getFeeSettings().then(setSettings).catch(reportError);
@@ -339,6 +342,16 @@ function Counter({ onPrint }: { onPrint: Print }) {
           )}
         </div>
       </Card>
+
+      <Card title="SchoolPay" subtitle="Payments parents made through SchoolPay, from the statement">
+        <div className="row-between">
+          <span className="subtle">Download the statement from the SchoolPay portal and turn it into receipts in one step.</span>
+          <Button icon={<FileSpreadsheet size={15} />} onClick={() => setImporting(true)}>
+            Import SchoolPay statement
+          </Button>
+        </div>
+      </Card>
+      {importing && <SchoolPayImportModal onClose={() => setImporting(false)} onDone={() => setImporting(false)} />}
 
       {last && (
         <Card title="Last receipt" subtitle="Print again if the printer jammed">

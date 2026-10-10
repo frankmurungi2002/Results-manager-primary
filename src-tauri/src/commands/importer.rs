@@ -138,7 +138,7 @@ fn suggest_mapping(headers: &[String]) -> HashMap<String, usize> {
 }
 
 /// Reads a spreadsheet or CSV into plain text rows.
-fn read_rows(path: &Path, sheet: Option<&str>) -> AppResult<(Vec<String>, Vec<Vec<String>>, String)> {
+pub(crate) fn read_rows(path: &Path, sheet: Option<&str>) -> AppResult<(Vec<String>, Vec<Vec<String>>, String)> {
     let extension = path
         .extension()
         .and_then(|e| e.to_str())

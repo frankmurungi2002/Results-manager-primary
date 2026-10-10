@@ -186,6 +186,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | PLE projection | 🔌 | M1 | Useful sales-demo material for P7 classes |
 | Day Book | ✅ | — | Each day's fees received (with cash), attendance, pass-outs, texts, admissions and leavers, staff in and late, worked out from the records, plus the head's note for the day; any range, printed. Optional evening SMS summary to up to three owner numbers, off by default, only on days something happened |
 | Offline only | ✅ | — | One switch (Settings → Internet & updates) that stops every network use and closes waiting texts |
+| SchoolPay statements | ✅ | — | Fees → Import SchoolPay statement: the Excel or CSV statement from the SchoolPay portal, columns guessed from the headings (changeable), each line matched by SchoolPay code, then registration number, then name (confirmed by the bursar); one receipt per transaction ID, so a statement opened twice records nothing twice; SchoolPay codes learned for next time. SchoolPay publishes no API, so the statement is the bridge |
 | Check a document | ✅ | — | QR and code on receipts and report cards (HMAC under a per-school secret); readable by any phone, confirmed in Phantom offline |
 | Subject heatmap | 🔌 | M1 | |
 
