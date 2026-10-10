@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Award,
+  ChartColumnBig,
   Banknote,
   BookOpenCheck,
   BookText,
@@ -70,6 +71,12 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
       },
       { id: "attendance", label: "Attendance", icon: CalendarCheck, show: (can, s) => teaches(s) || can("view_all_classes") },
       { id: "learners", label: "Learners", icon: Users, show: (can, s) => teaches(s) || can("view_all_learners") },
+      {
+        id: "insights",
+        label: "Insights",
+        icon: ChartColumnBig,
+        show: (can, s) => can("view_insights") || s.classIds.length > 0,
+      },
       { id: "requirements", label: "Requirements", icon: ClipboardCheck, show: (can, s) => runsAClass(s) || can("view_all_learners") },
       { id: "passouts", label: "Pass-outs", icon: DoorOpen, show: (can, s) => runsAClass(s) || can("issue_pass_outs") },
       { id: "messages", label: "Messages", icon: MessageSquare },
@@ -124,6 +131,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   daybook: "Day Book",
   requirements: "Requirements",
   registrations: "Registrations: PLE, EMIS and sports",
+  insights: "Insights",
   settings: "Settings",
 };
 
