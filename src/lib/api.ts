@@ -9,6 +9,16 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  LearnerFix,
+  PleCheck,
+  EmisCheck,
+  StaffIds,
+  StagedFile,
+  SportsEvent,
+  SportsEventInput,
+  SportsTeam,
+  LetterInput,
+  CorrectionLetter,
   RequirementInput,
   RequirementItem,
   RequirementSheet,
@@ -709,4 +719,22 @@ export const api = {
     call<void>("record_requirement", { studentId, itemId, quantity, cashPaid }),
   buildRequirementsList: (classId: string, termId: string | null) =>
     call<DocumentEnvelope<RequirementSheet>>("build_requirements_list", { classId, termId }),
+
+  fixLearnerDetails: (studentId: string, fix: LearnerFix) => call<void>("fix_learner_details", { studentId, fix }),
+  pleCheck: (classId: string | null) => call<PleCheck>("ple_check", { classId }),
+  buildPleDocument: (classId: string | null, ids: string[], kind: "slips" | "register", returnBy: string | null) =>
+    call<DocumentEnvelope<PleCheck>>("build_ple_document", { classId, ids, kind, returnBy }),
+  emisCheck: () => call<EmisCheck>("emis_check"),
+  saveStaffIds: (userId: string, ids: StaffIds) => call<void>("save_staff_ids", { userId, ids }),
+  exportEmis: () => call<StagedFile>("export_emis"),
+  listSportsEvents: () => call<SportsEvent[]>("list_sports_events"),
+  saveSportsEvent: (input: SportsEventInput) => call<string>("save_sports_event", { input }),
+  retireSportsEvent: (id: string) => call<void>("retire_sports_event", { id }),
+  setAthletes: (eventId: string, studentIds: string[], discipline: string | null, onTeam: boolean) =>
+    call<number>("set_athletes", { eventId, studentIds, discipline, onTeam }),
+  sportsTeam: (eventId: string) => call<SportsTeam>("sports_team", { eventId }),
+  buildSportsAlbum: (eventId: string) => call<DocumentEnvelope<SportsTeam>>("build_sports_album", { eventId }),
+  exportSportsTeam: (eventId: string) => call<StagedFile[]>("export_sports_team", { eventId }),
+  buildCorrectionLetter: (input: LetterInput) => call<DocumentEnvelope<CorrectionLetter>>("build_correction_letter", { input }),
+  saveExport: (file: string, destination: string) => call<string>("save_export", { file, destination }),
 };

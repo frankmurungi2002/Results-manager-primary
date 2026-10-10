@@ -2028,3 +2028,43 @@
   border-radius: var(--radius-md);
   overflow: hidden;
 }
+
+/* Registrations: what the checker found, serious first in red. */
+.issue-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.issue-list li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.issue-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.issue-list li.is-serious {
+  color: var(--danger);
+}
+
+.issue-list li.is-serious::before {
+  background: var(--danger);
+}
+
+.issue-list li.is-check {
+  color: var(--text-secondary);
+}
+
+.issue-list li.is-check::before {
+  background: var(--warning);
+}

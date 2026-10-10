@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Award,
   Banknote,
   BookOpenCheck,
   BookText,
@@ -91,6 +92,12 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
       { id: "daybook", label: "Day Book", icon: BookText, show: (can) => can("view_finance") || can("view_all_classes") },
       { id: "fees", label: "Fees", icon: Banknote, show: (can) => can("view_finance") || can("manage_fees") },
       { id: "verify", label: "Check a document", icon: ScanLine },
+      {
+        id: "registrations",
+        label: "Registrations",
+        icon: Award,
+        show: (can) => can("view_all_learners") || can("manage_academics") || can("manage_all_classes"),
+      },
       { id: "audit", label: "Activity log", icon: ScrollText, show: (can) => can("view_audit") },
       { id: "settings", label: "Settings", icon: Settings },
     ],
@@ -116,6 +123,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   verify: "Check a document",
   daybook: "Day Book",
   requirements: "Requirements",
+  registrations: "Registrations: PLE, EMIS and sports",
   settings: "Settings",
 };
 

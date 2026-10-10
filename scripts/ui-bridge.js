@@ -8,6 +8,8 @@
   window.__calls = [];
   // A file the next "open file" dialog returns, set by the test.
   window.__nextFile = null;
+  // Where the next "save file" dialog says to write, set by the test.
+  window.__nextSave = null;
   window.__TAURI_INTERNALS__ = {
     transformCallback: (cb) => {
       const id = Math.floor(Math.random() * 1e9);
@@ -17,6 +19,7 @@
     invoke: async (cmd, args) => {
       window.__calls.push(cmd);
       if (cmd === "plugin:dialog|open") return window.__nextFile;
+      if (cmd === "plugin:dialog|save") return window.__nextSave;
       if (cmd.startsWith("plugin:")) return null;
       const response = await fetch(url, { method: "POST", body: JSON.stringify({ cmd, args: args ?? {} }) });
       const out = await response.json();

@@ -20,6 +20,7 @@ import { FeesScreen } from "./screens/FeesScreen";
 import { VerifyScreen } from "./screens/VerifyScreen";
 import { DayBookScreen } from "./screens/DayBookScreen";
 import { RequirementsScreen } from "./screens/RequirementsScreen";
+import { RegistrationsScreen } from "./screens/RegistrationsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SetupWizard } from "./screens/SetupWizard";
 import { StaffScreen } from "./screens/StaffScreen";
@@ -133,6 +134,8 @@ function renderScreen(screen: string) {
       return <DayBookScreen />;
     case "requirements":
       return <RequirementsScreen />;
+    case "registrations":
+      return <RegistrationsScreen />;
     default:
       return <DashboardScreen />;
   }

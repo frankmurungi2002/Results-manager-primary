@@ -55,6 +55,10 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  PleCheck,
+  SportsTeam,
+  CorrectionLetter,
+  LearnerCheck,
   RequirementSheet,
   RecoverySheet,
   StaffMonth,
@@ -2365,6 +2369,212 @@ export function RequirementsSheet({ envelope }: { envelope: DocumentEnvelope<Req
           ))}
         </tbody>
       </table>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Registrations: PLE checking slips and register, sports album, letters
+// ---------------------------------------------------------------------------
+
+function longDate(iso: string | null | undefined): string {
+  if (!iso) return "\u00a0";
+  const d = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function sexWord(g: string | null): string {
+  return g === "M" ? "Male" : g === "F" ? "Female" : "\u00a0";
+}
+
+function Portrait({ learner, className = "rg-photo" }: { learner: LearnerCheck; className?: string }) {
+  return learner.photoDataUrl ? (
+    <img className={className} src={learner.photoDataUrl} alt="" />
+  ) : (
+    <div className={`${className} rg-photo-missing`}>No photo</div>
+  );
+}
+
+function pairs<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/** One slip per candidate, two to a page, for parents to check and sign. */
+export function PleSlipsSheet({ envelope }: { envelope: DocumentEnvelope<PleCheck> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <>
+      {pairs(body.candidates, 2).map((pair, page) => (
+        <Sheet key={page} branding={branding} footer={footer} variant="compact" title={`PLE ${body.examYear}: Check Your Child's Details`} subtitle={body.className}>
+          {pair.map((c) => (
+            <section key={c.studentId} className="rg-slip">
+              <Portrait learner={c} />
+              <div className="rg-slip-body">
+                <table className="rg-facts">
+                  <tbody>
+                    <tr><th>Full name</th><td className="rg-name">{c.fullName}</td></tr>
+                    <tr><th>Sex</th><td>{sexWord(c.gender)}</td></tr>
+                    <tr><th>Date of birth</th><td>{longDate(c.dateOfBirth)}</td></tr>
+                    <tr><th>LIN</th><td className="mono">{c.lin ?? "\u00a0"}</td></tr>
+                  </tbody>
+                </table>
+                <p className="rg-note">
+                  These details will be sent to UNEB exactly as printed and will appear on the PLE certificate. Check every letter
+                  against the birth certificate. If anything is wrong, write the correct details below
+                  {body.returnBy ? <>, sign and return this slip by <strong>{longDate(body.returnBy)}</strong></> : <> and return this slip</>}.
+                </p>
+                <div className="rg-write">Corrections:</div>
+                <div className="rg-signs">
+                  <div><span>Parent / guardian&apos;s name</span></div>
+                  <div><span>Signature</span></div>
+                  <div><span>Date</span></div>
+                </div>
+              </div>
+            </section>
+          ))}
+        </Sheet>
+      ))}
+    </>
+  );
+}
+
+/** The candidates' list for the noticeboard, with photos. */
+export function PleRegisterSheet({ envelope }: { envelope: DocumentEnvelope<PleCheck> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} title={`PLE ${body.examYear} Candidates`} subtitle={`${body.className}  •  ${body.candidates.length} candidates`}>
+      <p className="sr-key">Parents and candidates: check the name, sex, date of birth and photo, and tell the class teacher of any mistake before registration closes.</p>
+      <table className="cl-table rg-register">
+        <thead>
+          <tr>
+            <th className="num">#</th>
+            <th>Photo</th>
+            <th>Full name</th>
+            <th>Sex</th>
+            <th>Date of birth</th>
+            <th>LIN</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.candidates.map((c, i) => (
+            <tr key={c.studentId}>
+              <td className="num">{i + 1}</td>
+              <td><Portrait learner={c} className="rg-thumb" /></td>
+              <td style={{ fontWeight: 600 }}>{c.fullName}</td>
+              <td>{c.gender ?? ""}</td>
+              <td>{longDate(c.dateOfBirth)}</td>
+              <td className="mono">{c.lin ?? ""}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Sheet>
+  );
+}
+
+/** The team as the portal's album will show it, to check before generating. */
+export function SportsAlbumSheet({ envelope }: { envelope: DocumentEnvelope<SportsTeam> }) {
+  const { branding, footer, body } = envelope;
+  const rule = [
+    body.event.sex === "M" ? "Boys" : body.event.sex === "F" ? "Girls" : null,
+    body.event.bornOnOrAfter ? `born on or after ${longDate(body.event.bornOnOrAfter)}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  return (
+    <>
+      {pairs(body.athletes, 12).map((group, page, all) => (
+        <Sheet key={page} branding={branding} footer={footer} title={`${body.event.name}: ${body.event.sport}`} subtitle={`Draft album, to check before registering${rule ? `  •  ${rule}` : ""}`} pageNumber={page + 1} pageCount={all.length}>
+          <div className="rg-album">
+            {group.map((a) => (
+              <div key={a.studentId} className={a.issues.some((i) => i.serious) ? "rg-card is-flagged" : "rg-card"}>
+                <Portrait learner={a} />
+                <div className="rg-card-name">{a.fullName}</div>
+                <div>{sexWord(a.gender)}, {a.age ?? "?"} yrs</div>
+                <div>Born {longDate(a.dateOfBirth)}</div>
+                <div>{a.className}{a.discipline ? `  •  ${a.discipline}` : ""}</div>
+                <div className="mono">LIN {a.lin ?? "—"}</div>
+                {a.issues.filter((i) => i.serious).map((i) => (
+                  <div key={i.message} className="rg-card-flag">{i.message}</div>
+                ))}
+              </div>
+            ))}
+          </div>
+          {page === all.length - 1 && (
+            <div className="rg-certify">
+              <p>I certify that the athletes above are bona fide pupils of this school and that their details are true.</p>
+              <div className="rg-certify-row">
+                <div className="rg-certify-sign">
+                  <SignatureBlock ink={branding.headSignatureDataUrl} name="Headteacher" />
+                </div>
+                <Stamp src={branding.stampDataUrl} />
+              </div>
+            </div>
+          )}
+        </Sheet>
+      ))}
+    </>
+  );
+}
+
+/** A correction to the sports portal, on headed paper, signed and stamped. */
+export function CorrectionLetterSheet({ envelope }: { envelope: DocumentEnvelope<CorrectionLetter> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} title="">
+      <div className="rg-letter">
+        <p className="rg-letter-date">{body.date}</p>
+        <p>
+          {body.addressee.map((line) => (
+            <Fragment key={line}>
+              {line}
+              <br />
+            </Fragment>
+          ))}
+        </p>
+        <p>Dear Sir / Madam,</p>
+        <p className="rg-letter-subject">RE: {body.subject.toUpperCase()}</p>
+        <p>
+          {branding.institutionName} registered athletes for {body.eventName} ({body.sport}). The following details were entered
+          wrongly. We kindly request that they be corrected as shown below.
+        </p>
+        <table className="cl-table">
+          <thead>
+            <tr>
+              <th className="num">#</th>
+              <th>Athlete</th>
+              <th>LIN</th>
+              <th>Detail</th>
+              <th>Shows as</th>
+              <th>Should read</th>
+            </tr>
+          </thead>
+          <tbody>
+            {body.lines.map((l, i) => (
+              <tr key={i}>
+                <td className="num">{i + 1}</td>
+                <td>{l.fullName}<div className="rg-small">{l.className}</div></td>
+                <td className="mono">{l.lin ?? ""}</td>
+                <td>{l.what}</td>
+                <td>{l.wrong}</td>
+                <td style={{ fontWeight: 700 }}>{l.right}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {body.note && <p>{body.note}</p>}
+        <p>We confirm that the corrected details are true, and we are grateful for your assistance.</p>
+        <p>Yours faithfully,</p>
+        <div className="rg-certify-row">
+          <div className="rg-certify-sign">
+            <SignatureBlock ink={branding.headSignatureDataUrl} name={body.headTeacherName || "\u00a0"} />
+            <div className="nr-sign-label">Headteacher</div>
+          </div>
+          <Stamp src={branding.stampDataUrl} />
+        </div>
+      </div>
     </Sheet>
   );
 }

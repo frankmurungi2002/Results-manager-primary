@@ -1990,3 +1990,165 @@ export interface RequirementSheet {
   rows: RequirementRow[];
   complete: number;
 }
+
+// --- Registrations: PLE candidates, EMIS, sports; exports -------------------
+
+export interface Issue {
+  /** name, gender, dob, lin, photo, age, team, nin */
+  field: string;
+  serious: boolean;
+  message: string;
+}
+
+export interface LearnerCheck {
+  studentId: string;
+  regNumber: string;
+  fullName: string;
+  gender: string | null;
+  dateOfBirth: string | null;
+  lin: string | null;
+  specialNeeds: string | null;
+  guardianPhone: string | null;
+  classId: string;
+  className: string;
+  hasPhoto: boolean;
+  age: number | null;
+  issues: Issue[];
+  photoDataUrl: string | null;
+  discipline: string | null;
+}
+
+export interface LearnerFix {
+  fullName: string;
+  gender: string | null;
+  dateOfBirth: string | null;
+  lin: string | null;
+  specialNeeds: string | null;
+}
+
+export interface PleCheck {
+  classId: string;
+  className: string;
+  examYear: number;
+  candidates: LearnerCheck[];
+  ready: number;
+  returnBy: string | null;
+}
+
+export interface StaffCheck {
+  userId: string;
+  fullName: string;
+  office: string | null;
+  gender: string | null;
+  phone: string | null;
+  nin: string | null;
+  tmisNumber: string | null;
+  issues: Issue[];
+}
+
+export interface StaffIds {
+  gender: string | null;
+  nin: string | null;
+  tmisNumber: string | null;
+}
+
+export interface AgeCount {
+  age: number;
+  boys: number;
+  girls: number;
+}
+
+export interface CensusClass {
+  className: string;
+  boys: number;
+  girls: number;
+  unknownSex: number;
+  newBoys: number;
+  newGirls: number;
+  repeatBoys: number;
+  repeatGirls: number;
+  specialNeeds: number;
+  byAge: AgeCount[];
+  unknownAge: number;
+}
+
+export interface EmisCheck {
+  censusDate: string;
+  yearLabel: string;
+  classes: CensusClass[];
+  ages: number[];
+  learnersTotal: number;
+  learnersReady: number;
+  learners: LearnerCheck[];
+  staff: StaffCheck[];
+}
+
+export interface SportsEvent {
+  id: string;
+  name: string;
+  sport: string;
+  termId: string | null;
+  bornOnOrAfter: string | null;
+  /** M, F or any */
+  sex: string;
+  maxAthletes: number | null;
+  athletes: number;
+}
+
+export interface SportsEventInput {
+  id: string | null;
+  name: string;
+  sport: string;
+  bornOnOrAfter: string | null;
+  sex: string;
+  maxAthletes: number | null;
+}
+
+export interface SportsTeam {
+  event: SportsEvent;
+  athletes: LearnerCheck[];
+  ready: number;
+  warnings: string[];
+}
+
+export interface Correction {
+  studentId: string;
+  what: string;
+  wrong: string;
+  right: string;
+}
+
+export interface LetterInput {
+  eventId: string;
+  addressee: string;
+  corrections: Correction[];
+  note: string | null;
+}
+
+export interface CorrectionLine {
+  fullName: string;
+  lin: string | null;
+  className: string;
+  what: string;
+  wrong: string;
+  right: string;
+}
+
+export interface CorrectionLetter {
+  date: string;
+  addressee: string[];
+  subject: string;
+  eventName: string;
+  sport: string;
+  lines: CorrectionLine[];
+  note: string | null;
+  headTeacherName: string;
+}
+
+export interface StagedFile {
+  file: string;
+  suggestedName: string;
+  /** xlsx, csv or folder */
+  kind: string;
+  detail: string;
+}

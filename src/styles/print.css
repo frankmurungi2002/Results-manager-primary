@@ -2515,3 +2515,200 @@
   color: var(--ink-soft);
   font-size: 9pt;
 }
+
+/* ---------------------------------------------------------------------------
+   Registrations: PLE slips and register, sports album, correction letter
+   --------------------------------------------------------------------------- */
+
+.rg-photo {
+  width: 30mm;
+  height: 36mm;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+  flex: none;
+}
+
+.rg-photo-missing {
+  display: grid;
+  place-items: center;
+  font-size: 8pt;
+  color: var(--ink-faint);
+  border-style: dashed;
+}
+
+.rg-thumb {
+  width: 11mm;
+  height: 13mm;
+  object-fit: cover;
+  display: block;
+}
+
+.rg-thumb.rg-photo-missing {
+  font-size: 5.5pt;
+  border: 1px dashed var(--rule);
+  text-align: center;
+}
+
+.rg-register td {
+  vertical-align: middle;
+}
+
+.rg-slip {
+  display: flex;
+  gap: 5mm;
+  padding: 5mm 0;
+  break-inside: avoid;
+}
+
+.rg-slip + .rg-slip {
+  border-top: 1.5px dashed var(--ink-faint);
+  margin-top: 4mm;
+  padding-top: 8mm;
+}
+
+.rg-slip-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5mm;
+}
+
+.rg-facts {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rg-facts th {
+  text-align: left;
+  font-size: 8pt;
+  font-weight: 600;
+  color: var(--ink-faint);
+  width: 30mm;
+  padding: 1.2mm 0;
+}
+
+.rg-facts td {
+  border-bottom: 1px dotted var(--rule);
+  font-size: 10.5pt;
+  padding: 1.2mm 0;
+}
+
+.rg-facts .rg-name {
+  font-weight: 800;
+  font-size: 12pt;
+  letter-spacing: 0.02em;
+}
+
+.rg-note {
+  font-size: 8.5pt;
+  margin: 0;
+}
+
+.rg-write {
+  font-size: 8.5pt;
+  font-weight: 600;
+  min-height: 14mm;
+  border-bottom: 1px dotted var(--rule);
+}
+
+.rg-signs {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 1fr;
+  gap: 5mm;
+}
+
+.rg-signs div {
+  border-bottom: 1px solid var(--ink);
+  height: 9mm;
+  position: relative;
+}
+
+.rg-signs span {
+  position: absolute;
+  bottom: -4mm;
+  font-size: 7pt;
+  color: var(--ink-faint);
+}
+
+.rg-album {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3mm;
+}
+
+.rg-card {
+  border: 1px solid var(--rule);
+  padding: 2mm;
+  font-size: 7.5pt;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  break-inside: avoid;
+}
+
+.rg-card .rg-photo {
+  width: 26mm;
+  height: 31mm;
+  margin-bottom: 1.5mm;
+}
+
+.rg-card.is-flagged {
+  border: 1.5px solid #b42318;
+}
+
+.rg-card-name {
+  font-weight: 800;
+  font-size: 8.5pt;
+}
+
+.rg-card-flag {
+  color: #b42318;
+  font-weight: 600;
+  margin-top: 1mm;
+}
+
+.rg-certify {
+  margin-top: 6mm;
+  break-inside: avoid;
+  font-size: 9pt;
+}
+
+.rg-certify-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10mm;
+  margin-top: 4mm;
+}
+
+.rg-certify-sign {
+  width: 65mm;
+}
+
+.rg-letter {
+  font-size: 10.5pt;
+  line-height: 1.5;
+}
+
+.rg-letter p {
+  margin: 0 0 3.5mm;
+}
+
+.rg-letter-date {
+  text-align: right;
+}
+
+.rg-letter-subject {
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.rg-letter .cl-table {
+  margin-bottom: 4mm;
+}
+
+.rg-small {
+  font-size: 7.5pt;
+  color: var(--ink-faint);
+}

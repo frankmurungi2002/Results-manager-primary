@@ -24,6 +24,7 @@ export type ScreenId =
   | "verify"
   | "daybook"
   | "requirements"
+  | "registrations"
   | "settings";
 
 /**

@@ -121,6 +121,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "requirements",
         sql: M020_REQUIREMENTS,
     },
+    Migration {
+        version: 21,
+        name: "registrations",
+        sql: M021_REGISTRATIONS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1295,5 +1300,43 @@ CREATE TABLE requirement_received (
     updated_by  TEXT REFERENCES users (id),
     updated_at  TEXT NOT NULL,
     PRIMARY KEY (student_id, item_id)
+);
+"#;
+
+// ---------------------------------------------------------------------------
+// 021 — PLE candidates, the EMIS census and school sports (UPSSA)
+// ---------------------------------------------------------------------------
+//
+// The identity numbers the Ministry's systems ask for: the learner's EMIS LIN
+// is already on `students`; staff gain their National ID number (NIN) and
+// TMIS number. A sports championship has an age cut-off ("born on or after")
+// and a team of learners; leaving the team is a status, never a deletion.
+const M021_REGISTRATIONS: &str = r#"
+ALTER TABLE users ADD COLUMN gender TEXT CHECK (gender IS NULL OR gender IN ('M', 'F'));
+ALTER TABLE users ADD COLUMN nin TEXT;
+ALTER TABLE users ADD COLUMN tmis_number TEXT;
+ALTER TABLE students ADD COLUMN special_needs TEXT;
+
+CREATE TABLE sports_events (
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    sport            TEXT NOT NULL,
+    term_id          TEXT REFERENCES terms (id),
+    born_on_or_after TEXT,
+    sex              TEXT NOT NULL DEFAULT 'any' CHECK (sex IN ('M', 'F', 'any')),
+    max_athletes     INTEGER CHECK (max_athletes IS NULL OR max_athletes > 0),
+    status           TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'retired')),
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL
+);
+
+CREATE TABLE sports_athletes (
+    event_id    TEXT NOT NULL REFERENCES sports_events (id),
+    student_id  TEXT NOT NULL REFERENCES students (id),
+    discipline  TEXT,
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'removed')),
+    added_by    TEXT REFERENCES users (id),
+    updated_at  TEXT NOT NULL,
+    PRIMARY KEY (event_id, student_id)
 );
 "#;
