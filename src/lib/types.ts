@@ -1813,3 +1813,58 @@ export interface SmsBalance {
   warnBelow: number;
   textsLeft: number | null;
 }
+
+// ---------------------------------------------------------------------------
+// A new school year
+// ---------------------------------------------------------------------------
+
+export interface PromotionLearner {
+  studentId: string;
+  fullName: string;
+  regNumber: string;
+  average: number | null;
+  action: "promote" | "repeat" | "leave";
+  considerRepeating: boolean;
+}
+
+export interface PromotionClass {
+  classId: string;
+  className: string;
+  nextClassId: string | null;
+  nextClassName: string | null;
+  learners: PromotionLearner[];
+}
+
+export interface PromotionPlan {
+  fromYearId: string;
+  fromYear: string;
+  suggestedLabel: string;
+  resultsTerm: string | null;
+  repeatBelow: number;
+  classes: PromotionClass[];
+}
+
+export interface NewTerm {
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface Decision {
+  studentId: string;
+  action: "promote" | "repeat" | "leave";
+}
+
+export interface NewYearRequest {
+  label: string;
+  terms: NewTerm[];
+  decisions: Decision[];
+}
+
+export interface NewYearResult {
+  yearLabel: string;
+  promoted: number;
+  repeating: number;
+  left: number;
+  firstTerm: string;
+}

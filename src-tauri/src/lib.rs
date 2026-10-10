@@ -110,6 +110,9 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::autosms::send_fee_reminders,
         commands::autosms::preview_results_sms,
         commands::autosms::send_results_sms,
+        // --- A new school year -------------------------------------------
+        commands::newyear::get_promotion_plan,
+        commands::newyear::start_new_year,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,

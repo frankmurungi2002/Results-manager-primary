@@ -136,7 +136,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | --- | --- | --- | --- | --- |
 | FR-E1 | Rank classes by learners gained and lost | ⬜ | M2 | The data exists in `enrollments`; this is a query and a dashboard card |
 | FR-E2 | Append-only audit log | ✅ | — | Enforced by triggers, and sealed by a SHA-256 hash chain so a change made outside the application (rows edited, deleted or inserted with SQLite) is detected and named on the Activity log screen. Printed exports carry a verification code; typed back in later, it proves whether anything up to that entry has been rewritten, even by someone who recomputed every seal. Shown only on its own screen, not the dashboard |
-| FR-E3 | Promotion up the ladder; sealed yearly records; graduates | ⬜ | **M2** | Schema allows `promoted` and `graduated`. Needs: new academic year creation, bulk promote with per-learner exceptions (repeat, leave), sealing the old year, PLE candidate list |
+| FR-E3 | Promotion up the ladder; sealed yearly records; graduates | ✅ | **M2** | Terms & exams → Start a new school year: name it and its terms (exams copied from this year), see every class with each learner's last-term average and a "consider repeating" flag under 40%, change anyone to repeat or leave, then one transaction: old year sealed (only its open term closed, so unopened terms are never billed), learners moved up with their stream where the new class has one, the top class graduated, the first new term opened. Fees owed carry over |
 | FR-E4 | Disaster recovery, three scenarios | 🟡 | M4 (2 and 3) | Scenario 1 works: install on a new PC, then restore from the second drive. Scenarios 2 and 3 depend on FR-W7 and FR-W8 |
 | FR-E5 | Multi-year subject trends | ⬜ | M4 | Needs two or more sealed years to be meaningful |
 | FR-E6 | Multi-year weekly-assignment trends | ⬜ | M4 | Needs FR-C12 |
@@ -231,7 +231,7 @@ or consciously rejected.
 | --- | --- | --- | --- |
 | X1 | **Restore from backup** in the interface, with a preview of what the backup contains and its date | The SRS specifies backing up but never restoring | ✅ Done in M0 |
 | X2 | **Admin locked out**: recovery when the only School Admin forgets their password | A second admin can reset (FR-B4), but a school with one admin has no path. Options: a recovery code printed at setup, or support-issued reset tied to the activation key | M1 |
-| X3 | **Start a new academic year** (years, terms, exams created from the previous year's pattern) | FR-B3 covers the first year; nothing covers the second | M2, with FR-E3 |
+| X3 | **Start a new academic year** (years, terms, exams created from the previous year's pattern) | ✅ Done with FR-E3 | M2, with FR-E3 |
 | X4 | **Save as PDF** for every document, not only paper | Schools email and WhatsApp report cards | M1 |
 | X5 | **Printer and paper handling**: A4 vs A5 report cards, margins, one learner per page | Report cards are the product; print layout problems appear on real printers only | M1 |
 | X6 | **Seeded demo data** for sales demos and performance tests | SRS 14.6 says the 30-minute demo decides the sale | M1 |

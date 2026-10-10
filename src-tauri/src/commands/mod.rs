@@ -9,6 +9,7 @@ pub mod importer;
 pub mod insights;
 pub mod marks;
 pub mod messages;
+pub mod newyear;
 pub mod passouts;
 pub mod reports;
 pub mod setup;

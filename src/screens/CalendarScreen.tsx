@@ -1,11 +1,12 @@
 /** FR-B3 — the academic calendar: years, terms and the examinations in each. */
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, LockKeyhole, Unlock } from "lucide-react";
+import { CalendarDays, GraduationCap, LockKeyhole, Unlock } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { AcademicYearRow } from "../lib/types";
 import { useStore } from "../state/store";
+import { NewYearModal } from "../components/NewYear";
 import {
   Alert,
   Badge,
@@ -23,6 +24,7 @@ export function CalendarScreen() {
   const [years, setYears] = useState<AcademicYearRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyTerm, setBusyTerm] = useState<string | null>(null);
+  const [newYear, setNewYear] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -57,7 +59,19 @@ export function CalendarScreen() {
               about where a mark is being filed.
             </p>
           </div>
+          <Button icon={<GraduationCap size={15} />} onClick={() => setNewYear(true)}>
+            Start a new school year
+          </Button>
         </div>
+        {newYear && (
+          <NewYearModal
+            onClose={() => setNewYear(false)}
+            onDone={() => {
+              setNewYear(false);
+              void reload();
+            }}
+          />
+        )}
 
         {years.length === 0 ? (
           <Card>

@@ -428,6 +428,14 @@ pub fn build_report_cards(
     envelope(&conn, "report_card", batch)
 }
 
+/// Each learner's mean percentage for a term, for the promotion screen.
+/// Report cards held back for fees still count here: promotion is about
+/// learning, not money.
+pub fn term_averages(conn: &Connection, class_id: &str, term_id: &str) -> AppResult<HashMap<String, Option<f64>>> {
+    let batch = compute_report_cards(conn, class_id, term_id, &[], true)?;
+    Ok(batch.cards.into_iter().map(|c| (c.student_id, c.mean_percentage)).collect())
+}
+
 /// "Division 1" whether the grading system calls it "Division 1" or "1".
 fn division_words(division: &str) -> String {
     if division.to_lowercase().starts_with("div") || division.chars().all(|c| !c.is_ascii_digit()) {

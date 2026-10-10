@@ -9,6 +9,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  NewYearRequest,
+  NewYearResult,
+  PromotionPlan,
   SmsBalance,
   AutoSmsSettings,
   TextPlan,
@@ -668,4 +671,7 @@ export const api = {
 
   getSmsBalance: () => call<SmsBalance>("get_sms_balance"),
   checkSmsBalance: () => call<SmsBalance>("check_sms_balance"),
+
+  getPromotionPlan: (repeatBelow: number) => call<PromotionPlan>("get_promotion_plan", { repeatBelow }),
+  startNewYear: (request: NewYearRequest) => call<NewYearResult>("start_new_year", { request }),
 };
