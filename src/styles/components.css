@@ -2264,3 +2264,43 @@
   background: var(--accent, #2e7d4f);
   border-radius: 3px;
 }
+
+/* The practice school: said on every screen, and on the sign-in screen. */
+.practice-banner {
+  margin: 0 var(--space-6, 24px);
+  margin-top: var(--space-3, 12px);
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+  font-size: 13.5px;
+}
+
+.practice-hint {
+  max-width: 320px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.practice-logins {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+}
+
+.practice-logins li {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+}

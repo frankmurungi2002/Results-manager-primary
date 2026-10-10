@@ -39,6 +39,7 @@ import { PrintPreview, RecoverySheetDocument } from "../components/PrintDocument
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import { SubscriptionSettings } from "../components/Subscription";
 import { SupportCard } from "../components/SupportCard";
+import { StartRealSchoolCard } from "../components/StartRealSchool";
 import {
   Alert,
   Badge,
@@ -118,6 +119,7 @@ export function SettingsScreen() {
           ))}
         </div>
 
+        {tab === "school" && allowed("school") && <StartRealSchoolCard />}
         {tab === "school" && allowed("school") && <SchoolTab />}
         {tab === "features" && allowed("features") && <FeaturesTab />}
         {tab === "sms" && allowed("sms") && (

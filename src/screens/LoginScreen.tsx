@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { ApiError, api } from "../lib/api";
 import { useStore } from "../state/store";
 import { APP_NAME, BrandMark } from "../components/Logo";
+import { PRACTICE_LOGINS, PRACTICE_PASSWORD } from "../lib/practice";
 import { LoginShowcase } from "../components/LoginShowcase";
 import { StaffStation } from "../components/StaffStation";
 import { Alert, Button } from "../components/ui";
@@ -23,6 +24,10 @@ export function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"password" | "station" | "recover" | "invite">("password");
   const [stationOn, setStationOn] = useState(false);
+  const [practice, setPractice] = useState(false);
+  useEffect(() => {
+    api.practiceStatus().then((p) => setPractice(p.practice)).catch(() => undefined);
+  }, []);
 
   // The sign-in station is offered only once the school has switched it on.
   useEffect(() => {
@@ -158,6 +163,13 @@ export function LoginScreen() {
               </form>
               )}
             </div>
+
+            {practice && tab === "password" && (
+              <div className="practice-hint">
+                <strong>Practice school.</strong> Sign in as {PRACTICE_LOGINS.map((l) => l.username).join(", ")}; every password is{" "}
+                <span className="mono">{PRACTICE_PASSWORD}</span>.
+              </div>
+            )}
 
             <p className="login-after" style={{ visibility: tab === "invite" ? "hidden" : undefined }}>
               New staff?{" "}

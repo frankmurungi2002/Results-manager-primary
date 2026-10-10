@@ -59,6 +59,8 @@ interface AppStore {
   features: FeatureFlags;
   /** The school chose to use no internet at all: hide what needs it. */
   offlineOnly: boolean;
+  /** The made-up practice school, not a real one. */
+  practice: boolean;
   setOfflineOnly: (on: boolean) => void;
 
   // --- Navigation ---------------------------------------------------------
@@ -104,6 +106,7 @@ export const useStore = create<AppStore>((set, get) => ({
   institution: null,
   features: NO_FEATURES,
   offlineOnly: false,
+  practice: false,
 
   screen: "dashboard",
   screenParams: {},
@@ -199,12 +202,13 @@ export const useStore = create<AppStore>((set, get) => ({
 
   async refreshInstitution() {
     try {
-      const [institution, features, connectivity] = await Promise.all([
+      const [institution, features, connectivity, practice] = await Promise.all([
         api.getInstitution(),
         api.getFeatures(),
         api.getConnectivity(),
+        api.practiceStatus().catch(() => ({ practice: false })),
       ]);
-      set({ institution, features, offlineOnly: connectivity.offlineOnly });
+      set({ institution, features, offlineOnly: connectivity.offlineOnly, practice: practice.practice });
       applyAccent(institution.accentColor);
     } catch {
       // A teacher signing in before setup finishes is not an error worth

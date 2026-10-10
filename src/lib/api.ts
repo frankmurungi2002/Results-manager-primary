@@ -767,4 +767,7 @@ export const api = {
   withdrawConduct: (id: string, reason: string) => call<void>("withdraw_conduct", { id, reason }),
   conductLog: (classId: string | null, studentId: string | null) => call<ConductLog>("conduct_log", { classId, studentId }),
   saveSupportLog: () => call<StagedFile>("save_support_log"),
+  beginPracticeSchool: () => call<void>("begin_practice_school"),
+  practiceStatus: () => call<{ practice: boolean }>("practice_status"),
+  startRealSchool: (confirm: string) => call<void>("start_real_school", { confirm }),
 };

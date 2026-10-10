@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { PRACTICE_LOGINS, PRACTICE_PASSWORD, buildPracticeSchool } from "../lib/practice";
 import { ArrowLeft, ArrowRight, Check, PartyPopper } from "lucide-react";
 
 import { ApiError, api } from "../lib/api";
@@ -17,6 +18,7 @@ import { useStore } from "../state/store";
 import {
   Alert,
   Button,
+  Progress,
   Card,
   Loading,
   SelectInput,
@@ -44,6 +46,7 @@ export function SetupWizard() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ username: string } | null>(null);
+  const [practice, setPractice] = useState<{ step: string; done: number; total: number; finished: boolean; error: string | null } | null>(null);
 
   // --- Step 1: the school ---
   const [institutionName, setInstitutionName] = useState("");
@@ -108,6 +111,44 @@ export function SetupWizard() {
     return (
       <div className="auth-panel">
         <Loading label="Preparing setup" />
+      </div>
+    );
+  }
+
+  if (practice) {
+    return (
+      <div className="auth-panel">
+        <div className="auth-form">
+          <h2 className="auth-title">{practice.finished ? "The practice school is ready" : "Building the practice school"}</h2>
+          {practice.error ? (
+            <Alert tone="danger" title="It stopped part way">
+              {practice.error} Sign in as admin, then Settings → Start my real school clears it and starts again.
+            </Alert>
+          ) : practice.finished ? (
+            <>
+              <p className="auth-note">
+                Every account below uses the password <strong className="mono">{PRACTICE_PASSWORD}</strong>. Nothing here is real, and it
+                stays offline so no text is ever sent. When you are ready, Settings → School → Start my real school clears it.
+              </p>
+              <ul className="practice-logins">
+                {PRACTICE_LOGINS.map((l) => (
+                  <li key={l.username}>
+                    <strong className="mono">{l.username}</strong>
+                    <span>{l.who}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button variant="primary" size="lg" block onClick={() => { markProvisioned(); window.location.reload(); }}>
+                Go to sign in
+              </Button>
+            </>
+          ) : (
+            <>
+              <Progress value={practice.done} max={practice.total} />
+              <p className="auth-note">{practice.step}… This takes about a minute.</p>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -249,6 +290,31 @@ export function SetupWizard() {
         </div>
 
         {error && <Alert tone="danger">{error}</Alert>}
+
+        {step === 0 && (
+          <Alert tone="info" title="Just looking, or training staff first?">
+            <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
+              <span>
+                Open a practice school instead: a made-up school with learners, marks, fees and staff to try everything on. Clear it later
+                and set up your real school.
+              </span>
+              <Button
+                onClick={() => {
+                  setPractice({ step: "Starting", done: 0, total: 9, finished: false, error: null });
+                  buildPracticeSchool((stepName, doneSteps, total) =>
+                    setPractice({ step: stepName, done: doneSteps, total, finished: false, error: null }),
+                  )
+                    .then(() => setPractice({ step: "", done: 9, total: 9, finished: true, error: null }))
+                    .catch((e: unknown) =>
+                      setPractice({ step: "", done: 0, total: 9, finished: false, error: e instanceof Error ? e.message : (e as { message?: string })?.message ?? String(e) }),
+                    );
+                }}
+              >
+                Open a practice school
+              </Button>
+            </div>
+          </Alert>
+        )}
 
         {step === 0 && (
           <Card

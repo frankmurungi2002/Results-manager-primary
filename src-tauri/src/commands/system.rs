@@ -473,6 +473,11 @@ pub fn set_offline_only(
 /// the internet back on: weeks-old pass-out and fees texts, which tell
 /// parents things that are no longer true.
 pub fn set_offline_only_in(conn: &Connection, session: &Session, on: bool) -> AppResult<usize> {
+    if !on && crate::commands::practice::is_practice(conn)? {
+        return Err(AppError::validation(
+            "This is the practice school: it stays offline so no text reaches its made-up parents. Start your real school to use the internet.",
+        ));
+    }
     crate::network::set_offline_only(conn, on)?;
     let closed = if on {
         conn.execute(

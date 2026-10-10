@@ -2316,3 +2316,7 @@ export interface ConductLog {
   commendations: string[];
   actions: string[];
 }
+
+export interface PracticeStatus {
+  practice: boolean;
+}

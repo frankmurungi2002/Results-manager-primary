@@ -160,6 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const signOut = useStore((state) => state.signOut);
   const theme = useStore((state) => state.theme);
   const setTheme = useStore((state) => state.setTheme);
+  const practice = useStore((state) => state.practice);
   const appVersion = useStore((state) => state.appVersion);
 
   const [logo, setLogo] = useState<string | null>(null);
@@ -334,6 +335,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <LicenceBanner status={licence} />
+        {practice && (
+          <div className="practice-banner no-print">
+            <strong>Practice school.</strong> Nothing here is real and no text is sent. When you are ready, a School Admin clears it under
+            Settings → School → Start my real school.
+          </div>
+        )}
         {children}
       </div>
       </div>
