@@ -2,13 +2,13 @@
 //!
 //! A forged report card (a better division, a higher position) or a forged
 //! fees receipt (a bigger amount) is a real problem for Ugandan schools: the
-//! paper looks right and nobody can tell. Each document Phantom prints now
+//! paper looks right and nobody can tell. Each document Termbook prints now
 //! carries a short code, and a QR code that holds the facts and that code.
 //!
 //! * Anyone can scan the QR with an ordinary phone camera and see what the
 //!   school actually recorded. If the paper says UGX 700,000 and the QR says
 //!   UGX 70,000, the paper was altered.
-//! * At the school, "Check a document" in Phantom confirms the code. The code
+//! * At the school, "Check a document" in Termbook confirms the code. The code
 //!   is an HMAC of the facts under a secret that never leaves this computer,
 //!   so nobody can make up a code for facts the school never printed. It
 //!   works with no internet.
@@ -250,10 +250,11 @@ pub fn check_text(conn: &Connection, text: &str) -> AppResult<DocumentCheck> {
     let text = text
         .lines()
         .map(str::trim)
-        .find(|line| line.starts_with("PSM|"))
+        .find(|line| line.starts_with("TBK|") || line.starts_with("PSM|"))
         .unwrap_or(text.trim());
-    // QR text: "PSM|R|<receipt_no>|<code>" or "PSM|C|<reg>|<term_id>|<facts...>|<code>".
-    if let Some(rest) = text.strip_prefix("PSM|") {
+    // QR text: "TBK|R|<receipt_no>|<code>" or "TBK|C|<reg>|<term_id>|<facts...>|<code>".
+    // "PSM|" is what copies printed before the rename to Termbook carry.
+    if let Some(rest) = text.strip_prefix("TBK|").or_else(|| text.strip_prefix("PSM|")) {
         let parts: Vec<&str> = rest.split('|').collect();
         return match parts.first() {
             Some(&"R") if parts.len() == 3 => {
@@ -267,19 +268,19 @@ pub fn check_text(conn: &Connection, text: &str) -> AppResult<DocumentCheck> {
                 let term = parts.get(3).copied().unwrap_or("");
                 check_report_card(conn, reg, term, typed, &facts)
             }
-            _ => Err(AppError::validation("That QR is not a Phantom document.")),
+            _ => Err(AppError::validation("That QR is not a Termbook document.")),
         };
     }
     Err(AppError::validation("Scan the QR code, or enter the receipt number and the code printed beside it."))
 }
 
 /// The text a document's QR code holds: readable on any phone, and checkable
-/// in Phantom.
+/// in Termbook.
 ///
-/// A phone camera shows the readable lines; Phantom reads the last one.
+/// A phone camera shows the readable lines; Termbook reads the last one.
 pub fn receipt_qr(school: &str, payment: &crate::commands::fees::PaymentRow, verification_code: &str) -> String {
     format!(
-        "{school}\nReceipt {} of {}\n{}\n{} by {}\nCode {verification_code}\nPSM|R|{}|{verification_code}",
+        "{school}\nReceipt {} of {}\n{}\n{} by {}\nCode {verification_code}\nTBK|R|{}|{verification_code}",
         payment.receipt_label,
         payment.paid_on,
         payment.student_name,
@@ -291,7 +292,7 @@ pub fn receipt_qr(school: &str, payment: &crate::commands::fees::PaymentRow, ver
 
 /// `summary` is what the card says, in words: "Term 3 2026: Aggregate 14, Division II, position 9 of 42".
 pub fn report_card_qr(school: &str, name: &str, summary: &str, reg_number: &str, facts: &str, verification_code: &str) -> String {
-    format!("{school}\n{name} ({reg_number})\n{summary}\nCode {verification_code}\nPSM|C|{reg_number}|{facts}|{verification_code}")
+    format!("{school}\n{name} ({reg_number})\n{summary}\nCode {verification_code}\nTBK|C|{reg_number}|{facts}|{verification_code}")
 }
 
 /// A QR code as an SVG data URL, drawn in Rust so the page needs no library
@@ -408,7 +409,7 @@ mod tests {
 
     #[test]
     fn a_qr_is_an_svg_data_url() {
-        let url = qr_data_url("PSM|R|4|R-0000-0000-0000").unwrap();
+        let url = qr_data_url("TBK|R|4|R-0000-0000-0000").unwrap();
         assert!(url.starts_with("data:image/svg+xml;base64,"));
     }
 

@@ -1,4 +1,4 @@
-//! Texts to parents that Phantom can send by itself, each switched on by the
+//! Texts to parents that Termbook can send by itself, each switched on by the
 //! school or not at all.
 //!
 //! | Switch          | When                                                | Off by default |

@@ -73,7 +73,7 @@ pub fn adjustment_label(kind: &str) -> &'static str {
         "waiver" => "Waiver",
         "charge" => "Extra charge",
         "balance_forward" => "Balance brought forward",
-        "prepayment" => "Paid before Phantom",
+        "prepayment" => "Paid before Termbook",
         _ => "Adjustment",
     }
 }
@@ -314,7 +314,7 @@ impl Ledger {
                 };
                 let signed = if adjustment.is_reduction() || adjustment.kind == "prepayment" {
                     // A bursary or discount never takes a bill below nothing;
-                    // money paid before Phantom is a credit and may.
+                    // money paid before Termbook is a credit and may.
                     let value = if adjustment.is_reduction() {
                         value.min((items_total - reductions).max(0))
                     } else {

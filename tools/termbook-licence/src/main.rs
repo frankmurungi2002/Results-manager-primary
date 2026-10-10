@@ -1,15 +1,15 @@
-//! The owner's tool for Phantom School Manager licence keys.
+//! The owner's tool for Termbook licence keys.
 //!
 //! ```text
-//! phantom-licence keygen                 make your signing key (once, ever)
-//! phantom-licence issue  --school CODE --name "School" --plan term --from 2026-09-01 [--until 2026-12-12] [--id R-0001]
-//! phantom-licence inspect PSM1....        read a key and check it
+//! termbook-licence keygen                 make your signing key (once, ever)
+//! termbook-licence issue  --school CODE --name "School" --plan term --from 2026-09-01 [--until 2026-12-12] [--id R-0001]
+//! termbook-licence inspect TBK1....        read a key and check it
 //! ```
 //!
-//! The signing key (`phantom-issuer.key`) is the only thing that can make a
-//! key a school's copy of Phantom will accept. Keep it off any school
+//! The signing key (`termbook-issuer.key`) is the only thing that can make a
+//! key a school's copy of Termbook will accept. Keep it off any school
 //! computer, back it up somewhere safe and offline, and never send it to
-//! anyone. Lose it and every school needs a new copy of Phantom with a new
+//! anyone. Lose it and every school needs a new copy of Termbook with a new
 //! public key; leak it and anyone can issue keys.
 
 #[allow(dead_code)]
@@ -24,7 +24,7 @@ use chrono::{Duration, Local, NaiveDate};
 use ed25519_dalek::{Signer, SigningKey};
 use licence_format::{decode, encode, Claims};
 
-const KEY_FILE: &str = "phantom-issuer.key";
+const KEY_FILE: &str = "termbook-issuer.key";
 const REGISTER: &str = "issued-keys.csv";
 /// FR-W2: a term is about 120 days, a year 365.
 const TERM_DAYS: i64 = 120;
@@ -45,9 +45,9 @@ fn main() {
 }
 
 const USAGE: &str = "Usage:
-  phantom-licence keygen [--key FILE]
-  phantom-licence issue --school CODE --name NAME --plan term|year --from YYYY-MM-DD [--until YYYY-MM-DD] [--id REF] [--key FILE]
-  phantom-licence inspect KEY [--key FILE]";
+  termbook-licence keygen [--key FILE]
+  termbook-licence issue --school CODE --name NAME --plan term|year --from YYYY-MM-DD [--until YYYY-MM-DD] [--id REF] [--key FILE]
+  termbook-licence inspect KEY [--key FILE]";
 
 fn flag(args: &[String], name: &str) -> Option<String> {
     args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).cloned()
@@ -63,7 +63,7 @@ fn hex(bytes: &[u8]) -> String {
 
 fn load(path: &PathBuf) -> Result<SigningKey, String> {
     let text = fs::read_to_string(path)
-        .map_err(|_| format!("No signing key at {}. Run `phantom-licence keygen` first.", path.display()))?;
+        .map_err(|_| format!("No signing key at {}. Run `termbook-licence keygen` first.", path.display()))?;
     let bytes: Vec<u8> = (0..64)
         .step_by(2)
         .filter_map(|i| u8::from_str_radix(text.trim().get(i..i + 2)?, 16).ok())

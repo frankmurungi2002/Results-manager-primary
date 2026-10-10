@@ -1,9 +1,9 @@
 # Automatic updates
 
-Every installed copy of Phantom checks once a day (only when the school
+Every installed copy of Termbook checks once a day (only when the school
 allows the internet) for a newer signed release on this repository's GitHub
 releases. When one exists, the School Admin sees it on the dashboard and in
-Settings → Internet & updates, and presses **Install**: Phantom takes a
+Settings → Internet & updates, and presses **Install**: Termbook takes a
 backup, downloads the installer, checks its signature, installs it and
 restarts. Nothing is ever installed without a valid signature, and a school
 is never restarted without someone pressing Install.
@@ -12,7 +12,7 @@ is never restarted without someone pressing Install.
 
 1. Make the updater key pair on your own computer:
 
-       npx tauri signer generate -w %USERPROFILE%\.phantom\updater.key
+       npx tauri signer generate -w %USERPROFILE%\.termbook\updater.key
 
    Choose a password. Keep `updater.key` and its password like the licence
    key: never in the repository, backed up somewhere safe. Lose it and

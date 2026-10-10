@@ -401,7 +401,7 @@ export function StaffScreen() {
       <Modal
         open={credentials !== null}
         title="Write this down now"
-        description="Phantom School Manager shows an initial password once and stores only a hash of it. There is no way to see it again."
+        description="Termbook shows an initial password once and stores only a hash of it. There is no way to see it again."
         onClose={() => setCredentials(null)}
         footer={
           <>
@@ -627,7 +627,7 @@ function AddStaffModal({
     <Modal
       open={open}
       title="Add a staff member"
-      description="Phantom School Manager generates a password for them; you hand it over and they change it at first sign-in."
+      description="Termbook generates a password for them; you hand it over and they change it at first sign-in."
       onClose={onClose}
       footer={
         <>

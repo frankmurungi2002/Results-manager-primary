@@ -106,7 +106,7 @@ export function DashboardScreen() {
         <YourDesk session={session} summary={summary} onGo={(screen, params) => navigate(screen, params)} />
 
         {update && can("manage_school") && (
-          <Alert tone="info" title={`Phantom ${update} is ready to install`}>
+          <Alert tone="info" title={`Termbook ${update} is ready to install`}>
             <Button size="sm" onClick={() => navigate("settings", { tab: "internet" })}>
               Open Settings → Internet &amp; updates
             </Button>

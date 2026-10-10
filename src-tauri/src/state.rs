@@ -1,6 +1,6 @@
 //! Process-wide state: the database handle, the session, and where files live.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::db::Database;
@@ -41,7 +41,7 @@ impl AppState {
 
 #[derive(Debug, Clone)]
 pub struct AppPaths {
-    /// Everything Phantom School Manager owns on this machine.
+    /// Everything Termbook owns on this machine.
     pub data_dir: PathBuf,
     /// The live database.
     pub db_file: PathBuf,
@@ -49,6 +49,35 @@ pub struct AppPaths {
     pub backup_dir: PathBuf,
     /// Where exports land before the user picks a destination.
     pub export_dir: PathBuf,
+}
+
+/// The data folder's name before the product became Termbook. The folder is
+/// named after the app's identifier, so the rename gave it a new one.
+const OLD_DATA_FOLDER: &str = "ug.resultsmanager.desktop";
+
+/// Brings a school's data across from the folder used before the rename, the
+/// first time Termbook starts. Moves the whole folder (database, backups,
+/// exports) when Termbook has no database of its own yet; never overwrites
+/// one. Returns whether anything was moved.
+pub fn adopt_previous_folder(data_dir: &Path) -> std::io::Result<bool> {
+    let Some(parent) = data_dir.parent() else { return Ok(false) };
+    let old = parent.join(OLD_DATA_FOLDER);
+    if data_dir.join("school.rmdb").exists() || !old.join("school.rmdb").exists() {
+        return Ok(false);
+    }
+    if !data_dir.exists() {
+        std::fs::rename(&old, data_dir)?;
+        return Ok(true);
+    }
+    // The new folder exists but holds no database: move the contents in.
+    for entry in std::fs::read_dir(&old)? {
+        let entry = entry?;
+        let target = data_dir.join(entry.file_name());
+        if !target.exists() {
+            std::fs::rename(entry.path(), target)?;
+        }
+    }
+    Ok(true)
 }
 
 impl AppPaths {
@@ -69,5 +98,33 @@ impl AppPaths {
             .map_err(|e| AppError::internal(format!("could not create the export folder: {e}")))?;
 
         Ok(paths)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn data_from_before_the_rename_is_carried_across_once() {
+        let root = std::env::temp_dir().join(format!("tb-adopt-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let old = root.join(OLD_DATA_FOLDER);
+        std::fs::create_dir_all(old.join("backups")).unwrap();
+        std::fs::write(old.join("school.rmdb"), b"school").unwrap();
+        std::fs::write(old.join("backups").join("a.rmdb"), b"snap").unwrap();
+        let new = root.join("ug.co.termbook");
+
+        assert!(adopt_previous_folder(&new).unwrap());
+        assert_eq!(std::fs::read(new.join("school.rmdb")).unwrap(), b"school");
+        assert!(new.join("backups").join("a.rmdb").exists());
+        assert!(!adopt_previous_folder(&new).unwrap(), "only once");
+
+        // Never over a database Termbook already has.
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("school.rmdb"), b"older").unwrap();
+        assert!(!adopt_previous_folder(&new).unwrap());
+        assert_eq!(std::fs::read(new.join("school.rmdb")).unwrap(), b"school");
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

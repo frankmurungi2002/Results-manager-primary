@@ -1,6 +1,6 @@
 //! FR-G8 — SMS to guardians, through a local outbox.
 //!
-//! Phantom School Manager is offline-first, so a message is never sent in the moment it is
+//! Termbook is offline-first, so a message is never sent in the moment it is
 //! written. It is written to `sms_outbox` first, in the same transaction as
 //! whatever caused it (a pass-out, a return), and a background sender drains
 //! the outbox whenever the school has internet. A message written with no
@@ -506,8 +506,8 @@ pub fn wake() {
     }
 }
 
-/// Sends the outbox every couple of minutes for as long as Phantom School
-/// Manager is open, and at once whenever [`wake`] is called. Runs on its own
+/// Sends the outbox every couple of minutes for as long as Termbook is
+/// open, and at once whenever [`wake`] is called. Runs on its own
 /// thread, so a screen never waits on the network.
 pub fn spawn_scheduler(app: AppHandle) {
     let spawned = std::thread::Builder::new()

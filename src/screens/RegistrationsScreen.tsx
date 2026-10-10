@@ -872,7 +872,7 @@ function LetterModal({ team, onClose, onPrint }: { team: SportsTeam; onClose: ()
       rs.map((r, n) => {
         if (n !== i) return r;
         const next = { ...r, ...patch };
-        // The right value defaults to what Phantom has now (already fixed here).
+        // The right value defaults to what Termbook has now (already fixed here).
         if (patch.studentId !== undefined || patch.what !== undefined) next.right = current(next);
         return next;
       }),
@@ -883,7 +883,7 @@ function LetterModal({ team, onClose, onPrint }: { team: SportsTeam; onClose: ()
       open
       wide
       title="Correction letter"
-      description="For details that were wrong on the portal or the album. Fix the learner here first: the correct value is filled in from Phantom."
+      description="For details that were wrong on the portal or the album. Fix the learner here first: the correct value is filled in from Termbook."
       onClose={onClose}
       footer={
         <>

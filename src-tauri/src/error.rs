@@ -92,7 +92,7 @@ impl AppError {
                 format!("That spreadsheet could not be read: {detail}")
             }
             AppError::Database(e) if crate::licence::is_read_only_refusal(e) => {
-                "The subscription has ended, so Phantom is read-only: you can view, print and back up \
+                "The subscription has ended, so Termbook is read-only: you can view, print and back up \
                  everything, but not add or change anything. Enter a renewal key in Settings → Subscription."
                     .to_string()
             }

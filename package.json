@@ -1,9 +1,9 @@
 {
-  "name": "results-manager",
+  "name": "termbook",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
-  "description": "Phantom School Manager — offline-first school management for Ugandan nursery and primary schools",
+  "description": "Termbook — offline-first school management for Ugandan nursery and primary schools",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

@@ -1,6 +1,6 @@
 # Roadmap
 
-The complete requirement register for Phantom School Manager, with every requirement's
+The complete requirement register for Termbook, with every requirement's
 current state in this repository and the milestone it belongs to.
 
 - The **source of truth for what a requirement means** is [`SRS.md`](SRS.md).
@@ -99,7 +99,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-B8 | Fees-block rule at print time | ✅ (manual flag) | M2 reads from the Fees Ledger | |
 | FR-B9 | Light, dark and match-Windows themes | ✅ | — | |
 | FR-B10 | Backup status; cloud controls marked "coming soon" | ✅ | — | |
-| FR-B11 | Subscription tracker, 7-day grace, then read-only mode | ✅ | **M2** | Ed25519-signed keys, verified offline and bound to the school's code; termly (120 days) or yearly (365); 30-day trial; 7 days' grace then read-only, enforced by an SQLite authorizer; clock rollback ignored. The owner issues keys with `tools/phantom-licence`. Off until the owner's public key is compiled in; see [`LICENSING.md`](LICENSING.md) |
+| FR-B11 | Subscription tracker, 7-day grace, then read-only mode | ✅ | **M2** | Ed25519-signed keys, verified offline and bound to the school's code; termly (120 days) or yearly (365); 30-day trial; 7 days' grace then read-only, enforced by an SQLite authorizer; clock rollback ignored. The owner issues keys with `tools/termbook-licence`. Off until the owner's public key is compiled in; see [`LICENSING.md`](LICENSING.md) |
 | FR-B12 | Backup to a second drive | ✅ simplified | M3 (full mirror) | Scheduled snapshots and restore done in M0. The full checksummed dual-SSD mirror (SRS 13) is M3 |
 | FR-B13 | Software update channel with rollback | ⏸ | M3 | Manual, support-assisted reinstall until then. Tauri's updater plugin is the natural route |
 | FR-B14 | In-app feedback | ⬜ | M2 (email/WhatsApp link), M3 (queued form + screenshot) | |
@@ -158,7 +158,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G1 | Document generator: Custom Builder / Template Upload, letters, certificates | ⬜ | M2 (Custom Builder), M3 (Template Upload + letters + certificates) | Moved out of the pilot (decided 2026-09-27): M1 ships one fixed, well-designed report card instead. Must reuse `DocumentEnvelope`; the report card becomes one template of this engine |
 | FR-G2 | Visitor log and visitation slip | ✅ | M2 | Visitors screen: signed in with a numbered slip (VS-) to carry, the learner a parent came to see, who is still on the compound whatever day they came, signed out at the gate; the day's book prints; visitors count in the Day Book |
 | FR-G3 | School overview dashboard | 🟡 | M4 | `dashboard_summary` exists; the full version waits for attendance, fees and staff data |
-| FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | 🟡 | M3 | Attendance done: staff sign in and out at the office computer with a PIN from the sign-in screen (no Phantom sign-in, names only); late after the school's start time; the office records someone with a reason; day view, month view and a printed monthly register. Leave and contracts remain |
+| FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | 🟡 | M3 | Attendance done: staff sign in and out at the office computer with a PIN from the sign-in screen (no Termbook sign-in, names only); late after the school's start time; the office records someone with a reason; day view, month view and a printed monthly register. Leave and contracts remain |
 | FR-G5 | Fees ledger; drives the fees block automatically | ✅ | **M2** | Fees screen: fee structure per class per term (every learner, or optional items such as lunch and transport with sign-ups), copy a term's fees; bursaries, discounts and waivers (amount or %), extra charges and opening balances; payments with numbered two-copy receipts (amount in words, balance after, QR proof) that the database refuses to change or delete, one receipt per Mobile Money/bank reference, voiding only by the head or School Admin and never one's own; balances carried term to term; promises to pay; invoices, statements, who-owes list and collections for banking; optional receipt SMS; balance and next term's fees on report cards; automatic fees block above a limit |
 | FR-G6 | Timetable | ✅ | M3 | School day (bell times, 5 or 6 days); class and stream grids edited cell by cell or auto-filled from lessons per week; a teacher is never double-booked; teacher timetables; print one class, one teacher, every class or every teacher |
 | FR-G7 | Shared exams and academic calendar | 🟡 | M3 | Exam timetable done: papers by date, time, classes, venue and invigilator, clash-checked, generated in one step, printed for the school or one class; the first paper dates the exam and permits show each paper's time. Holidays and school events are not built |
@@ -187,7 +187,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | Day Book | ✅ | — | Each day's fees received (with cash), attendance, pass-outs, texts, admissions and leavers, staff in and late, worked out from the records, plus the head's note for the day; any range, printed. Optional evening SMS summary to up to three owner numbers, off by default, only on days something happened |
 | Offline only | ✅ | — | One switch (Settings → Internet & updates) that stops every network use and closes waiting texts |
 | SchoolPay statements | ✅ | — | Fees → Import SchoolPay statement: the Excel or CSV statement from the SchoolPay portal, columns guessed from the headings (changeable), each line matched by SchoolPay code, then registration number, then name (confirmed by the bursar); one receipt per transaction ID, so a statement opened twice records nothing twice; SchoolPay codes learned for next time. SchoolPay publishes no API, so the statement is the bridge |
-| Check a document | ✅ | — | QR and code on receipts and report cards (HMAC under a per-school secret); readable by any phone, confirmed in Phantom offline |
+| Check a document | ✅ | — | QR and code on receipts and report cards (HMAC under a per-school secret); readable by any phone, confirmed in Termbook offline |
 | Subject heatmap | ✅ | M1 | Insights → Subject heat map: every class against every subject as a percentage of each paper's maximum, coloured against the school mean, with the weakest five named |
 | PLE candidate checker | ✅ | — | Registrations → PLE candidates: every candidate checked before UNEB registration (names in full with no initials or stray characters, sex, a real date of birth and a plausible age at the exam, LIN present, well-formed and unique across the school, a photo large enough to print) and fixed in place, with every correction in the activity log. Prints a checking slip per candidate for parents to sign and return, and the candidates' list with photos for the noticeboard |
 | EMIS census | ✅ | — | Registrations → EMIS census: enrolment by class and sex, by age, new entrants, repeaters (same class as last year) and special needs, counted from the records; learners missing a LIN, sex or date of birth; staff sex, NIN (14 characters, checked against the sex) and TMIS number, edited inline. Exports one workbook (enrolment, age by class, learners, staff, what to fix) to copy into EMIS |
@@ -254,6 +254,7 @@ or consciously rejected.
 
 | Date | Decision |
 | --- | --- |
+| 2026-10-10 | The product is renamed **Termbook** (was Phantom School Manager, and before that Results Manager). Identifier `ug.co.termbook`, version 1.0.0. On first start the data folder from the old identifier is moved across; QR codes printed before the rename still check; the audit chain keeps its original starting point |
 | 2026-09-27 | The pilot school is **Rainbow Nursery and Primary School** (for now). The SRS names MB Primary School as sponsor; the SRS text is left unchanged |
 | 2026-09-27 | M1 is SRS Phase 0 **minus the Custom Report Builder** (FR-G1), which moves to M2. M1 ships one fixed, well-designed report card |
 | 2026-09-27 | Excel marks upload (FR-C3) supports **both** layouts: one sheet per subject, and one workbook per class with all subjects |

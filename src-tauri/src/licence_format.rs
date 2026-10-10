@@ -1,5 +1,5 @@
 //! The licence key format, shared word for word by the application (which
-//! only verifies) and `tools/phantom-licence` (which signs). Both compile this
+//! only verifies) and `tools/termbook-licence` (which signs). Both compile this
 //! one file, so a key the tool issues is always one the application reads.
 //! Nothing here may depend on the rest of the application.
 
@@ -9,7 +9,7 @@ use chrono::NaiveDate;
 use ed25519_dalek::{Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
-pub const PREFIX: &str = "PSM1";
+pub const PREFIX: &str = "TBK1";
 
 /// What the owner signs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,10 +34,10 @@ pub fn decode(key: &str, issuer: &VerifyingKey) -> Result<Claims, &'static str> 
     let compact: String = key.chars().filter(|c| !c.is_whitespace()).collect();
     let mut parts = compact.split('.');
     let (Some(prefix), Some(body), Some(sig), None) = (parts.next(), parts.next(), parts.next(), parts.next()) else {
-        return Err("That is not a Phantom licence key. Paste the whole key, starting PSM1.");
+        return Err("That is not a Termbook licence key. Paste the whole key, starting TBK1.");
     };
     if prefix != PREFIX {
-        return Err("That is not a Phantom licence key. It should start PSM1.");
+        return Err("That is not a Termbook licence key. It should start TBK1.");
     }
     let body = URL_SAFE_NO_PAD
         .decode(body)
@@ -49,11 +49,11 @@ pub fn decode(key: &str, issuer: &VerifyingKey) -> Result<Claims, &'static str> 
         .ok_or("Part of that key is missing or mistyped. Paste it again.")?;
     issuer
         .verify_strict(&body, &sig)
-        .map_err(|_| "That key was not issued by Phantom School Manager, or it has been changed.")?;
+        .map_err(|_| "That key was not issued by Termbook, or it has been changed.")?;
     let claims: Claims =
-        serde_json::from_slice(&body).map_err(|_| "That key is in a format this version cannot read. Update Phantom.")?;
+        serde_json::from_slice(&body).map_err(|_| "That key is in a format this version cannot read. Update Termbook.")?;
     if claims.v != 1 {
-        return Err("That key is for a newer version of Phantom. Update Phantom.");
+        return Err("That key is for a newer version of Termbook. Update Termbook.");
     }
     if claims.until < claims.from {
         return Err("That key ends before it starts.");

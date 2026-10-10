@@ -1,7 +1,7 @@
 //! The staff sign-in register: who came to school, and when.
 //!
 //! Teachers sign in at the office computer with their name and a short PIN,
-//! on the sign-in screen, without signing in to Phantom. The sign-in station
+//! on the sign-in screen, without signing in to Termbook. The sign-in station
 //! shows names and nothing else, so it can be left open on the desk in the
 //! morning. A second tap signs out. The headteacher sees who is in, who came
 //! late and, at the end of the month, each person's record.
@@ -108,7 +108,7 @@ pub fn set_my_sign_in_pin(state: State<'_, AppState>, pin: String) -> AppResult<
 }
 
 /// The office clears a forgotten PIN; the person sets a new one when they
-/// next sign in to Phantom.
+/// next sign in to Termbook.
 #[tauri::command]
 pub fn clear_staff_pin(state: State<'_, AppState>, user_id: String) -> AppResult<()> {
     let session = state.sessions.require()?;
@@ -201,7 +201,7 @@ pub fn station_sign_in(conn: &Connection, user_id: &str, pin: &str, now: chrono:
         .ok_or_else(|| AppError::not_found("That person"))?;
     let Some(hash) = hash else {
         return Err(AppError::validation(format!(
-            "{name} has no PIN yet. Sign in to Phantom once and set it under My account, or ask the office to record you."
+            "{name} has no PIN yet. Sign in to Termbook once and set it under My account, or ask the office to record you."
         )));
     };
     let utc_now = Utc::now();

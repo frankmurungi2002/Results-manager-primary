@@ -3,7 +3,7 @@
 //! A consistent snapshot of the live database goes to the local backups folder
 //! and, when one is set, to a folder on a second drive. Snapshots are taken
 //! when someone asks, every fifteen minutes while the database is changing,
-//! and when Phantom School Manager closes. A snapshot of an unchanged database is skipped.
+//! and when Termbook closes. A snapshot of an unchanged database is skipped.
 //!
 //! Restore copies a snapshot back into the live database in place. What it
 //! replaces is snapshotted first, so a restore can itself be undone.
@@ -34,7 +34,9 @@ const KEEP_NEWEST: usize = 20;
 const KEEP_DAYS: i64 = 30;
 
 /// Where snapshots go inside the chosen folder on the second drive.
-const MIRROR_SUBDIR: &str = "ResultsManager";
+const MIRROR_SUBDIR: &str = "Termbook backups";
+/// Where they went before the rename to Termbook; still listed for restoring.
+const OLD_MIRROR_SUBDIR: &str = "ResultsManager";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
@@ -215,19 +217,20 @@ pub struct BackupFile {
     pub modified_at: String,
 }
 
-/// Every snapshot Phantom School Manager can see, newest first: the local folder, then the second
+/// Every snapshot Termbook can see, newest first: the local folder, then the second
 /// drive if it is plugged in.
 pub fn list(state: &AppState) -> AppResult<Vec<BackupFile>> {
     let mirror_dir = {
         let conn = state.db.lock();
         repo::get_setting(&conn, "backup.mirror_path")?
     }
-    .map(|dir| Path::new(&dir).join(MIRROR_SUBDIR));
+    .map(|dir| (Path::new(&dir).join(MIRROR_SUBDIR), Path::new(&dir).join(OLD_MIRROR_SUBDIR)));
 
     let mut found = Vec::new();
     collect(&state.paths.backup_dir, "local", &mut found);
-    if let Some(dir) = &mirror_dir {
+    if let Some((dir, old)) = &mirror_dir {
         collect(dir, "mirror", &mut found);
+        collect(old, "mirror", &mut found);
     }
     found.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
     Ok(found)
@@ -265,13 +268,13 @@ pub struct BackupSummary {
     pub learners: i64,
     pub marks: i64,
     pub last_activity_at: Option<String>,
-    /// False when the snapshot was made by a newer version of Phantom School Manager than this one.
+    /// False when the snapshot was made by a newer version of Termbook than this one.
     pub compatible: bool,
 }
 
 pub fn inspect(path: &Path) -> AppResult<BackupSummary> {
     let not_a_backup = || {
-        AppError::validation("That file is not a Phantom School Manager backup, or it is damaged.")
+        AppError::validation("That file is not a Termbook backup, or it is damaged.")
     };
 
     if !path.is_file() {
@@ -332,7 +335,7 @@ pub fn restore(state: &AppState, session: &Session, path: &Path) -> AppResult<Ba
     let summary = inspect(path)?;
     if !summary.compatible {
         return Err(AppError::validation(
-            "That backup was made by a newer version of Phantom School Manager. Update it on this computer first.",
+            "That backup was made by a newer version of Termbook. Update it on this computer first.",
         ));
     }
 

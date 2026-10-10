@@ -83,6 +83,9 @@ pub fn record_with_details(
 // code already on paper.
 
 /// What the first entry's "previous seal" is.
+// The chain's fixed starting point. It keeps the product's first name on
+// purpose: changing it would make every existing activity log fail its
+// integrity check.
 const GENESIS: &str = "phantom-school-manager/audit/v1";
 /// Set once the entries made before sealing existed have been sealed.
 const LEGACY_SEALED: &str = "audit.legacy_sealed";
@@ -199,7 +202,7 @@ pub fn verify_chain(conn: &Connection) -> AppResult<ChainReport> {
         let expected = hash(&previous, &row);
         match stored {
             None if problem.is_none() => {
-                problem = Some((row.0, format!("Entry {} was added outside Phantom School Manager.", row.0)));
+                problem = Some((row.0, format!("Entry {} was added outside Termbook.", row.0)));
             }
             Some(stored) if stored != expected && problem.is_none() => {
                 // Was the entry changed, or is one missing before it? If the
@@ -209,7 +212,7 @@ pub fn verify_chain(conn: &Connection) -> AppResult<ChainReport> {
                 problem = Some((
                     row.0,
                     format!(
-                        "Entry {} does not match its seal: it, or an entry just before it, was changed or removed outside Phantom School Manager.",
+                        "Entry {} does not match its seal: it, or an entry just before it, was changed or removed outside Termbook.",
                         row.0
                     ),
                 ));
@@ -232,7 +235,7 @@ pub fn verify_chain(conn: &Connection) -> AppResult<ChainReport> {
             )
             .optional()?;
         if let Some(id) = orphan {
-            problem = Some((id, format!("Entry {id} was removed outside Phantom School Manager.")));
+            problem = Some((id, format!("Entry {id} was removed outside Termbook.")));
         }
     }
 

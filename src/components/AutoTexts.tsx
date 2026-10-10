@@ -72,7 +72,7 @@ export function AutoSmsCard() {
         </div>
       }
     >
-      {offlineOnly && <Alert tone="info">This school uses Phantom offline only, so no text is sent.</Alert>}
+      {offlineOnly && <Alert tone="info">This school uses Termbook offline only, so no text is sent.</Alert>}
       <div className="stack">
         {row("absence", "Absence", "When a learner is newly marked absent on the register, text their parent the same morning.")}
         {row("results", "Results", "Adds “Text results to parents” to Reports: each child's aggregate, division and position.")}
@@ -99,7 +99,7 @@ export function AutoSmsCard() {
         {row("notReported", "Not yet reported", "In the first two weeks of term, text parents of learners who have not come to school at all.")}
       </div>
       <p className="field-hint" style={{ marginTop: "var(--space-3)" }}>
-        Phantom sends these while it is open on the office computer. Texts waiting more than a day are not sent late.
+        Termbook sends these while it is open on the office computer. Texts waiting more than a day are not sent late.
       </p>
     </Card>
   );

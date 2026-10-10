@@ -1,6 +1,6 @@
 # Security model
 
-Phantom School Manager holds a school's entire academic history on one PC in a shared
+Termbook holds a school's entire academic history on one PC in a shared
 office, run by people who are not IT staff, on a machine that may be handled by
 anyone who walks past it. The model below follows from that, not from a generic
 checklist.

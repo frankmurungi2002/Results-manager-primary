@@ -96,7 +96,7 @@ export function MessagesScreen() {
         </div>
 
         {offlineOnly && (
-          <Alert tone="info" title="This school uses Phantom offline only">
+          <Alert tone="info" title="This school uses Termbook offline only">
             Texts cannot be sent. To send them, a School Admin turns off "Offline only" in Settings → Internet &amp;
             updates. Groups can still be kept up to date here.
           </Alert>

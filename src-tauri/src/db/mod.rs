@@ -1,6 +1,6 @@
 //! Database handle, connection pragmas, and key management.
 //!
-//! There is exactly one connection, guarded by a mutex. A school runs Phantom School Manager on one
+//! There is exactly one connection, guarded by a mutex. A school runs Termbook on one
 //! PC with at most a handful of concurrent operations, so a pool buys nothing
 //! and a single connection makes transaction boundaries obvious.
 
@@ -167,7 +167,7 @@ fn apply_encryption_key(conn: &Connection, path: &Path) -> AppResult<()> {
     use crate::error::AppError;
     use rand::RngCore;
 
-    const SERVICE: &str = "ug.resultsmanager.desktop";
+    const SERVICE: &str = "ug.co.termbook";
     let account = format!("db::{}", path.display());
 
     let entry = keyring::Entry::new(SERVICE, &account)

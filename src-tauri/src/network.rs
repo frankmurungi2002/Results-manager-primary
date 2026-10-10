@@ -1,4 +1,4 @@
-//! Whether this school lets Phantom use the internet at all.
+//! Whether this school lets Termbook use the internet at all.
 //!
 //! Everything a school does every day (marks, report cards, fees, attendance,
 //! printing) works with no internet and always will. Only four things ever
@@ -7,7 +7,7 @@
 //! * sending SMS through the school's gateway,
 //! * checking the SMS credit balance,
 //! * checking for and downloading updates,
-//! * email invitations (through Phantom Cloud, once it exists).
+//! * email invitations (through Termbook Cloud, once it exists).
 //!
 //! A school with no data bundle, or one that simply does not want a computer
 //! that talks to the internet, switches on **Offline only**. Then none of the
@@ -25,7 +25,7 @@ const KEY: &str = "network.offline_only";
 
 /// Shown wherever something needs the internet and the school said no.
 pub const OFFLINE_ONLY_MESSAGE: &str =
-    "This school uses Phantom offline only. To use this, turn off \"Offline only\" in Settings → Internet.";
+    "This school uses Termbook offline only. To use this, turn off \"Offline only\" in Settings → Internet.";
 
 pub fn offline_only(conn: &Connection) -> AppResult<bool> {
     Ok(repo::get_setting(conn, KEY)?.as_deref() == Some("1"))

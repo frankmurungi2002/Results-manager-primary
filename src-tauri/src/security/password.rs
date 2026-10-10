@@ -95,6 +95,7 @@ pub fn check_strength(password: &Secret) -> AppResult<()> {
         "letmein",
         "admin123",
         "resultsmanager",
+        "termbook",
         "schooladmin",
     ];
     if OBVIOUS.iter().any(|bad| lower.contains(bad)) {

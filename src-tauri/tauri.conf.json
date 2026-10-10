@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Phantom School Manager",
-  "version": "0.1.0",
-  "identifier": "ug.resultsmanager.desktop",
+  "productName": "Termbook",
+  "version": "1.0.0",
+  "identifier": "ug.co.termbook",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Phantom School Manager",
+        "title": "Termbook",
         "width": 1366,
         "height": 768,
         "minWidth": 1100,
@@ -38,11 +38,11 @@
     "targets": [
       "nsis"
     ],
-    "publisher": "Phantom School Manager",
-    "copyright": "Phantom School Manager",
+    "publisher": "Termbook",
+    "copyright": "Termbook",
     "category": "Education",
     "shortDescription": "Offline school management for Ugandan schools",
-    "longDescription": "Phantom School Manager registers learners and staff, captures marks, and produces every printed document a parent or a PLE administrator expects to see — without depending on an internet connection.",
+    "longDescription": "Termbook registers learners and staff, captures marks, and produces every printed document a parent or a PLE administrator expects to see — without depending on an internet connection.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

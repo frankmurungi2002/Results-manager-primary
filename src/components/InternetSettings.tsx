@@ -1,5 +1,5 @@
 /**
- * Settings → Internet: one switch that keeps Phantom entirely offline.
+ * Settings → Internet: one switch that keeps Termbook entirely offline.
  *
  * Everything a school does every day works with no internet. This panel says
  * plainly which few things use it, and lets a school turn all of them off.
@@ -43,7 +43,7 @@ export function InternetSettings({ children }: { children?: React.ReactNode }) {
         setConfirming(false);
         toast(
           "success",
-          on ? "Phantom is now offline only. Nothing will use the internet." : "Internet features are allowed again.",
+          on ? "Termbook is now offline only. Nothing will use the internet." : "Internet features are allowed again.",
         );
       })
       .catch(reportError)
@@ -91,7 +91,7 @@ export function InternetSettings({ children }: { children?: React.ReactNode }) {
 
       <Modal
         open={confirming}
-        title="Use Phantom offline only?"
+        title="Use Termbook offline only?"
         description="Nothing will use the internet until you switch this off again."
         onClose={() => setConfirming(false)}
         footer={

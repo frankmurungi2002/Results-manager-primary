@@ -1,4 +1,4 @@
-//! Things Phantom does by itself while it is open: the owner's evening
+//! Things Termbook does by itself while it is open: the owner's evening
 //! summary, fee and absence reminders. Each job is a plain function of the
 //! database and the local time, so it is tested without waiting for a clock;
 //! this module only calls them every few minutes.

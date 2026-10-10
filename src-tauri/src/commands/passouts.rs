@@ -1,7 +1,7 @@
 //! FR-G22 — a learner leaving school during the day.
 //!
 //! The Class Teacher or School Admin records who is leaving, why, where to,
-//! with whom and for how long. Phantom School Manager prints a slip for the gate and texts the
+//! with whom and for how long. Termbook prints a slip for the gate and texts the
 //! guardian (FR-G8) so a parent always knows where their child is. When the
 //! learner comes back they are marked returned, and the guardian gets a second
 //! text. A learner still out after their expected time shows up on the
@@ -688,7 +688,7 @@ pub async fn send_test_sms(state: State<'_, AppState>, phone: String) -> AppResu
         crate::network::require_online_allowed(&conn)?;
         let settings = sms::load_settings(&conn)?;
         let body = format!(
-            "{}: this is a test message from Phantom School Manager. SMS is working.",
+            "{}: this is a test message from Termbook. SMS is working.",
             sms::signature(&conn)?
         );
         (settings, body)

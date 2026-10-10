@@ -1,9 +1,9 @@
 [package]
-name = "phantom-licence"
+name = "termbook-licence"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "The owner's tool for issuing Phantom School Manager licence keys. Never shipped to schools."
+description = "The owner's tool for issuing Termbook licence keys. Never shipped to schools."
 
 # Not part of the application's workspace: it holds no school data, and the
 # application never needs it.

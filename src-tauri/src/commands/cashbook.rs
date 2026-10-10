@@ -4,7 +4,7 @@
 //! Every entry is a numbered voucher (PV- for spending, OI- for other income,
 //! BK- for banking), kept like a receipt: never edited, never deleted,
 //! cancelled only with a reason and by someone other than whoever wrote it.
-//! From these and the fee receipts Phantom works out what came in, what went
+//! From these and the fee receipts Termbook works out what came in, what went
 //! out, the surplus, and the cash that should be in the drawer right now,
 //! so the head can count it.
 

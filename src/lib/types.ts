@@ -468,7 +468,7 @@ export interface ReportCard {
   activities: ActivityRating[];
   /** What the learner owes, when the school prints balances on cards. */
   feesBalance: number | null;
-  /** Proves the card is genuine: typed into Phantom or scanned. */
+  /** Proves the card is genuine: typed into Termbook or scanned. */
   verificationCode: string | null;
   verificationQr: string | null;
 }
@@ -1316,7 +1316,7 @@ export interface ImportResult {
   rows: ImportRow[];
 }
 
-/** The Phantom School Manager fields an import can fill, in the order the mapping screen shows them. */
+/** The Termbook fields an import can fill, in the order the mapping screen shows them. */
 export const IMPORT_FIELDS = [
   { key: "fullName", label: "Learner's name", required: true },
   { key: "className", label: "Class", required: false },
@@ -1672,8 +1672,8 @@ export const ADJUSTMENT_KINDS: { id: AdjustmentKind; label: string; reduces: boo
   { id: "discount", label: "Discount", reduces: true, percentAllowed: true, hint: "Sibling, staff child, early payment" },
   { id: "waiver", label: "Waiver", reduces: true, percentAllowed: true, hint: "Forgiven by the head or director" },
   { id: "charge", label: "Extra charge", reduces: false, percentAllowed: false, hint: "A trip, a broken window, a new uniform" },
-  { id: "balance_forward", label: "Balance brought forward", reduces: false, percentAllowed: false, hint: "Owed from before Phantom" },
-  { id: "prepayment", label: "Paid before Phantom", reduces: true, percentAllowed: false, hint: "Money already paid, from the old books" },
+  { id: "balance_forward", label: "Balance brought forward", reduces: false, percentAllowed: false, hint: "Owed from before Termbook" },
+  { id: "prepayment", label: "Paid before Termbook", reduces: true, percentAllowed: false, hint: "Money already paid, from the old books" },
 ];
 
 // ---------------------------------------------------------------------------

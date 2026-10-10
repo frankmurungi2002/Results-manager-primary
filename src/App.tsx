@@ -54,7 +54,7 @@ export default function App() {
   if (!booted) {
     return (
       <div className="auth-panel">
-        <Loading label="Starting Phantom School Manager" />
+        <Loading label="Starting Termbook" />
       </div>
     );
   }
@@ -63,7 +63,7 @@ export default function App() {
     return (
       <div className="auth-panel">
         <div className="auth-form">
-          <Alert tone="danger" title="Phantom School Manager could not start">
+          <Alert tone="danger" title="Termbook could not start">
             {bootError}
           </Alert>
           <Button variant="primary" block onClick={() => window.location.reload()}>
@@ -71,7 +71,7 @@ export default function App() {
           </Button>
           <p className="field-hint">
             If this keeps happening, your data is still safe on disk. Take a
-            copy of the Phantom School Manager data folder before reinstalling.
+            copy of the Termbook data folder before reinstalling.
           </p>
         </div>
         <ToastRegion />

@@ -61,7 +61,7 @@ pub fn update_status(state: State<'_, AppState>) -> AppResult<UpdateInfo> {
 
 fn updater<R: Runtime>(app: &AppHandle<R>) -> AppResult<tauri_plugin_updater::Updater> {
     if !configured() {
-        return Err(AppError::validation("Updates are not set up in this copy of Phantom yet."));
+        return Err(AppError::validation("Updates are not set up in this copy of Termbook yet."));
     }
     let url = ENDPOINT.parse().map_err(|_| AppError::internal("bad update address"))?;
     app.updater_builder()
@@ -110,7 +110,7 @@ pub async fn install_update<R: Runtime>(app: AppHandle<R>, state: State<'_, AppS
         .await
         .map_err(|e| AppError::validation(format!("Could not reach the update server: {e}")))?
     else {
-        return Err(AppError::validation("Phantom is already up to date."));
+        return Err(AppError::validation("Termbook is already up to date."));
     };
     crate::backup::take(&state, None, crate::backup::Trigger::Manual)?;
     {
@@ -121,7 +121,7 @@ pub async fn install_update<R: Runtime>(app: AppHandle<R>, state: State<'_, AppS
             "update.install",
             "app",
             &update.version,
-            format!("Installing Phantom {} (was {})", update.version, env!("CARGO_PKG_VERSION")),
+            format!("Installing Termbook {} (was {})", update.version, env!("CARGO_PKG_VERSION")),
         )?;
     }
     update

@@ -13,7 +13,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 
-use results_manager_lib::state::{AppPaths, AppState};
+use termbook_lib::state::{AppPaths, AppState};
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, INVOKE_KEY};
 use tauri::webview::InvokeRequest;
@@ -27,7 +27,7 @@ fn main() {
     let state = AppState::new(paths).expect("database");
     let app = mock_builder()
         .manage(state)
-        .invoke_handler(results_manager_lib::invoke_handler())
+        .invoke_handler(termbook_lib::invoke_handler())
         .build(mock_context(noop_assets()))
         .expect("mock app");
     let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())

@@ -1,13 +1,13 @@
 [package]
-name = "results-manager"
-version = "0.1.0"
+name = "termbook"
+version = "1.0.0"
 description = "Offline-first school management for Ugandan nursery and primary schools"
-authors = ["Phantom School Manager"]
+authors = ["Termbook"]
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "results_manager_lib"
+name = "termbook_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -56,7 +56,7 @@ sha2 = "0.10"
 
 # Subscription keys (FR-B11) are Ed25519-signed by the owner and verified
 # here, offline. Only verification is compiled in; the private key and the
-# issuing tool live outside this crate (tools/phantom-licence).
+# issuing tool live outside this crate (tools/termbook-licence).
 ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 base64 = "0.22"
 

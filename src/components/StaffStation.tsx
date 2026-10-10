@@ -123,7 +123,7 @@ export function StaffStation() {
           </div>
           {!chosen.hasPin ? (
             <p className="login-help">
-              You have no PIN yet. Sign in to Phantom once and set it under My account, or ask the office to record
+              You have no PIN yet. Sign in to Termbook once and set it under My account, or ask the office to record
               you.
             </p>
           ) : (

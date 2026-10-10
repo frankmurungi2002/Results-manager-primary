@@ -24,7 +24,7 @@ export function UpdatesCard() {
   return (
     <Card
       title="Updates"
-      subtitle={`This computer runs Phantom ${info.currentVersion}`}
+      subtitle={`This computer runs Termbook ${info.currentVersion}`}
       actions={info.availableVersion ? <Badge tone="info">{info.availableVersion} is ready</Badge> : undefined}
     >
       {!info.configured ? (
@@ -33,17 +33,17 @@ export function UpdatesCard() {
           that.
         </p>
       ) : info.offlineOnly ? (
-        <Alert tone="info">Offline only is on, so Phantom does not look for updates.</Alert>
+        <Alert tone="info">Offline only is on, so Termbook does not look for updates.</Alert>
       ) : (
         <div className="stack">
           {info.availableVersion ? (
-            <Alert tone="info" title={`Phantom ${info.availableVersion} is available`}>
-              {info.availableNotes || "Fixes and improvements."} Installing takes a backup first, then restarts Phantom:
+            <Alert tone="info" title={`Termbook ${info.availableVersion} is available`}>
+              {info.availableNotes || "Fixes and improvements."} Installing takes a backup first, then restarts Termbook:
               do it when nobody is entering marks.
             </Alert>
           ) : (
             <p className="subtle" style={{ margin: 0 }}>
-              {info.lastChecked ? `Up to date. Last checked ${relativeTime(info.lastChecked)}.` : "Phantom checks once a day while it is open."}
+              {info.lastChecked ? `Up to date. Last checked ${relativeTime(info.lastChecked)}.` : "Termbook checks once a day while it is open."}
             </p>
           )}
           <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
@@ -56,7 +56,7 @@ export function UpdatesCard() {
                   .checkForUpdate()
                   .then((next) => {
                     setInfo(next);
-                    if (!next.availableVersion) toast("success", "Phantom is up to date.");
+                    if (!next.availableVersion) toast("success", "Termbook is up to date.");
                   })
                   .catch(reportError)
                   .finally(() => setBusy(null));
@@ -70,7 +70,7 @@ export function UpdatesCard() {
                 icon={<Download size={15} />}
                 loading={busy === "install"}
                 onClick={() => {
-                  if (!window.confirm("Install now? Phantom will take a backup and restart.")) return;
+                  if (!window.confirm("Install now? Termbook will take a backup and restart.")) return;
                   setBusy("install");
                   api
                     .installUpdate()

@@ -84,7 +84,7 @@ export function LoginShowcase() {
       className="login-showcase"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      aria-label="About Phantom School Manager"
+      aria-label="About Termbook"
     >
       {CAPTIONS.map((_, slide) => {
         const Scene = BUILT_IN_SCENES[slide]!;

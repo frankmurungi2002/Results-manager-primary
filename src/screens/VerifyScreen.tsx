@@ -21,10 +21,10 @@ export function VerifyScreen() {
   const [result, setResult] = useState<DocumentCheck | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // A scanner types the whole QR, ending with the "PSM|" line: check as soon
+  // A scanner types the whole QR, ending with the "TBK|" line (or "PSM|" on copies printed before the rename): check as soon
   // as that line is complete, so nobody has to press anything.
   useEffect(() => {
-    const line = scanned.split(/\r?\n/).find((l) => l.trim().startsWith("PSM|"));
+    const line = scanned.split(/\r?\n/).find((l) => /^(TBK|PSM)\|/.test(l.trim()));
     if (!line || !/\|[RC]-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}\s*$/i.test(line)) return;
     const timer = window.setTimeout(() => void check(() => api.checkDocument(scanned)), 150);
     return () => window.clearTimeout(timer);
@@ -51,7 +51,7 @@ export function VerifyScreen() {
           <div>
             <h1 className="page-title">Check a document</h1>
             <p className="page-description">
-              Every receipt and report card Phantom prints carries a QR code and a short code. Check one here to be
+              Every receipt and report card Termbook prints carries a QR code and a short code. Check one here to be
               sure it is genuine and nothing on it was changed. No internet needed.
             </p>
           </div>

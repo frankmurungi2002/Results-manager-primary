@@ -143,7 +143,7 @@ export const useStore = create<AppStore>((set, get) => ({
         bootError:
           error instanceof ApiError
             ? error.message
-            : "Phantom School Manager could not start.",
+            : "Termbook could not start.",
       });
     }
   },

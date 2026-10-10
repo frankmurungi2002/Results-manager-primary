@@ -1,6 +1,6 @@
-# Phantom Cloud: design
+# Termbook Cloud: design
 
-Four things the owner has asked for need a server Phantom does not have yet:
+Four things the owner has asked for need a server Termbook does not have yet:
 **its own bulk SMS**, **cloud backup**, **inviting teachers by email**, and
 **schools paying online**. This document decides how that server works before
 any of it is built, because the decisions are hard to undo once schools
@@ -44,7 +44,7 @@ What the cloud **does** hold:
 The licence key already proves which school a computer belongs to (it is
 signed and names the school code). The cloud reuses it:
 
-1. The first time Phantom needs the cloud, it makes a **device key pair**
+1. The first time Termbook needs the cloud, it makes a **device key pair**
    (Ed25519) and sends the public half with its licence key.
 2. The cloud checks the licence signature and records "school `9F3AC2B1E0`,
    device key `…`".
@@ -65,16 +65,16 @@ cost per download. Start on one small server; it handles thousands of schools.
 ## 4. Your own bulk SMS: reseller with credits
 
 Chosen 2026-10-08. Phones only accept texts from licensed senders, so "our
-own SMS platform" means: **Phantom holds one wholesale account with a
-Ugandan aggregator, and schools buy SMS credits from Phantom.** Schools never
+own SMS platform" means: **Termbook holds one wholesale account with a
+Ugandan aggregator, and schools buy SMS credits from Termbook.** Schools never
 see the aggregator. This is what most local bulk SMS platforms are.
 
 ```
-School PC ──signed──▶ Phantom Cloud ──▶ Aggregator ──▶ MTN / Airtel ──▶ parent
+School PC ──signed──▶ Termbook Cloud ──▶ Aggregator ──▶ MTN / Airtel ──▶ parent
    (outbox)            (balance, -1 per SMS)       (delivery report back ▲)
 ```
 
-- In the app this is one more provider in `sms.rs`, "Phantom SMS", beside
+- In the app this is one more provider in `sms.rs`, "Termbook SMS", beside
   Africa's Talking and EgoSMS. The outbox, priorities, expiry, the
   one-sender gate and the cost preview all stay exactly as built.
 - The cloud checks the balance **before** sending and refuses with "not
@@ -84,7 +84,7 @@ School PC ──signed──▶ Phantom Cloud ──▶ Aggregator ──▶ MTN
   set; your margin is the difference from the wholesale rate you negotiate.
 - **Sender IDs**: texts should arrive from "RAINBOW NP", not a number. Each
   sender ID is registered with the networks through the aggregator, which
-  takes time per school; schools without one use Phantom's.
+  takes time per school; schools without one use Termbook's.
 
 To decide before building: which aggregator (price per SMS, sender-ID
 turnaround, delivery reports, uptime), and the price to schools. Check UCC's
@@ -105,10 +105,10 @@ that.
 
 - **Encrypted on the school's computer, before upload.** The School Admin
   sets a backup passphrase; a key is derived from it (Argon2id, as passwords
-  are) and the file is encrypted with an authenticated cipher. Phantom Cloud
+  are) and the file is encrypted with an authenticated cipher. Termbook Cloud
   stores ciphertext and cannot read a single learner's name.
 - **The catch, stated plainly to the school:** lose the passphrase and the
-  cloud copy is unreadable, by anyone, including Phantom. So setup prints a
+  cloud copy is unreadable, by anyone, including Termbook. So setup prints a
   **recovery sheet** (the passphrase's recovery code) for the school safe.
   Paper again, because paper survives what kills computers.
 - **Small and resumable.** Compressed before encryption; uploaded only when
@@ -132,9 +132,9 @@ The design keeps the invitation on the school's computer and uses the cloud
 only as a postman:
 
 1. The office adds a teacher with their email and phone.
-2. Phantom makes a one-time **invite code** (eight characters, valid 72
+2. Termbook makes a one-time **invite code** (eight characters, valid 72
    hours) and stores only its hash, as it does passwords.
-3. The code is delivered by **email** (through Phantom Cloud's mail relay),
+3. The code is delivered by **email** (through Termbook Cloud's mail relay),
    or **SMS** (through the outbox), or a **printed slip**: whichever the
    school has. No internet, no problem: the slip works.
 4. The teacher, at the office computer, chooses "I have an invite code",
@@ -148,10 +148,10 @@ mechanism gives "forgot my password" a safe answer later.
 ## 7. Paying online, and keys issued automatically
 
 Today (SRS 16.4): the school pays by Mobile Money to the business number, you
-run `phantom-licence issue`, you send the key on WhatsApp. That is right for
+run `termbook-licence issue`, you send the key on WhatsApp. That is right for
 the first cohort.
 
-Later: the school pays inside Phantom (MTN MoMo or Airtel Money, directly or
+Later: the school pays inside Termbook (MTN MoMo or Airtel Money, directly or
 through a Ugandan payment aggregator), the payment confirmation reaches the
 cloud, and the cloud issues the key and the app installs it, with no person in
 between.
@@ -170,7 +170,7 @@ your desk.
    needed; can be built next.*
 2. **The cloud's skeleton**: device registration (section 2), school list for
    the owner.
-3. **Phantom SMS with credits** (section 4), once an aggregator is chosen.
+3. **Termbook SMS with credits** (section 4), once an aggregator is chosen.
 4. **Encrypted cloud backup** (section 5).
 5. **Email** for invites (section 6), through the same cloud.
 6. **Online payment and automatic keys** (section 7), once enough schools

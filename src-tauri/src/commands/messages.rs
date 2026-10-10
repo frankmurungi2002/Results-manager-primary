@@ -321,7 +321,7 @@ fn check_placeholders(template: &str) -> AppResult<BTreeSet<String>> {
         let word = after[..close].trim().to_lowercase();
         if !PLACEHOLDERS.contains(&word.as_str()) {
             return Err(AppError::validation(format!(
-                "{{{}}} is not something Phantom can fill in. Use {{learner}}, {{class}} or {{name}}.",
+                "{{{}}} is not something Termbook can fill in. Use {{learner}}, {{class}} or {{name}}.",
                 &after[..close]
             )));
         }

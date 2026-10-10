@@ -91,7 +91,7 @@ pub fn invite_in(conn: &Connection, session: &Session, user_id: &str, send_sms: 
     let school: String = conn.query_row("SELECT name FROM institution LIMIT 1", [], |r| r.get(0)).optional()?.unwrap_or_default();
     let first = full_name.split_whitespace().next().unwrap_or(&full_name);
     let message = format!(
-        "{school}: {first}, your Phantom School Manager account is ready. Username: {username}. Invite code: {code} (valid 3 days). On the school computer choose \"I have an invite code\" and set your own password."
+        "{school}: {first}, your Termbook account is ready. Username: {username}. Invite code: {code} (valid 3 days). On the school computer choose \"I have an invite code\" and set your own password."
     );
     let sms_queued = if send_sms {
         sms::queue(conn, phone.as_deref(), &message, "invite", user_id, Some(&session.user_id))?.is_some()

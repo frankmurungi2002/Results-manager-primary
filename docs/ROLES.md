@@ -1,6 +1,6 @@
 # Roles and permissions
 
-Who may do what in Phantom School Manager. **The table below is generated from
+Who may do what in Termbook. **The table below is generated from
 the code** (`permissions_for` in `src-tauri/src/security/session.rs`), and a
 test fails if this file and the code ever disagree. To change the policy,
 change the code; the test prints the new table to paste here.

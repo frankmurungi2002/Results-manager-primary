@@ -2,7 +2,7 @@
 //!
 //! A school pays for a term or a year. The owner then issues a licence key:
 //! the school's code, the plan and an end date, signed with an Ed25519 private
-//! key that never leaves the owner (see `tools/phantom-licence`). This module
+//! key that never leaves the owner (see `tools/termbook-licence`). This module
 //! holds only the matching public key, so it can check a key but never make
 //! one. A key cannot be forged, cannot be edited (changing the date breaks the
 //! signature), and works only for the school it was issued to.
@@ -25,7 +25,7 @@ use serde::Serialize;
 use crate::error::{AppError, AppResult};
 
 /// The owner's public key, as 64 hex characters, printed by
-/// `phantom-licence keygen`. While it is empty the application runs as a
+/// `termbook-licence keygen`. While it is empty the application runs as a
 /// pilot: no keys, no limits. Setting it turns subscriptions on.
 pub const ISSUER_PUBLIC_KEY_HEX: &str = "";
 
@@ -181,7 +181,7 @@ pub fn status_with(conn: &Connection, issuer: Option<&VerifyingKey>, now: DateTi
 /// school, and one that would shorten a subscription already installed.
 pub fn install(conn: &Connection, key: &str) -> AppResult<Claims> {
     let issuer = issuer().ok_or_else(|| {
-        AppError::validation("This copy of Phantom does not use licence keys.")
+        AppError::validation("This copy of Termbook does not use licence keys.")
     })?;
     install_with(conn, key, &issuer)
 }

@@ -51,7 +51,7 @@ export function LicenceBanner({ status }: { status: LicenceStatus | null }) {
       <div className="licence-banner is-locked" role="alert">
         <TriangleAlert size={16} />
         <span>
-          <strong>The subscription has ended. Phantom is read-only.</strong> Everything can be viewed, printed and
+          <strong>The subscription has ended. Termbook is read-only.</strong> Everything can be viewed, printed and
           backed up; nothing can be added or changed until a renewal key is entered. {fix}
         </span>
       </div>
@@ -62,7 +62,7 @@ export function LicenceBanner({ status }: { status: LicenceStatus | null }) {
       <div className="licence-banner is-warn" role="status">
         <TriangleAlert size={16} />
         <span>
-          <strong>The subscription has ended.</strong> Phantom keeps working for {days(left)} more, then becomes
+          <strong>The subscription has ended.</strong> Termbook keeps working for {days(left)} more, then becomes
           read-only. {fix}
         </span>
       </div>
@@ -141,7 +141,7 @@ export function SubscriptionSettings() {
         </div>
         {status.clockRolledBack && (
           <Alert tone="warning" title="This computer's clock is behind">
-            It shows an earlier date than Phantom has already seen, so the later date is being used. Set the correct
+            It shows an earlier date than Termbook has already seen, so the later date is being used. Set the correct
             date and time in Windows.
           </Alert>
         )}
@@ -150,11 +150,11 @@ export function SubscriptionSettings() {
       {status.state !== "pilot" && (
         <Card title="How to pay and renew" subtitle="Termly or yearly">
           <ol className="sub-steps">
-            <li>Pay for a term or a year as agreed with Phantom School Manager.</li>
+            <li>Pay for a term or a year as agreed with Termbook.</li>
             <li>
               Send your <strong>school code</strong> (above) with the payment reference.
             </li>
-            <li>You receive a licence key: a long line starting PSM1. Paste it below.</li>
+            <li>You receive a licence key: a long line starting TBK1. Paste it below.</li>
           </ol>
           {can("manage_school") ? (
             <div className="stack">
@@ -162,7 +162,7 @@ export function SubscriptionSettings() {
                 className="textarea mono"
                 rows={4}
                 aria-label="Licence key"
-                placeholder="PSM1.eyJ2IjoxLCJzY2hvb2wiOi..."
+                placeholder="TBK1.eyJ2IjoxLCJzY2hvb2wiOi..."
                 value={key}
                 onChange={(event) => setKey(event.target.value)}
                 spellCheck={false}

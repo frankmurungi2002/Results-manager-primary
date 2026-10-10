@@ -1,17 +1,17 @@
 /**
- * The Phantom School Manager mark: a gold crest around a P, on an indigo tile.
+ * The Termbook mark: a gold crest around a T, on an indigo tile.
  *
  * The same drawing as src-tauri/icons/source.svg, which every window and
  * installer icon is generated from (`npx tauri icon src-tauri/icons/source.svg`),
  * so the taskbar icon and the mark inside the app are the same object.
  *
- * Below 24px the crest is dropped and the P fills the tile: a crest thin
+ * Below 24px the crest is dropped and the T fills the tile: a crest thin
  * enough to fit at that size turns into a gold smudge.
  */
 
 import { useId } from "react";
 
-export const APP_NAME = "Phantom School Manager";
+export const APP_NAME = "Termbook";
 
 export function BrandMark({ size = 36 }: { size?: number }) {
   // Gradient ids must be unique when the mark appears more than once.
@@ -46,22 +46,10 @@ export function BrandMark({ size = 36 }: { size?: number }) {
             strokeWidth="2.4"
             strokeLinejoin="round"
           />
-          <path
-            d="M26 44 V20 H34.5 A7.75 7.75 0 0 1 34.5 35.5 H26"
-            fill="none"
-            stroke="#FFFFFF"
-            strokeWidth="6"
-            strokeLinejoin="round"
-          />
+          <path d="M21.5 21 H42.5 M32 21 V44" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
         </>
       ) : (
-        <path
-          d="M23 51 V14 H35 A10.5 10.5 0 0 1 35 35 H23"
-          fill="none"
-          stroke="#FFFFFF"
-          strokeWidth="9"
-          strokeLinejoin="round"
-        />
+        <path d="M16 16 H48 M32 16 V50" fill="none" stroke="#FFFFFF" strokeWidth="9" strokeLinecap="round" />
       )}
     </svg>
   );

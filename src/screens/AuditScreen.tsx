@@ -114,7 +114,7 @@ export function AuditScreen() {
             <p className="page-description">
               Every action by every person, with a timestamp. Entries cannot be
               edited or removed, and each one is sealed to the one before it, so
-              a change made outside Phantom School Manager is found and named.
+              a change made outside Termbook is found and named.
             </p>
           </div>
         </div>
@@ -132,7 +132,7 @@ export function AuditScreen() {
             <div className="audit-seal is-broken" role="alert">
               <ShieldAlert size={20} />
               <div>
-                <strong>The log has been altered outside Phantom School Manager.</strong> {integrity.report.problem}{" "}
+                <strong>The log has been altered outside Termbook.</strong> {integrity.report.problem}{" "}
                 Nothing the application did can cause this. Keep your printed logs and backups; they show what the
                 record said before.
               </div>

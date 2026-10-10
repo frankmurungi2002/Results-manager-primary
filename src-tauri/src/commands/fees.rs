@@ -1363,7 +1363,7 @@ pub struct FeeReceipt {
     pub reg_number: String,
     pub term_name: String,
     pub amount_words: String,
-    /// Typed into Phantom (or scanned) to prove the receipt is genuine.
+    /// Typed into Termbook (or scanned) to prove the receipt is genuine.
     pub verification_code: String,
     pub verification_qr: String,
 }

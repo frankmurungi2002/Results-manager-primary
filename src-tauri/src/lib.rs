@@ -1,4 +1,4 @@
-//! Phantom School Manager — offline-first school management for Ugandan nursery and
+//! Termbook — offline-first school management for Ugandan nursery and
 //! primary schools.
 //!
 //! The backend owns everything that matters: the database, who is signed in,
@@ -308,6 +308,14 @@ pub fn run() {
                 .app_data_dir()
                 .map_err(|e| format!("could not find a place to store data: {e}"))?;
 
+            // Before the rename to Termbook the data lived in a folder named
+            // after the old identifier: bring it across, once.
+            match state::adopt_previous_folder(&data_dir) {
+                Ok(true) => log::info!("moved the school's data from the folder used before the rename"),
+                Ok(false) => {}
+                Err(e) => log::error!("could not move data from the old folder: {e}"),
+            }
+
             let paths = AppPaths::resolve(data_dir)
                 .map_err(|e| format!("could not prepare the data folder: {e}"))?;
 
@@ -325,7 +333,7 @@ pub fn run() {
         })
         .invoke_handler(invoke_handler())
         .build(tauri::generate_context!())
-        .expect("Phantom School Manager failed to start")
+        .expect("Termbook failed to start")
         .run(|app, event| {
             // A last snapshot on the way out, if anything changed since the
             // scheduled one (SRS 16.1: every fifteen minutes and on close).

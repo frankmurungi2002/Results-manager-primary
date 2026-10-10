@@ -1,10 +1,10 @@
-# Phantom School Manager
+# Termbook
 
 Offline-first school management for Ugandan nursery and primary schools.
 
 > Marks in. Reports out. Offline.
 
-A school pays once a term, installs Phantom School Manager on one Windows PC, and
+A school pays once a term, installs Termbook on one Windows PC, and
 produces every printed output a parent or a PLE administrator expects —
 registration records, mark sheets, class lists, registers and report cards —
 without ever needing a reliable internet connection.
@@ -32,7 +32,7 @@ The first run opens the setup wizard. Everything it asks can be changed later.
 
 ### Where the data lives
 
-`%APPDATA%\ug.resultsmanager.desktop\`
+`%APPDATA%\ug.co.termbook\`
 
 - `school.rmdb` — the live database
 - `backups\` — the twenty most recent snapshots

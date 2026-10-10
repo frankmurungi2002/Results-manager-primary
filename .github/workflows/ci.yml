@@ -56,4 +56,4 @@ jobs:
       # The owner's key tool compiles the application's key format file, so
       # it must keep building whenever that file changes.
       - run: cargo build --locked
-        working-directory: tools/phantom-licence
+        working-directory: tools/termbook-licence

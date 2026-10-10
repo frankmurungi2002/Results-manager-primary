@@ -342,7 +342,7 @@ function OwnerSmsModal({ onClose }: { onClose: () => void }) {
         <Loading />
       ) : (
         <div className="stack">
-          {offlineOnly && <Alert tone="info">This school uses Phantom offline only, so no text can be sent.</Alert>}
+          {offlineOnly && <Alert tone="info">This school uses Termbook offline only, so no text can be sent.</Alert>}
           <label className="row" style={{ gap: "var(--space-3)" }}>
             <Switch
               checked={settings.enabled}
@@ -360,7 +360,7 @@ function OwnerSmsModal({ onClose }: { onClose: () => void }) {
           </label>
           <Alert tone="info">
             It reads like: “Rainbow N&amp;P, Thu 8 Oct: Fees UGX 1,450,000 (12 receipts; cash 600,000). Attendance 94%, 21
-            absent. 3 pass-outs.” Phantom must be open on the office computer at that time.
+            absent. 3 pass-outs.” Termbook must be open on the office computer at that time.
           </Alert>
         </div>
       )}

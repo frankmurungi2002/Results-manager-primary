@@ -1,4 +1,4 @@
-//! Files that leave Phantom: Excel workbooks, the EMIS census, a sports
+//! Files that leave Termbook: Excel workbooks, the EMIS census, a sports
 //! team's photos.
 //!
 //! The webview cannot touch the disk (see docs/SECURITY.md). A command builds

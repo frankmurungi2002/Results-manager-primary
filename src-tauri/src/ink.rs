@@ -53,7 +53,7 @@ pub fn clean(bytes: &[u8], mark: Mark) -> AppResult<Vec<u8>> {
         Ok(ImageFormat::Jpeg) => ImageFormat::Jpeg,
         _ => {
             return Err(AppError::validation(
-                "That file is not a photo Phantom can read. Use a JPEG or PNG.",
+                "That file is not a photo Termbook can read. Use a JPEG or PNG.",
             ))
         }
     };

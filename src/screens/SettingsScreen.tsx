@@ -216,7 +216,7 @@ function SchoolTab() {
     <div className="stack">
       <Card
         title="School identity"
-        subtitle="This appears at the top of every document Phantom School Manager prints"
+        subtitle="This appears at the top of every document Termbook prints"
         footer={
           <div className="row-between">
             <span className="field-hint">The name is required; a logo never is.</span>
@@ -930,7 +930,7 @@ function BackupTab() {
     <div className="stack">
       <Card
         title="Backups"
-        subtitle="A consistent snapshot, safe to take while Phantom School Manager is in use"
+        subtitle="A consistent snapshot, safe to take while Termbook is in use"
         actions={
           <Button
             variant="primary"
@@ -1020,7 +1020,7 @@ function BackupTab() {
         }
       >
         <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
-          Plug in an external SSD and choose a folder on it. Phantom School Manager keeps the twenty
+          Plug in an external SSD and choose a folder on it. Termbook keeps the twenty
           most recent snapshots locally so a school PC never fills up. Rotating
           one drive off site at the end of each term is the cheapest protection
           there is against fire or theft.
@@ -1070,7 +1070,7 @@ function RestoreCard() {
   function chooseFile() {
     openDialog({
       multiple: false,
-      filters: [{ name: "Phantom School Manager backup", extensions: ["rmdb"] }],
+      filters: [{ name: "Termbook backup", extensions: ["rmdb"] }],
     })
       .then((path) => {
         if (typeof path === "string") inspect(path);
@@ -1178,8 +1178,8 @@ function RestoreCard() {
         {preview && (
           <div className="stack">
             {!preview.compatible && (
-              <Alert tone="danger" title="Made by a newer version of Phantom School Manager">
-                Update Phantom School Manager on this computer before restoring this backup.
+              <Alert tone="danger" title="Made by a newer version of Termbook">
+                Update Termbook on this computer before restoring this backup.
               </Alert>
             )}
             <Row label="School" value={preview.institutionName ?? "Not set up yet"} />
@@ -1330,7 +1330,7 @@ function AccountTab() {
           <Row label="Signed in" value={formatDateTime(session.signedInAt)} />
         </div>
         <p className="field-hint" style={{ marginTop: "var(--space-4)" }}>
-          Phantom School Manager signs you out automatically after 30 minutes without activity, so a
+          Termbook signs you out automatically after 30 minutes without activity, so a
           machine left unattended in a shared office does not stay open.
         </p>
       </Card>
@@ -1412,7 +1412,7 @@ function RecoveryCard() {
   return (
     <Card
       title="Recovery code"
-      subtitle="Nobody inside Phantom can reset a School Admin's password. A printed recovery code can."
+      subtitle="Nobody inside Termbook can reset a School Admin's password. A printed recovery code can."
       footer={
         <div className="row-between">
           <span className="field-hint">

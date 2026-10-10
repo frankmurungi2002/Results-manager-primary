@@ -700,7 +700,7 @@ ALTER TABLE users ADD COLUMN photo_png BLOB;
 
 const M005_PASS_OUTS_AND_SMS: &str = r#"
 
--- Every message Phantom School Manager sends, written here first and sent when there is internet.
+-- Every message Termbook sends, written here first and sent when there is internet.
 CREATE TABLE sms_outbox (
     id           TEXT PRIMARY KEY,
     to_phone     TEXT NOT NULL,             -- +256XXXXXXXXX
@@ -1091,7 +1091,7 @@ CREATE TABLE fee_optins (
 
 -- Anything that changes one learner's bill: a bursary, a sibling discount,
 -- a waiver (each an amount or a percentage), an extra charge, a balance
--- brought forward from before Phantom, or money paid before Phantom.
+-- brought forward from before Termbook, or money paid before Termbook.
 CREATE TABLE fee_adjustments (
     id            TEXT PRIMARY KEY,
     student_id    TEXT NOT NULL REFERENCES students (id),
@@ -1212,7 +1212,7 @@ CREATE TABLE day_notes (
 // ---------------------------------------------------------------------------
 //
 // Teachers sign themselves in at the office computer with a short PIN, without
-// signing in to Phantom: the computer never shows anyone's data to do it.
+// signing in to Termbook: the computer never shows anyone's data to do it.
 
 const M016_STAFF_REGISTER: &str = r#"
 ALTER TABLE users ADD COLUMN pin_hash TEXT;
@@ -1261,7 +1261,7 @@ UPDATE settings SET value = 'egosms_classic' WHERE key = 'sms.provider' AND valu
 // 018 — a School Admin's printed recovery code
 // ---------------------------------------------------------------------------
 //
-// Nobody can reset a School Admin's password from inside Phantom: that is the
+// Nobody can reset a School Admin's password from inside Termbook: that is the
 // point of the subset rule. So a School Admin prints a one-time recovery code
 // and keeps it in the school safe. Only its hash is stored.
 
