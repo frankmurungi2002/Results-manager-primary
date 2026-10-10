@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   CalendarDays,
   ChevronDown,
+  ClipboardCheck,
   ClipboardList,
   FileText,
   GraduationCap,
@@ -68,6 +69,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
       },
       { id: "attendance", label: "Attendance", icon: CalendarCheck, show: (can, s) => teaches(s) || can("view_all_classes") },
       { id: "learners", label: "Learners", icon: Users, show: (can, s) => teaches(s) || can("view_all_learners") },
+      { id: "requirements", label: "Requirements", icon: ClipboardCheck, show: (can, s) => runsAClass(s) || can("view_all_learners") },
       { id: "passouts", label: "Pass-outs", icon: DoorOpen, show: (can, s) => runsAClass(s) || can("issue_pass_outs") },
       { id: "messages", label: "Messages", icon: MessageSquare },
       { id: "reports", label: "Reports & printing", icon: FileText, show: (can, s) => teaches(s) || can("view_all_learners") },
@@ -113,6 +115,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   fees: "Fees",
   verify: "Check a document",
   daybook: "Day Book",
+  requirements: "Requirements",
   settings: "Settings",
 };
 

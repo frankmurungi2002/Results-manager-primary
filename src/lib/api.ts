@@ -9,6 +9,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  RequirementInput,
+  RequirementItem,
+  RequirementSheet,
   ImportChoice,
   StatementColumns,
   StatementImported,
@@ -695,4 +698,15 @@ export const api = {
     call<StatementPlan>("read_schoolpay_statement", { path, columns }),
   importSchoolpayStatement: (path: string, columns: StatementColumns, choices: ImportChoice[]) =>
     call<StatementImported>("import_schoolpay_statement", { path, columns, choices }),
+
+  listRequirementItems: (termId: string | null) => call<RequirementItem[]>("list_requirement_items", { termId }),
+  saveRequirementItem: (input: RequirementInput) => call<string>("save_requirement_item", { input }),
+  retireRequirementItem: (id: string) => call<void>("retire_requirement_item", { id }),
+  copyRequirements: (fromTermId: string, toTermId: string) => call<number>("copy_requirements", { fromTermId, toTermId }),
+  requirementsSheet: (classId: string, termId: string | null) =>
+    call<RequirementSheet>("requirements_sheet", { classId, termId }),
+  recordRequirement: (studentId: string, itemId: string, quantity: number, cashPaid: number) =>
+    call<void>("record_requirement", { studentId, itemId, quantity, cashPaid }),
+  buildRequirementsList: (classId: string, termId: string | null) =>
+    call<DocumentEnvelope<RequirementSheet>>("build_requirements_list", { classId, termId }),
 };

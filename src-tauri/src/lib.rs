@@ -125,6 +125,14 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         // --- SchoolPay statements ----------------------------------------
         commands::schoolpay::read_schoolpay_statement,
         commands::schoolpay::import_schoolpay_statement,
+        // --- Term requirements -------------------------------------------
+        commands::requirements::list_requirement_items,
+        commands::requirements::save_requirement_item,
+        commands::requirements::retire_requirement_item,
+        commands::requirements::copy_requirements,
+        commands::requirements::requirements_sheet,
+        commands::requirements::record_requirement,
+        commands::requirements::build_requirements_list,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,

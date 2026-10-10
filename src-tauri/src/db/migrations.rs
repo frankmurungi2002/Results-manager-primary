@@ -116,6 +116,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "schoolpay_codes",
         sql: M019_SCHOOLPAY_CODES,
     },
+    Migration {
+        version: 20,
+        name: "requirements",
+        sql: M020_REQUIREMENTS,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1257,4 +1262,38 @@ ALTER TABLE users ADD COLUMN recovery_locked_until TEXT;
 const M019_SCHOOLPAY_CODES: &str = r#"
 ALTER TABLE students ADD COLUMN schoolpay_code TEXT;
 CREATE UNIQUE INDEX idx_students_schoolpay_code ON students (schoolpay_code) WHERE schoolpay_code IS NOT NULL;
+"#;
+
+// ---------------------------------------------------------------------------
+// 020 — term requirements: what each learner brings
+// ---------------------------------------------------------------------------
+
+const M020_REQUIREMENTS: &str = r#"
+CREATE TABLE requirement_items (
+    id          TEXT PRIMARY KEY,
+    term_id     TEXT NOT NULL REFERENCES terms (id),
+    -- NULL: every class.
+    class_id    TEXT REFERENCES classes (id),
+    name        TEXT NOT NULL,
+    quantity    INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    -- What the school accepts in cash instead, if it does.
+    cash_value  INTEGER CHECK (cash_value IS NULL OR cash_value >= 0),
+    position    INTEGER NOT NULL DEFAULT 0,
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'retired')),
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE INDEX idx_requirement_items_term ON requirement_items (term_id, status);
+
+-- What one learner has handed in of one item.
+CREATE TABLE requirement_received (
+    student_id  TEXT NOT NULL REFERENCES students (id),
+    item_id     TEXT NOT NULL REFERENCES requirement_items (id),
+    quantity    INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+    cash_paid   INTEGER NOT NULL DEFAULT 0 CHECK (cash_paid >= 0),
+    updated_by  TEXT REFERENCES users (id),
+    updated_at  TEXT NOT NULL,
+    PRIMARY KEY (student_id, item_id)
+);
 "#;

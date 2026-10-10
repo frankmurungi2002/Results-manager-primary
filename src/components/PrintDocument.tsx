@@ -55,6 +55,7 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  RequirementSheet,
   RecoverySheet,
   StaffMonth,
   DayBook,
@@ -2329,6 +2330,41 @@ export function RecoverySheetDocument({ envelope }: { envelope: DocumentEnvelope
         </ul>
         <p className="rec-made">Made {printDate(body.createdAt)}.</p>
       </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Requirements still to bring
+// ---------------------------------------------------------------------------
+
+export function RequirementsSheet({ envelope }: { envelope: DocumentEnvelope<RequirementSheet> }) {
+  const { branding, footer, body } = envelope;
+  const owing = body.rows.filter((r) => r.outstanding.length > 0);
+  return (
+    <Sheet branding={branding} footer={footer} title="Requirements Still to Bring" subtitle={`${body.className}  •  ${body.termName}`}>
+      <p className="sr-key">
+        The list: {body.items.map((i) => (i.quantity > 1 ? `${i.quantity} x ${i.name}` : i.name)).join(", ")}.{" "}
+        {body.complete} of {body.rows.length} learners have brought everything.
+      </p>
+      <table className="cl-table">
+        <thead>
+          <tr>
+            <th className="num">#</th>
+            <th style={{ width: "34%" }}>Learner</th>
+            <th>Still to bring</th>
+          </tr>
+        </thead>
+        <tbody>
+          {owing.map((r, i) => (
+            <tr key={r.studentId}>
+              <td className="num">{i + 1}</td>
+              <td>{r.fullName}</td>
+              <td>{r.outstanding.join(", ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </Sheet>
   );
 }

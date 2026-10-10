@@ -23,6 +23,7 @@ export type ScreenId =
   | "fees"
   | "verify"
   | "daybook"
+  | "requirements"
   | "settings";
 
 /**

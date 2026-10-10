@@ -795,7 +795,12 @@ fn compute_report_cards(
     }
 
     let non_empty = |value: Option<String>| value.filter(|text| !text.trim().is_empty());
-    let requirements = non_empty(repo::get_setting(&conn, "report.requirements")?);
+    // The term's requirements list when the office keeps one; otherwise the
+    // text written under report card settings.
+    let requirements = match crate::commands::requirements::as_text(conn, term_id, class_id)? {
+        Some(list) => Some(list),
+        None => non_empty(repo::get_setting(&conn, "report.requirements")?),
+    };
     let head_teacher_name = non_empty(repo::get_setting(&conn, "report.head_teacher_name")?);
 
     // --- Build every card, then rank ----------------------------------------

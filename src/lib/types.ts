@@ -1943,3 +1943,50 @@ export interface StatementImported {
   skipped: number;
   codesLearned: number;
 }
+
+// ---------------------------------------------------------------------------
+// Term requirements
+// ---------------------------------------------------------------------------
+
+export interface RequirementItem {
+  id: string;
+  termId: string;
+  classId: string | null;
+  className: string | null;
+  name: string;
+  quantity: number;
+  cashValue: number | null;
+}
+
+export interface RequirementInput {
+  id: string | null;
+  termId: string | null;
+  classId: string | null;
+  name: string;
+  quantity: number;
+  cashValue: number | null;
+}
+
+export interface RequirementEntry {
+  itemId: string;
+  quantity: number;
+  cashPaid: number;
+  complete: boolean;
+}
+
+export interface RequirementRow {
+  studentId: string;
+  fullName: string;
+  entries: RequirementEntry[];
+  outstanding: string[];
+}
+
+export interface RequirementSheet {
+  termId: string;
+  termName: string;
+  classId: string;
+  className: string;
+  items: RequirementItem[];
+  rows: RequirementRow[];
+  complete: number;
+}

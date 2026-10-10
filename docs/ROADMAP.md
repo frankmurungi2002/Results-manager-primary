@@ -189,6 +189,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | SchoolPay statements | ✅ | — | Fees → Import SchoolPay statement: the Excel or CSV statement from the SchoolPay portal, columns guessed from the headings (changeable), each line matched by SchoolPay code, then registration number, then name (confirmed by the bursar); one receipt per transaction ID, so a statement opened twice records nothing twice; SchoolPay codes learned for next time. SchoolPay publishes no API, so the statement is the bridge |
 | Check a document | ✅ | — | QR and code on receipts and report cards (HMAC under a per-school secret); readable by any phone, confirmed in Phantom offline |
 | Subject heatmap | 🔌 | M1 | |
+| Term requirements | ✅ | — | Requirements screen: the office sets the term's list (for every class or one class, with an optional cash value instead), class teachers tick items as they arrive, partial quantities and cash-instead count; "who still owes" prints per class; the list prints on report cards in place of the free-text setting |
 
 ### Non-functional requirements (SRS 14)
 
