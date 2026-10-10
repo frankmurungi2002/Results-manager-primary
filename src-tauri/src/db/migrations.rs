@@ -131,6 +131,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "staff_invites",
         sql: M022_STAFF_INVITES,
     },
+    Migration {
+        version: 23,
+        name: "cash_book",
+        sql: M023_CASH_BOOK,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1364,4 +1369,57 @@ CREATE TABLE staff_invites (
     created_by       TEXT REFERENCES users (id),
     created_at       TEXT NOT NULL
 );
+"#;
+
+// ---------------------------------------------------------------------------
+// 023 — spending, other income and banking
+// ---------------------------------------------------------------------------
+//
+// Everything that moves the school's money other than fees, kept like
+// receipts: numbered, never edited, never deleted, cancelled only with a
+// reason by someone other than whoever wrote it. `banking` moves cash to the
+// bank: it lowers cash at hand without being spending.
+const M023_CASH_BOOK: &str = r#"
+CREATE TABLE cash_entries (
+    id           TEXT PRIMARY KEY,
+    kind         TEXT NOT NULL CHECK (kind IN ('expense', 'income', 'banking')),
+    voucher_no   INTEGER NOT NULL,
+    on_date      TEXT NOT NULL,
+    category     TEXT NOT NULL,
+    description  TEXT NOT NULL,
+    party        TEXT,
+    amount       INTEGER NOT NULL CHECK (amount > 0),
+    method       TEXT NOT NULL CHECK (method IN ('cash', 'mobile_money', 'bank', 'cheque')),
+    reference    TEXT,
+    status       TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid', 'voided')),
+    recorded_by  TEXT REFERENCES users (id),
+    created_at   TEXT NOT NULL,
+    voided_by    TEXT REFERENCES users (id),
+    voided_at    TEXT,
+    void_reason  TEXT,
+    UNIQUE (kind, voucher_no),
+    CHECK (status = 'valid' OR (voided_at IS NOT NULL AND void_reason IS NOT NULL))
+);
+
+CREATE INDEX idx_cash_entries_day ON cash_entries (on_date, status);
+
+CREATE TRIGGER trg_cash_entries_fixed
+BEFORE UPDATE OF kind, voucher_no, on_date, category, description, party, amount, method, reference,
+                 recorded_by, created_at ON cash_entries
+BEGIN
+    SELECT RAISE(ABORT, 'a voucher cannot be changed: cancel it and write a new one');
+END;
+
+CREATE TRIGGER trg_cash_entries_void_once
+BEFORE UPDATE OF status ON cash_entries
+WHEN OLD.status = 'voided'
+BEGIN
+    SELECT RAISE(ABORT, 'a cancelled voucher stays cancelled');
+END;
+
+CREATE TRIGGER trg_cash_entries_no_delete
+BEFORE DELETE ON cash_entries
+BEGIN
+    SELECT RAISE(ABORT, 'vouchers are never deleted');
+END;
 "#;

@@ -2250,3 +2250,17 @@
   font-size: 21px;
   line-height: 1.7;
 }
+
+.spend-bar {
+  height: 6px;
+  background: var(--bg-sunken);
+  border-radius: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.spend-bar > div {
+  height: 100%;
+  background: var(--accent, #2e7d4f);
+  border-radius: 3px;
+}

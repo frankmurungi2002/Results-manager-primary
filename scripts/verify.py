@@ -259,6 +259,26 @@ def check_invariants(con):
          "INSERT INTO fee_payments (id,receipt_no,student_id,term_id,amount,method,"
          "reference,paid_on,created_at) VALUES ('fp4',4,'st1','t1',250000,"
          "'mobile_money','MP2610A1','2026-02-03',?)", (now,))
+    # Spending vouchers are kept like receipts.
+    con.execute("INSERT INTO cash_entries (id,kind,voucher_no,on_date,category,description,"
+                "amount,method,created_at) VALUES ('ce1','expense',1,'2026-02-03',"
+                "'Food and kitchen','Maize flour',120000,'cash',?)", (now,))
+    con.commit()
+    case("a voucher's amount cannot be changed",
+         "UPDATE cash_entries SET amount = 12000 WHERE id = 'ce1'", must_fail=True)
+    case("a voucher cannot be deleted", "DELETE FROM cash_entries", must_fail=True)
+    case("one voucher number per kind",
+         "INSERT INTO cash_entries (id,kind,voucher_no,on_date,category,description,"
+         "amount,method,created_at) VALUES ('ce2','expense',1,'2026-02-03','Medical',"
+         "'x',1,'cash',?)", (now,), must_fail=True)
+    case("a cancelled voucher needs a reason",
+         "UPDATE cash_entries SET status = 'voided', voided_at = ? WHERE id = 'ce1'",
+         (now,), must_fail=True)
+    case("a voucher can be cancelled with a reason",
+         "UPDATE cash_entries SET status = 'voided', voided_at = ?, void_reason = 'twice'"
+         " WHERE id = 'ce1'", (now,))
+    case("a cancelled voucher stays cancelled",
+         "UPDATE cash_entries SET status = 'valid' WHERE id = 'ce1'", must_fail=True)
     case("a discount is an amount or a percentage, not both",
          "INSERT INTO fee_adjustments (id,student_id,term_id,kind,amount,percent,reason,"
          "created_at) VALUES ('fa1','st1','t1','bursary',1000,10,'x',?)", (now,),

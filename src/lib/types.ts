@@ -1687,6 +1687,7 @@ export interface DayRow {
   feesCash: number | null;
   receipts: number | null;
   receiptsCancelled: number | null;
+  spent: number | null;
   registers: number;
   present: number;
   absent: number;
@@ -2162,4 +2163,59 @@ export interface Invite {
   message: string;
   phone: string | null;
   smsQueued: boolean;
+}
+
+// --- Spending, other income and banking -------------------------------------
+
+export interface CashEntry {
+  id: string;
+  /** expense, income or banking */
+  kind: string;
+  voucher: string;
+  onDate: string;
+  category: string;
+  description: string;
+  party: string | null;
+  amount: number;
+  method: string;
+  reference: string | null;
+  status: string;
+  recordedBy: string | null;
+  voidReason: string | null;
+  amountWords: string;
+}
+
+export interface CashEntryInput {
+  kind: string;
+  onDate: string | null;
+  category: string;
+  description: string;
+  party: string | null;
+  amount: number;
+  method: string;
+  reference: string | null;
+}
+
+export interface CategoryTotal {
+  category: string;
+  amount: number;
+  entries: number;
+}
+
+export interface CashSummary {
+  from: string;
+  to: string;
+  fees: number;
+  otherIncome: number;
+  income: number;
+  spent: number;
+  surplus: number;
+  banked: number;
+  cashAtStart: number;
+  cashAtEnd: number;
+  spending: CategoryTotal[];
+  incomeBy: CategoryTotal[];
+  entries: CashEntry[];
+  expenseCategories: string[];
+  incomeCategories: string[];
 }

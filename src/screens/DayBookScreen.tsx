@@ -40,6 +40,7 @@ function dayLabel(date: string): string {
 function isQuiet(day: DayRow): boolean {
   return (
     (day.feesCollected ?? 0) === 0 &&
+    (day.spent ?? 0) === 0 &&
     day.registers === 0 &&
     day.passOuts === 0 &&
     day.textsSent === 0 &&
@@ -127,7 +128,7 @@ export function DayBookScreen() {
           <>
             <div className="grid grid-stats fees-stats" style={{ marginTop: "var(--space-4)" }}>
               {book.money && (
-                <StatTile label="Fees received" value={ugx(t.feesCollected ?? 0)} meta={`${t.receipts ?? 0} receipts`} />
+                <StatTile label="Fees received" value={ugx(t.feesCollected ?? 0)} meta={`${t.receipts ?? 0} receipts${t.spent ? `, ${ugx(t.spent)} spent` : ""}`} />
               )}
               <StatTile
                 label="Attendance"
@@ -145,6 +146,7 @@ export function DayBookScreen() {
                     <tr>
                       <th>Day</th>
                       {book.money && <th className="num">Fees</th>}
+                      {book.money && <th className="num">Spent</th>}
                       <th className="num">Attendance</th>
                       <th className="num">Absent</th>
                       <th className="num">Pass-outs</th>
@@ -165,6 +167,7 @@ export function DayBookScreen() {
                             ) : null}
                           </td>
                         )}
+                        {book.money && <td className="num">{day.spent ? ugx(day.spent) : "—"}</td>}
                         <td className="num">{day.attendancePercent === null ? "—" : `${day.attendancePercent}%`}</td>
                         <td className="num">{day.registers ? day.absent : "—"}</td>
                         <td className="num">{day.passOuts || "—"}</td>
@@ -253,6 +256,12 @@ function NoteModal({ day, onClose, onSaved }: { day: DayRow; onClose: () => void
               </dd>
             </div>
           )}
+          {day.spent ? (
+            <div>
+              <dt>Spent</dt>
+              <dd>{ugx(day.spent)} (see Expenses for the vouchers)</dd>
+            </div>
+          ) : null}
           <div>
             <dt>Registers</dt>
             <dd>

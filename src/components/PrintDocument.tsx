@@ -55,6 +55,8 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  CashEntry,
+  CashSummary,
   Invite,
   PleCheck,
   SportsTeam,
@@ -2216,6 +2218,7 @@ export function DayBookSheet({ envelope }: { envelope: DocumentEnvelope<DayBook>
             <th style={{ width: "11%" }}>Day</th>
             {body.money && <th className="num">Fees received</th>}
             {body.money && <th className="num">Cash</th>}
+            {body.money && <th className="num">Spent</th>}
             <th className="num">Attendance</th>
             <th className="num">Absent</th>
             <th className="num">Pass-outs</th>
@@ -2230,6 +2233,7 @@ export function DayBookSheet({ envelope }: { envelope: DocumentEnvelope<DayBook>
               <td>{printDate(d.date)}</td>
               {body.money && <td className="num">{(d.feesCollected ?? 0).toLocaleString("en-US")}</td>}
               {body.money && <td className="num">{(d.feesCash ?? 0).toLocaleString("en-US")}</td>}
+              {body.money && <td className="num">{(d.spent ?? 0).toLocaleString("en-US")}</td>}
               <td className="num">{d.attendancePercent === null ? "—" : `${d.attendancePercent}%`}</td>
               <td className="num">{d.registers ? d.absent : "—"}</td>
               <td className="num">{d.passOuts}</td>
@@ -2244,6 +2248,7 @@ export function DayBookSheet({ envelope }: { envelope: DocumentEnvelope<DayBook>
             <td>Total</td>
             {body.money && <td className="num">{(t.feesCollected ?? 0).toLocaleString("en-US")}</td>}
             {body.money && <td className="num">{(t.feesCash ?? 0).toLocaleString("en-US")}</td>}
+            {body.money && <td className="num">{(t.spent ?? 0).toLocaleString("en-US")}</td>}
             <td className="num">{t.attendancePercent === null ? "—" : `${t.attendancePercent}%`}</td>
             <td className="num">{t.absent}</td>
             <td className="num">{t.passOuts}</td>
@@ -2602,6 +2607,124 @@ export function InviteSlipSheet({ envelope }: { envelope: DocumentEnvelope<Invit
           <li>Choose a password of at least 10 characters that nobody else knows, and type it twice.</li>
         </ol>
         <p>The code works once. Keep your password to yourself: everything you record is signed with your name.</p>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Spending: the payment voucher and the income and spending statement
+// ---------------------------------------------------------------------------
+
+const VOUCHER_TITLE: Record<string, string> = { expense: "Payment Voucher", income: "Income Voucher", banking: "Banking Voucher" };
+
+export function VoucherSheet({ envelope }: { envelope: DocumentEnvelope<CashEntry> }) {
+  const { branding, footer, body: e } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} variant="compact" title={VOUCHER_TITLE[e.kind] ?? "Voucher"} subtitle={`${e.voucher}  •  ${printDate(e.onDate)}`} pageNumber={1} pageCount={1}>
+      <div className="po-sheet" style={{ "--doc-accent": branding.accentColor } as CSSProperties}>
+        <section className={e.status === "voided" ? "po-copy rc-copy rc-voided" : "po-copy rc-copy"}>
+          <header className="po-copy-head">
+            <span className="po-copy-kind">{e.category}</span>
+            <span className="po-copy-number">{e.voucher}</span>
+          </header>
+          {e.status === "voided" && <div className="rc-void-banner">CANCELLED{e.voidReason ? `: ${e.voidReason}` : ""}.</div>}
+          <div className="rc-body">
+            <dl className="po-facts rc-facts">
+              <dt>{e.kind === "income" ? "Received from" : e.kind === "banking" ? "Banked at" : "Paid to"}</dt>
+              <dd>{e.party ?? "\u00a0"}</dd>
+              <dt>For</dt>
+              <dd>
+                <strong>{e.description}</strong>
+              </dd>
+              <dt>How</dt>
+              <dd>
+                {e.method === "cash" ? "Cash" : e.method === "mobile_money" ? "Mobile Money" : e.method === "bank" ? "Bank" : "Cheque"}
+                {e.reference ? `  •  ${e.reference}` : ""}
+              </dd>
+              <dt>The sum of</dt>
+              <dd className="rc-words">{e.amountWords}</dd>
+            </dl>
+            <div className="rc-side">
+              <div className="rc-amount">
+                <span>Amount</span>
+                <strong>{ugx(e.amount)}</strong>
+              </div>
+            </div>
+          </div>
+          <footer className="po-copy-foot vc-foot">
+            <div className="po-sign">
+              {e.recordedBy ?? ""}
+              <span>Prepared by</span>
+            </div>
+            <div className="po-sign">
+              <span>Approved by (headteacher)</span>
+            </div>
+            <div className="po-sign">
+              <span>{e.kind === "expense" ? "Received by (name and signature)" : "Signature"}</span>
+            </div>
+          </footer>
+        </section>
+      </div>
+    </Sheet>
+  );
+}
+
+export function CashSummarySheet({ envelope }: { envelope: DocumentEnvelope<CashSummary> }) {
+  const { branding, footer, body } = envelope;
+  const valid = body.entries.filter((e) => e.status === "valid");
+  return (
+    <Sheet branding={branding} footer={footer} title="Income and Spending" subtitle={`${printDate(body.from)} to ${printDate(body.to)}`}>
+      <table className="cl-table cs-table">
+        <tbody>
+          <tr className="cs-head"><td colSpan={2}>Money in</td></tr>
+          <tr><td>School fees received</td><td className="num">{ugx(body.fees)}</td></tr>
+          {body.incomeBy.map((c) => (
+            <tr key={c.category}><td>{c.category}</td><td className="num">{ugx(c.amount)}</td></tr>
+          ))}
+          <tr className="cs-total"><td>Total in</td><td className="num">{ugx(body.income)}</td></tr>
+          <tr className="cs-head"><td colSpan={2}>Money spent</td></tr>
+          {body.spending.length === 0 && <tr><td colSpan={2}>Nothing spent</td></tr>}
+          {body.spending.map((c) => (
+            <tr key={c.category}><td>{c.category} <span className="rg-small">({c.entries})</span></td><td className="num">{ugx(c.amount)}</td></tr>
+          ))}
+          <tr className="cs-total"><td>Total spent</td><td className="num">{ugx(body.spent)}</td></tr>
+          <tr className="cs-grand"><td>{body.surplus >= 0 ? "Surplus" : "Shortfall"}</td><td className="num">{ugx(body.surplus)}</td></tr>
+          <tr className="cs-head"><td colSpan={2}>Cash</td></tr>
+          <tr><td>Cash at hand on {printDate(body.from)} (opening)</td><td className="num">{ugx(body.cashAtStart)}</td></tr>
+          <tr><td>Cash taken to the bank</td><td className="num">{ugx(body.banked)}</td></tr>
+          <tr className="cs-total"><td>Cash that should be at hand on {printDate(body.to)}</td><td className="num">{ugx(body.cashAtEnd)}</td></tr>
+          <tr><td>Cash counted</td><td className="num">&nbsp;</td></tr>
+        </tbody>
+      </table>
+      {valid.length > 0 && (
+        <>
+          <h3 className="cs-sub">Vouchers</h3>
+          <table className="cl-table">
+            <thead>
+              <tr>
+                <th>Voucher</th>
+                <th>Date</th>
+                <th>Details</th>
+                <th className="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {valid.map((e) => (
+                <tr key={e.id}>
+                  <td className="mono">{e.voucher}</td>
+                  <td>{printDate(e.onDate)}</td>
+                  <td>{e.category}: {e.description}{e.party ? ` (${e.party})` : ""}</td>
+                  <td className="num">{e.kind === "income" ? "" : "-"}{e.amount.toLocaleString("en-US")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      <div className="rg-certify-row" style={{ marginTop: "10mm" }}>
+        <div className="rg-certify-sign"><SignatureBlock ink={null} name="Bursar" /></div>
+        <div className="rg-certify-sign"><SignatureBlock ink={branding.headSignatureDataUrl} name="Headteacher" /></div>
       </div>
     </Sheet>
   );

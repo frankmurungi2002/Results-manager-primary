@@ -2712,3 +2712,41 @@
   font-size: 7.5pt;
   color: var(--ink-faint);
 }
+
+/* Vouchers and the income and spending statement */
+.vc-foot {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cs-table td {
+  padding: 1.6mm 2.5mm;
+}
+
+.cs-head td {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 8pt;
+  background: var(--paper-tint, #f2f4f7);
+}
+
+.cs-total td {
+  font-weight: 700;
+  border-top: 1.5px solid var(--ink);
+}
+
+.cs-grand td {
+  font-weight: 800;
+  font-size: 11pt;
+  border-top: 2px double var(--ink);
+}
+
+.cs-sub {
+  margin: 6mm 0 2mm;
+  font-size: 10pt;
+}
+
+.cs-table td.num {
+  white-space: nowrap;
+  width: 38mm;
+}

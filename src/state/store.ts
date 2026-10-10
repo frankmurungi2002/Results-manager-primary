@@ -26,6 +26,7 @@ export type ScreenId =
   | "requirements"
   | "registrations"
   | "insights"
+  | "expenses"
   | "settings";
 
 /**

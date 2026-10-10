@@ -45,6 +45,8 @@ pub struct DayRow {
     pub fees_cash: Option<i64>,
     pub receipts: Option<i64>,
     pub receipts_cancelled: Option<i64>,
+    /// Spending vouchers written that day (money readers only).
+    pub spent: Option<i64>,
     /// Classes whose register was marked that day.
     pub registers: i64,
     pub present: i64,
@@ -69,6 +71,7 @@ impl DayRow {
     /// A day on which nothing at all was recorded (a weekend, a holiday).
     pub fn is_quiet(&self) -> bool {
         self.fees_collected.unwrap_or(0) == 0
+            && self.spent.unwrap_or(0) == 0
             && self.registers == 0
             && self.pass_outs == 0
             && self.texts_sent == 0
@@ -132,7 +135,16 @@ pub fn day_rows(conn: &Connection, from: NaiveDate, to: NaiveDate, money: bool) 
                 Ok(())
             },
         )?;
+        each(conn, &a, &b, &mut days,
+            "SELECT on_date, SUM(amount) FROM cash_entries
+             WHERE kind = 'expense' AND status = 'valid' AND on_date BETWEEN ?1 AND ?2 GROUP BY on_date",
+            &mut |day, r| {
+                day.spent = Some(r.get(1)?);
+                Ok(())
+            },
+        )?;
         for day in days.values_mut() {
+            day.spent.get_or_insert(0);
             day.fees_collected.get_or_insert(0);
             day.fees_cash.get_or_insert(0);
             day.receipts.get_or_insert(0);
@@ -240,6 +252,7 @@ pub fn day_book(conn: &Connection, from: NaiveDate, to: NaiveDate, money: bool) 
             *totals.fees_cash.get_or_insert(0) += day.fees_cash.unwrap_or(0);
             *totals.receipts.get_or_insert(0) += day.receipts.unwrap_or(0);
             *totals.receipts_cancelled.get_or_insert(0) += day.receipts_cancelled.unwrap_or(0);
+            *totals.spent.get_or_insert(0) += day.spent.unwrap_or(0);
         }
         totals.registers += day.registers;
         totals.absent += day.absent;

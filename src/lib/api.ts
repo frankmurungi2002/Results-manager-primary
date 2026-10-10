@@ -9,6 +9,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  CashEntry,
+  CashEntryInput,
+  CashSummary,
   Invite,
   LearnerFix,
   PleCheck,
@@ -741,4 +744,9 @@ export const api = {
   inviteStaff: (userId: string, sendSms: boolean) => call<DocumentEnvelope<Invite>>("invite_staff", { userId, sendSms }),
   acceptInvite: (username: string, code: string, newPassword: string) =>
     call<string>("accept_invite", { username, code, newPassword }),
+  recordCashEntry: (input: CashEntryInput) => call<CashEntry>("record_cash_entry", { input }),
+  voidCashEntry: (id: string, reason: string) => call<CashEntry>("void_cash_entry", { id, reason }),
+  cashSummary: (from: string, to: string) => call<CashSummary>("cash_summary", { from, to }),
+  buildCashSummary: (from: string, to: string) => call<DocumentEnvelope<CashSummary>>("build_cash_summary", { from, to }),
+  buildVoucher: (id: string) => call<DocumentEnvelope<CashEntry>>("build_voucher", { id }),
 };

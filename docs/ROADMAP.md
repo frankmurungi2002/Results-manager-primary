@@ -174,7 +174,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G17 | Admissions pipeline | ⬜ | M2 | |
 | FR-G18 | Correspondence log | ⬜ | M4 | |
 | FR-G19 | Meeting minutes and action points | ⬜ | M4 | |
-| FR-G20 | Petty cash and expenditure | ⬜ | M3 | |
+| FR-G20 | Petty cash and expenditure | ✅ | M3 | Expenses screen: spending (by head: food, salaries, power and water…), other income and cash banked, each on a numbered voucher (PV-, OI-, BK-) protected like a receipt: never edited or deleted, cancelled only with a reason by someone else. Cash spending beyond the cash at hand is refused. Shows money in, spent, surplus and the cash that should be in the drawer; prints the payment voucher for signatures and the income and spending statement with a line for the cash counted. The Day Book shows each day's spending |
 | FR-G21 | School store and uniform tracking | ⬜ | M3 | |
 | FR-G22 | Pass-out / exit pass with guardian SMS | ✅ | M3 | Reason, destination, who with and time away; two-copy slip; SMS on leaving and on return; late-back flag on the dashboard |
 | FR-G23 | Bulk SMS broadcast with cost estimate | ✅ | M3 | Messages screen: whole school, classes, streams, learner groups (teams, clubs) and staff, combined freely. One text per phone number (a parent of three gets one message naming all three), `{learner}` / `{class}` / `{name}` placeholders, the exact SMS count before sending (Unicode detected, pasted curly quotes made plain), and a stale preview sends nothing. Class Teachers text their own class and teachers in charge text their group; the school can switch that off. Goes out behind urgent messages |
