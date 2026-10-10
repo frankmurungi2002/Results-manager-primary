@@ -1,6 +1,7 @@
 pub mod academics;
 pub mod attendance;
 pub mod auth;
+pub mod daybook;
 pub mod features;
 pub mod fees;
 pub mod importer;
@@ -11,6 +12,7 @@ pub mod passouts;
 pub mod reports;
 pub mod setup;
 pub mod signatures;
+pub mod staffreg;
 pub mod students;
 pub mod system;
 pub mod teachers;

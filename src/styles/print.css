@@ -2474,3 +2474,24 @@
   font-size: 8pt;
   color: var(--ink-soft);
 }
+
+.db-table tfoot td {
+  font-weight: 700;
+  border-top: 1.5px solid var(--ink);
+}
+
+.sr-table th,
+.sr-table td {
+  font-size: 7pt;
+  padding: 1mm 0.8mm;
+}
+
+.sr-late {
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.sr-key {
+  font-size: 8pt;
+  color: var(--ink-soft);
+}

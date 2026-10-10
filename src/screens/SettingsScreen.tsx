@@ -1279,6 +1279,8 @@ function AccountTab() {
         </div>
       </Card>
 
+      <PinCard />
+
       <Card title="This session">
         <div className="stack">
           <Row label="Name" value={session.fullName} />
@@ -1295,5 +1297,49 @@ function AccountTab() {
         </p>
       </Card>
     </div>
+  );
+}
+
+/** The PIN for the staff sign-in station on the sign-in screen. */
+function PinCard() {
+  const reportError = useStore((state) => state.reportError);
+  const toast = useStore((state) => state.toast);
+  const [pin, setPin] = useState("");
+  const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const mismatch = again.length > 0 && again !== pin;
+  return (
+    <Card
+      title="My sign-in PIN"
+      subtitle="For signing in and out of school at the office computer, on the Staff sign-in tab of the sign-in screen"
+      footer={
+        <div className="row" style={{ justifyContent: "flex-end" }}>
+          <Button
+            variant="primary"
+            loading={busy}
+            disabled={pin.length < 4 || mismatch || !again}
+            onClick={() => {
+              setBusy(true);
+              api
+                .setMySignInPin(pin)
+                .then(() => {
+                  toast("success", "Your PIN is set.");
+                  setPin("");
+                  setAgain("");
+                })
+                .catch(reportError)
+                .finally(() => setBusy(false));
+            }}
+          >
+            Set PIN
+          </Button>
+        </div>
+      }
+    >
+      <div className="grid-form">
+        <TextInput label="PIN (4 to 6 digits)" type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+        <TextInput label="Again" type="password" inputMode="numeric" maxLength={6} value={again} onChange={(e) => setAgain(e.target.value.replace(/\D/g, ""))} error={mismatch ? "The two PINs do not match." : null} />
+      </div>
+    </Card>
   );
 }

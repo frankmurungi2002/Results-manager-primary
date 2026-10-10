@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Banknote,
   BookOpenCheck,
+  BookText,
   CalendarCheck,
   CalendarDays,
   ChevronDown,
@@ -85,6 +86,7 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
   {
     heading: "School office",
     items: [
+      { id: "daybook", label: "Day Book", icon: BookText, show: (can) => can("view_finance") || can("view_all_classes") },
       { id: "fees", label: "Fees", icon: Banknote, show: (can) => can("view_finance") || can("manage_fees") },
       { id: "verify", label: "Check a document", icon: ScanLine },
       { id: "audit", label: "Activity log", icon: ScrollText, show: (can) => can("view_audit") },
@@ -110,6 +112,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   audit: "Activity log",
   fees: "Fees",
   verify: "Check a document",
+  daybook: "Day Book",
   settings: "Settings",
 };
 

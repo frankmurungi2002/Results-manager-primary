@@ -14,6 +14,7 @@ pub mod domain;
 pub mod error;
 pub mod fees;
 pub mod ink;
+pub mod jobs;
 pub mod licence;
 pub mod licence_format;
 pub mod network;
@@ -85,6 +86,23 @@ pub fn invoke_handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> 
         commands::fees::build_fee_statement,
         commands::fees::build_fee_balances,
         commands::fees::build_fee_collections,
+        // --- Day Book ----------------------------------------------------
+        commands::daybook::get_day_book,
+        commands::daybook::build_day_book,
+        commands::daybook::save_day_note,
+        commands::daybook::get_owner_sms,
+        commands::daybook::save_owner_sms,
+        // --- Staff sign-in register -------------------------------------
+        commands::staffreg::get_staff_register_settings,
+        commands::staffreg::save_staff_register_settings,
+        commands::staffreg::set_my_sign_in_pin,
+        commands::staffreg::clear_staff_pin,
+        commands::staffreg::station_staff,
+        commands::staffreg::station_sign,
+        commands::staffreg::staff_register_day,
+        commands::staffreg::record_staff_attendance,
+        commands::staffreg::staff_register_month,
+        commands::staffreg::build_staff_register,
         commands::system::backup_status,
         commands::system::set_mirror_path,
         commands::system::run_backup,
@@ -235,6 +253,7 @@ pub fn run() {
             app.manage(state);
             backup::spawn_scheduler(app.handle().clone());
             sms::spawn_scheduler(app.handle().clone());
+            jobs::spawn_scheduler(app.handle().clone());
             Ok(())
         })
         .invoke_handler(invoke_handler())

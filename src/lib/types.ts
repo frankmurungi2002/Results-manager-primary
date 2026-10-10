@@ -1671,3 +1671,107 @@ export const ADJUSTMENT_KINDS: { id: AdjustmentKind; label: string; reduces: boo
   { id: "balance_forward", label: "Balance brought forward", reduces: false, percentAllowed: false, hint: "Owed from before Phantom" },
   { id: "prepayment", label: "Paid before Phantom", reduces: true, percentAllowed: false, hint: "Money already paid, from the old books" },
 ];
+
+// ---------------------------------------------------------------------------
+// Day Book
+// ---------------------------------------------------------------------------
+
+export interface DayRow {
+  date: string;
+  /** Null when the reader may not see money. */
+  feesCollected: number | null;
+  feesCash: number | null;
+  receipts: number | null;
+  receiptsCancelled: number | null;
+  registers: number;
+  present: number;
+  absent: number;
+  late: number;
+  attendancePercent: number | null;
+  passOuts: number;
+  textsSent: number;
+  textsFailed: number;
+  learnersAdmitted: number;
+  learnersLeft: number;
+  staffSignedIn: number;
+  staffLate: number;
+  activity: number;
+  note: string | null;
+  noteBy: string | null;
+}
+
+export interface DayBook {
+  from: string;
+  to: string;
+  money: boolean;
+  days: DayRow[];
+  totals: DayRow;
+}
+
+export interface OwnerSmsSettings {
+  enabled: boolean;
+  phones: string[];
+  sendAt: string;
+  includeMoney: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Staff sign-in register
+// ---------------------------------------------------------------------------
+
+export interface StaffRegisterSettings {
+  enabled: boolean;
+  startTime: string;
+}
+
+export interface StationPerson {
+  userId: string;
+  fullName: string;
+  hasPin: boolean;
+  signedInAt: string | null;
+  signedOutAt: string | null;
+}
+
+export interface StationResult {
+  fullName: string;
+  action: "in" | "out";
+  time: string;
+  late: boolean;
+}
+
+export interface RegisterRow {
+  userId: string;
+  fullName: string;
+  office: string | null;
+  signedInAt: string | null;
+  signedOutAt: string | null;
+  late: boolean;
+  method: "pin" | "office" | null;
+  note: string | null;
+}
+
+export interface OfficeEntry {
+  userId: string;
+  onDate: string;
+  signedInAt: string;
+  signedOutAt: string | null;
+  note: string;
+}
+
+export interface MonthRow {
+  userId: string;
+  fullName: string;
+  office: string | null;
+  daysIn: number;
+  daysLate: number;
+  averageIn: string | null;
+  marks: string[];
+}
+
+export interface StaffMonth {
+  month: string;
+  label: string;
+  days: number[];
+  startTime: string;
+  rows: MonthRow[];
+}

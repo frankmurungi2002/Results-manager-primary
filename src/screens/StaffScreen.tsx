@@ -18,6 +18,7 @@ import type {
   UserSummary,
 } from "../lib/types";
 import { useStore } from "../state/store";
+import { StaffRegister } from "../components/StaffRegister";
 import {
   Alert,
   Badge,
@@ -46,7 +47,7 @@ export function StaffScreen() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"people" | "assignments">("people");
+  const [tab, setTab] = useState<"people" | "assignments" | "register">("people");
 
   const [addOpen, setAddOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
@@ -124,6 +125,12 @@ export function StaffScreen() {
           >
             Class assignments ({assignments.length})
           </button>
+          <button
+            className={cx("tab", tab === "register" && "is-active")}
+            onClick={() => setTab("register")}
+          >
+            Sign-in register
+          </button>
         </div>
 
         {admins.length >= 3 && tab === "people" && (
@@ -133,7 +140,9 @@ export function StaffScreen() {
           </Alert>
         )}
 
-        {loading ? (
+        {tab === "register" ? (
+          <StaffRegister />
+        ) : loading ? (
           <Card flush>
             <TableSkeleton rows={6} columns={4} />
           </Card>

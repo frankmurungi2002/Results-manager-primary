@@ -9,6 +9,14 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  OfficeEntry,
+  RegisterRow,
+  StaffMonth,
+  StaffRegisterSettings,
+  StationPerson,
+  StationResult,
+  DayBook,
+  OwnerSmsSettings,
   AdjustmentInput,
   Collections,
   DocumentCheck,
@@ -626,4 +634,24 @@ export const api = {
     call<DocumentEnvelope<FeeAccountList>>("build_fee_balances", { termId, classId }),
   buildFeeCollections: (from: string, to: string) =>
     call<DocumentEnvelope<Collections>>("build_fee_collections", { from, to }),
+
+  // --- Day Book ---------------------------------------------------------------
+  getDayBook: (from: string, to: string) => call<DayBook>("get_day_book", { from, to }),
+  buildDayBook: (from: string, to: string) => call<DocumentEnvelope<DayBook>>("build_day_book", { from, to }),
+  saveDayNote: (onDate: string, note: string) => call<void>("save_day_note", { onDate, note }),
+  getOwnerSms: () => call<OwnerSmsSettings>("get_owner_sms"),
+  saveOwnerSms: (settings: OwnerSmsSettings) => call<void>("save_owner_sms", { settings }),
+
+  // --- Staff sign-in register ----------------------------------------------
+  getStaffRegisterSettings: () => call<StaffRegisterSettings>("get_staff_register_settings"),
+  saveStaffRegisterSettings: (settings: StaffRegisterSettings) =>
+    call<void>("save_staff_register_settings", { settings }),
+  setMySignInPin: (pin: string) => call<void>("set_my_sign_in_pin", { pin }),
+  clearStaffPin: (userId: string) => call<void>("clear_staff_pin", { userId }),
+  stationStaff: () => call<StationPerson[]>("station_staff"),
+  stationSign: (userId: string, pin: string) => call<StationResult>("station_sign", { userId, pin }),
+  staffRegisterDay: (onDate: string) => call<RegisterRow[]>("staff_register_day", { onDate }),
+  recordStaffAttendance: (entry: OfficeEntry) => call<void>("record_staff_attendance", { entry }),
+  staffRegisterMonth: (month: string) => call<StaffMonth>("staff_register_month", { month }),
+  buildStaffRegister: (month: string) => call<DocumentEnvelope<StaffMonth>>("build_staff_register", { month }),
 };

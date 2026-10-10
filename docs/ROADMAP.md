@@ -158,7 +158,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G1 | Document generator: Custom Builder / Template Upload, letters, certificates | ⬜ | M2 (Custom Builder), M3 (Template Upload + letters + certificates) | Moved out of the pilot (decided 2026-09-27): M1 ships one fixed, well-designed report card instead. Must reuse `DocumentEnvelope`; the report card becomes one template of this engine |
 | FR-G2 | Visitor log and visitation slip | ⬜ | M2 | |
 | FR-G3 | School overview dashboard | 🟡 | M4 | `dashboard_summary` exists; the full version waits for attendance, fees and staff data |
-| FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | ⬜ | M3 | |
+| FR-G4 | Staff HR: attendance, leave, contracts (no payroll) | 🟡 | M3 | Attendance done: staff sign in and out at the office computer with a PIN from the sign-in screen (no Phantom sign-in, names only); late after the school's start time; the office records someone with a reason; day view, month view and a printed monthly register. Leave and contracts remain |
 | FR-G5 | Fees ledger; drives the fees block automatically | ✅ | **M2** | Fees screen: fee structure per class per term (every learner, or optional items such as lunch and transport with sign-ups), copy a term's fees; bursaries, discounts and waivers (amount or %), extra charges and opening balances; payments with numbered two-copy receipts (amount in words, balance after, QR proof) that the database refuses to change or delete, one receipt per Mobile Money/bank reference, voiding only by the head or School Admin and never one's own; balances carried term to term; promises to pay; invoices, statements, who-owes list and collections for banking; optional receipt SMS; balance and next term's fees on report cards; automatic fees block above a limit |
 | FR-G6 | Timetable | ✅ | M3 | School day (bell times, 5 or 6 days); class and stream grids edited cell by cell or auto-filled from lessons per week; a teacher is never double-booked; teacher timetables; print one class, one teacher, every class or every teacher |
 | FR-G7 | Shared exams and academic calendar | 🟡 | M3 | Exam timetable done: papers by date, time, classes, venue and invigilator, clash-checked, generated in one step, printed for the school or one class; the first paper dates the exam and permits show each paper's time. Holidays and school events are not built |
@@ -184,6 +184,9 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | Item | Status | Milestone | Notes |
 | --- | --- | --- | --- |
 | PLE projection | 🔌 | M1 | Useful sales-demo material for P7 classes |
+| Day Book | ✅ | — | Each day's fees received (with cash), attendance, pass-outs, texts, admissions and leavers, staff in and late, worked out from the records, plus the head's note for the day; any range, printed. Optional evening SMS summary to up to three owner numbers, off by default, only on days something happened |
+| Offline only | ✅ | — | One switch (Settings → Internet & updates) that stops every network use and closes waiting texts |
+| Check a document | ✅ | — | QR and code on receipts and report cards (HMAC under a per-school secret); readable by any phone, confirmed in Phantom offline |
 | Subject heatmap | 🔌 | M1 | |
 
 ### Non-functional requirements (SRS 14)

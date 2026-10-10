@@ -412,8 +412,12 @@ pub fn receipt_label(number: i64) -> String {
 
 /// "UGX 1,250,000".
 pub fn ugx(amount: i64) -> String {
-    let negative = amount < 0;
-    let digits = amount.unsigned_abs().to_string();
+    format!("{}UGX {}", if amount < 0 { "-" } else { "" }, thousands(amount.unsigned_abs()))
+}
+
+/// "1,250,000".
+pub fn thousands(amount: u64) -> String {
+    let digits = amount.to_string();
     let mut grouped = String::new();
     for (i, c) in digits.chars().enumerate() {
         if i > 0 && (digits.len() - i) % 3 == 0 {
@@ -421,7 +425,7 @@ pub fn ugx(amount: i64) -> String {
         }
         grouped.push(c);
     }
-    format!("{}UGX {grouped}", if negative { "-" } else { "" })
+    grouped
 }
 
 /// An amount in words, the way a Ugandan receipt book writes it:

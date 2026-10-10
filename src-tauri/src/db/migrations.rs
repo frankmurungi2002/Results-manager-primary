@@ -91,6 +91,16 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "fees_ledger",
         sql: M014_FEES_LEDGER,
     },
+    Migration {
+        version: 15,
+        name: "day_book",
+        sql: M015_DAY_BOOK,
+    },
+    Migration {
+        version: 16,
+        name: "staff_register",
+        sql: M016_STAFF_REGISTER,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -1138,4 +1148,53 @@ CREATE TABLE fee_promises (
 );
 
 CREATE INDEX idx_fee_promises_open ON fee_promises (status, due_on);
+"#;
+
+// ---------------------------------------------------------------------------
+// 015 — the Day Book
+// ---------------------------------------------------------------------------
+//
+// The day's figures are worked out from the records themselves (receipts,
+// registers, pass-outs, texts), so they can never disagree with them. What
+// only a person knows is written here: the headteacher's note for the day.
+
+const M015_DAY_BOOK: &str = r#"
+CREATE TABLE day_notes (
+    on_date     TEXT PRIMARY KEY,                    -- YYYY-MM-DD, school's local date
+    note        TEXT NOT NULL,
+    updated_by  TEXT REFERENCES users (id),
+    updated_at  TEXT NOT NULL
+);
+"#;
+
+// ---------------------------------------------------------------------------
+// 016 — the staff sign-in register
+// ---------------------------------------------------------------------------
+//
+// Teachers sign themselves in at the office computer with a short PIN, without
+// signing in to Phantom: the computer never shows anyone's data to do it.
+
+const M016_STAFF_REGISTER: &str = r#"
+ALTER TABLE users ADD COLUMN pin_hash TEXT;
+ALTER TABLE users ADD COLUMN pin_failed_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN pin_locked_until TEXT;
+
+CREATE TABLE staff_attendance (
+    id             TEXT PRIMARY KEY,
+    user_id        TEXT NOT NULL REFERENCES users (id),
+    on_date        TEXT NOT NULL,                     -- YYYY-MM-DD, local
+    signed_in_at   TEXT NOT NULL,                     -- HH:MM, local
+    signed_out_at  TEXT,                              -- HH:MM, local
+    late           INTEGER NOT NULL DEFAULT 0,
+    -- 'pin' at the sign-in station, or 'office' when entered for them.
+    method         TEXT NOT NULL CHECK (method IN ('pin', 'office')),
+    note           TEXT,
+    recorded_by    TEXT REFERENCES users (id),
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL,
+    CHECK (method = 'pin' OR note IS NOT NULL),
+    UNIQUE (user_id, on_date)
+);
+
+CREATE INDEX idx_staff_attendance_date ON staff_attendance (on_date);
 "#;

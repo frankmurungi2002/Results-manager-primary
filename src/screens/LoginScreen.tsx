@@ -1,12 +1,13 @@
 /** FR-B1 — one login frame for every role, routed by the backend. */
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
-import { ApiError } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 import { useStore } from "../state/store";
 import { APP_NAME, BrandMark } from "../components/Logo";
 import { LoginShowcase } from "../components/LoginShowcase";
+import { StaffStation } from "../components/StaffStation";
 import { Alert, Button } from "../components/ui";
 
 export function LoginScreen() {
@@ -20,6 +21,13 @@ export function LoginScreen() {
   const [showHelp, setShowHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<"password" | "station">("password");
+  const [stationOn, setStationOn] = useState(false);
+
+  // The sign-in station is offered only once the school has switched it on.
+  useEffect(() => {
+    api.stationStaff().then(() => setStationOn(true)).catch(() => setStationOn(false));
+  }, []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -55,12 +63,24 @@ export function LoginScreen() {
           <div className="login-center">
             {institutionName && <div className="login-school">{institutionName}</div>}
 
-            <form className="login-panel" onSubmit={onSubmit} noValidate>
-              <h2 className="login-title">Welcome back.</h2>
+            <div className="login-panel">
+              <h2 className="login-title">{tab === "station" ? "Arriving or leaving?" : "Welcome back."}</h2>
 
-              <div className="login-tabs" role="presentation">
-                <span className="login-tab is-active">Username &amp; password</span>
+              <div className="login-tabs" role="tablist">
+                <button type="button" role="tab" className={tab === "password" ? "login-tab is-active" : "login-tab"} onClick={() => setTab("password")}>
+                  Username &amp; password
+                </button>
+                {stationOn && (
+                  <button type="button" role="tab" className={tab === "station" ? "login-tab is-active" : "login-tab"} onClick={() => setTab("station")}>
+                    Staff sign-in
+                  </button>
+                )}
               </div>
+
+              {tab === "station" ? (
+                <StaffStation />
+              ) : (
+              <form className="login-form" onSubmit={onSubmit} noValidate>
 
               {error && <Alert tone="danger">{error}</Alert>}
 
@@ -127,7 +147,9 @@ export function LoginScreen() {
               >
                 Login
               </Button>
-            </form>
+              </form>
+              )}
+            </div>
 
             <p className="login-after">New staff? Your School Admin creates your account.</p>
           </div>

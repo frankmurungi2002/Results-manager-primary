@@ -55,6 +55,8 @@ import type {
   TimetableDocument,
 } from "../lib/types";
 import type {
+  StaffMonth,
+  DayBook,
   Collections,
   FeeAccountDetail,
   FeeAccountList,
@@ -2180,6 +2182,125 @@ export function FeeCollectionsSheet({ envelope }: { envelope: DocumentEnvelope<C
         </div>
         <div>
           <span>Headteacher / Director</span>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The Day Book, printed
+// ---------------------------------------------------------------------------
+
+export function DayBookSheet({ envelope }: { envelope: DocumentEnvelope<DayBook> }) {
+  const { branding, footer, body } = envelope;
+  const t = body.totals;
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      title="Day Book"
+      subtitle={`${printDate(body.from)} to ${printDate(body.to)}`}
+      landscape
+    >
+      <table className="cl-table db-table">
+        <thead>
+          <tr>
+            <th style={{ width: "11%" }}>Day</th>
+            {body.money && <th className="num">Fees received</th>}
+            {body.money && <th className="num">Cash</th>}
+            <th className="num">Attendance</th>
+            <th className="num">Absent</th>
+            <th className="num">Pass-outs</th>
+            <th className="num">Texts</th>
+            <th className="num">Staff in</th>
+            <th style={{ width: "34%" }}>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.days.map((d) => (
+            <tr key={d.date}>
+              <td>{printDate(d.date)}</td>
+              {body.money && <td className="num">{(d.feesCollected ?? 0).toLocaleString("en-US")}</td>}
+              {body.money && <td className="num">{(d.feesCash ?? 0).toLocaleString("en-US")}</td>}
+              <td className="num">{d.attendancePercent === null ? "—" : `${d.attendancePercent}%`}</td>
+              <td className="num">{d.registers ? d.absent : "—"}</td>
+              <td className="num">{d.passOuts}</td>
+              <td className="num">{d.textsSent}</td>
+              <td className="num">{d.staffSignedIn || "—"}</td>
+              <td>{d.note ?? ""}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            {body.money && <td className="num">{(t.feesCollected ?? 0).toLocaleString("en-US")}</td>}
+            {body.money && <td className="num">{(t.feesCash ?? 0).toLocaleString("en-US")}</td>}
+            <td className="num">{t.attendancePercent === null ? "—" : `${t.attendancePercent}%`}</td>
+            <td className="num">{t.absent}</td>
+            <td className="num">{t.passOuts}</td>
+            <td className="num">{t.textsSent}</td>
+            <td className="num">{t.staffSignedIn || "—"}</td>
+            <td />
+          </tr>
+        </tfoot>
+      </table>
+      <div className="col-sign">
+        <div>
+          <span>Headteacher</span>
+        </div>
+        <div>
+          <span>Director</span>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The staff sign-in register, a month
+// ---------------------------------------------------------------------------
+
+export function StaffRegisterSheet({ envelope }: { envelope: DocumentEnvelope<StaffMonth> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet branding={branding} footer={footer} title="Staff Attendance Register" subtitle={`${body.label}  •  late after ${body.startTime}`} landscape>
+      <table className="cl-table sr-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            {body.days.map((d) => (
+              <th key={d} className="num">
+                {d}
+              </th>
+            ))}
+            <th className="num">In</th>
+            <th className="num">Late</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.rows.map((r) => (
+            <tr key={r.userId}>
+              <td>{r.fullName}</td>
+              {r.marks.map((m, i) => (
+                <td key={i} className={m.startsWith("L ") ? "num sr-late" : "num"}>
+                  {m.replace("L ", "")}
+                </td>
+              ))}
+              <td className="num">{r.daysIn}</td>
+              <td className="num">{r.daysLate}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="sr-key">Times are when each person signed in. Late arrivals are underlined.</p>
+      <div className="col-sign">
+        <div>
+          <span>Headteacher</span>
+        </div>
+        <div>
+          <span>Date</span>
         </div>
       </div>
     </Sheet>
