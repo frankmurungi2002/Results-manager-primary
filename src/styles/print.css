@@ -2239,3 +2239,238 @@
   font-size: 13pt;
   letter-spacing: 0.06em;
 }
+
+/* --- Proof of genuineness: QR and code ----------------------------------- */
+
+.verify-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1mm;
+  flex: none;
+}
+
+.verify-mark img {
+  width: 20mm;
+  height: 20mm;
+  image-rendering: pixelated;
+}
+
+.verify-mark span {
+  font: 600 6.5pt/1 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+/* --- FR-G5: receipts ----------------------------------------------------- */
+
+.rc-body {
+  display: flex;
+  gap: 4mm;
+  align-items: flex-start;
+  padding: 2mm 4mm;
+}
+
+.rc-facts {
+  flex: 1;
+}
+
+.rc-words {
+  font-style: italic;
+}
+
+.rc-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+  min-width: 38mm;
+}
+
+.rc-amount,
+.rc-balance {
+  border: 1.5px solid var(--ink);
+  border-radius: 2mm;
+  padding: 1.5mm 2.5mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.rc-balance {
+  border-width: 1px;
+  border-color: var(--rule);
+}
+
+.rc-amount span,
+.rc-balance span {
+  font-size: 7pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.rc-amount strong {
+  font-size: 14pt;
+}
+
+.rc-voided {
+  position: relative;
+}
+
+.rc-void-banner {
+  border: 2px solid #b42318;
+  color: #b42318;
+  font-weight: 700;
+  text-align: center;
+  padding: 1.5mm;
+  margin: 1mm 0;
+  letter-spacing: 0.03em;
+}
+
+/* --- FR-G5: invoices and statements -------------------------------------- */
+
+.inv-page {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+}
+
+.inv {
+  border: 1px solid var(--rule);
+  border-radius: 2mm;
+  padding: 3mm 4mm;
+  break-inside: avoid;
+}
+
+.inv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4mm;
+  margin-bottom: 2mm;
+}
+
+.inv-name {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.inv-sub {
+  font-size: 8.5pt;
+  color: var(--ink-soft);
+}
+
+.inv-due {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-due span {
+  font-size: 7pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.inv-due strong {
+  font-size: 14pt;
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+.inv-table td,
+.inv-table th {
+  padding: 1mm 1.5mm;
+  border-bottom: 1px solid var(--rule-soft);
+  text-align: left;
+}
+
+.inv-table th {
+  background: var(--band);
+}
+
+.inv-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.inv-less td {
+  color: var(--ink-soft);
+}
+
+.inv-total td {
+  font-weight: 700;
+  border-top: 1.5px solid var(--ink);
+  border-bottom: none;
+}
+
+.inv-promise {
+  margin: 2mm 0 0;
+  font-size: 9pt;
+}
+
+.inv-pay {
+  margin-top: 2mm;
+  padding: 2mm;
+  background: var(--band);
+  font-size: 8.5pt;
+  white-space: pre-line;
+}
+
+.st-term {
+  margin-bottom: 4mm;
+  break-inside: avoid;
+}
+
+.st-final {
+  margin-left: auto;
+  display: flex;
+  gap: 4mm;
+  align-items: baseline;
+  border: 1.5px solid var(--ink);
+  border-radius: 2mm;
+  padding: 2mm 4mm;
+}
+
+.st-final strong {
+  font-size: 14pt;
+}
+
+.col-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2mm 6mm;
+  margin-top: 3mm;
+  font-size: 9pt;
+}
+
+.col-totals strong {
+  margin-left: auto;
+}
+
+.col-voided-title {
+  margin: 5mm 0 1mm;
+  font-weight: 700;
+  color: #b42318;
+}
+
+.col-sign {
+  display: flex;
+  gap: 20mm;
+  margin-top: 14mm;
+}
+
+.col-sign div {
+  flex: 1;
+  border-top: 1px solid var(--ink);
+  padding-top: 1mm;
+  font-size: 8pt;
+  color: var(--ink-soft);
+}

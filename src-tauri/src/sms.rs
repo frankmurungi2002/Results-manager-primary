@@ -459,12 +459,37 @@ fn drain(db: &Database, total: &mut FlushResult, deliver: &Deliver<'_>) -> AppRe
     Ok(())
 }
 
-/// Sends queued messages on a background thread, so a screen never waits on
-/// the network.
-pub fn flush_in_background(app: AppHandle) {
+/// Wakes the background sender. Commands call this after queueing a message
+/// instead of holding the application handle themselves, so they stay plain
+/// functions of the database (and can be exercised without a window).
+static WAKE: (std::sync::Mutex<bool>, std::sync::Condvar) =
+    (std::sync::Mutex::new(false), std::sync::Condvar::new());
+
+/// Asks the sender to go now rather than at its next round.
+pub fn wake() {
+    let (flag, signal) = &WAKE;
+    if let Ok(mut woken) = flag.lock() {
+        *woken = true;
+        signal.notify_all();
+    }
+}
+
+/// Sends the outbox every couple of minutes for as long as Phantom School
+/// Manager is open, and at once whenever [`wake`] is called. Runs on its own
+/// thread, so a screen never waits on the network.
+pub fn spawn_scheduler(app: AppHandle) {
     let spawned = std::thread::Builder::new()
-        .name("rm-sms-now".into())
-        .spawn(move || {
+        .name("rm-sms".into())
+        .spawn(move || loop {
+            {
+                let (flag, signal) = &WAKE;
+                let Ok(woken) = flag.lock() else { return };
+                let mut woken = match signal.wait_timeout_while(woken, INTERVAL, |w| !*w) {
+                    Ok((guard, _)) => guard,
+                    Err(_) => return,
+                };
+                *woken = false;
+            }
             let state = app.state::<AppState>();
             if let Err(err) = flush(&state) {
                 log::error!("sending queued SMS failed: {err}");
@@ -472,22 +497,6 @@ pub fn flush_in_background(app: AppHandle) {
         });
     if let Err(err) = spawned {
         log::error!("could not start the SMS sender: {err}");
-    }
-}
-
-/// Retries the outbox every couple of minutes for as long as Phantom School Manager is open.
-pub fn spawn_scheduler(app: AppHandle) {
-    let spawned = std::thread::Builder::new()
-        .name("rm-sms".into())
-        .spawn(move || loop {
-            std::thread::sleep(INTERVAL);
-            let state = app.state::<AppState>();
-            if let Err(err) = flush(&state) {
-                log::error!("scheduled SMS send failed: {err}");
-            }
-        });
-    if let Err(err) = spawned {
-        log::error!("could not start the SMS scheduler: {err}");
     }
 }
 

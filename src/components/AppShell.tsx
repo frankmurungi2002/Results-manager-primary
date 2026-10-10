@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Banknote,
   BookOpenCheck,
   CalendarCheck,
   CalendarDays,
@@ -15,6 +16,7 @@ import {
   MessageSquare,
   NotebookPen,
   Moon,
+  ScanLine,
   ScrollText,
   Settings,
   Shield,
@@ -83,6 +85,8 @@ const NAV_SECTIONS: { heading: string; items: NavEntry[] }[] = [
   {
     heading: "School office",
     items: [
+      { id: "fees", label: "Fees", icon: Banknote, show: (can) => can("view_finance") || can("manage_fees") },
+      { id: "verify", label: "Check a document", icon: ScanLine },
       { id: "audit", label: "Activity log", icon: ScrollText, show: (can) => can("view_audit") },
       { id: "settings", label: "Settings", icon: Settings },
     ],
@@ -104,6 +108,8 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   calendar: "Terms & exams",
   grading: "Grading systems",
   audit: "Activity log",
+  fees: "Fees",
+  verify: "Check a document",
   settings: "Settings",
 };
 

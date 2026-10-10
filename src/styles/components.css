@@ -1724,3 +1724,216 @@
 
 .plain-list { list-style: none; margin: 0 0 var(--space-3); padding: 0; }
 
+
+/* --- Shared small pieces --------------------------------------------------- */
+
+.chip {
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  color: inherit;
+}
+
+.chip.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.section-title {
+  font-weight: 600;
+  margin: var(--space-2) 0;
+}
+
+.is-voided td {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  opacity: 0.7;
+}
+
+.is-voided td .badge {
+  text-decoration: none;
+  margin-left: 6px;
+}
+
+.tone-danger {
+  color: var(--danger);
+}
+
+.tone-success {
+  color: var(--success);
+}
+
+.tone-info {
+  color: var(--info);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 8px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.input-sm {
+  height: 30px;
+  padding: 0 8px;
+  font-size: var(--text-sm);
+}
+
+/* --- FR-G5: fees ------------------------------------------------------------ */
+
+.fees-counter {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  max-width: 880px;
+}
+
+.fees-owes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.fees-owes > div {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fees-owes span {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fees-owes strong {
+  font-size: var(--text-lg);
+}
+
+.fees-term {
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-2);
+}
+
+.fees-grid td,
+.fees-grid th {
+  vertical-align: top;
+}
+
+.fees-cell {
+  width: 110px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fees-cell.is-dirty {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.fees-total td {
+  font-weight: 700;
+  border-top: 2px solid var(--border-default);
+}
+
+.optin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.optin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.optin.is-on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.fees-stats .stat-value {
+  font-size: var(--text-xl);
+  white-space: nowrap;
+}
+
+/* --- Checking a printed document ------------------------------------------ */
+
+.verify-result {
+  margin-top: var(--space-4);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  border: 2px solid;
+}
+
+.verify-result.is-genuine {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.verify-result.is-forged {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.verify-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-md);
+  margin-bottom: var(--space-3);
+}
+
+.is-genuine .verify-head {
+  color: var(--success);
+}
+
+.is-forged .verify-head {
+  color: var(--danger);
+}
+
+.verify-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.verify-facts dt {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.verify-facts dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}

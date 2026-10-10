@@ -171,6 +171,10 @@ pub struct ReportCardBatch {
     pub blocked: Vec<BlockedLearner>,
     /// Class Teachers' signatures, once each; a card names its teacher by id.
     pub signatures: Vec<SignatureImage>,
+    /// Print the fees block (balance and next term's fees) on each card.
+    pub show_fees: bool,
+    /// What next term costs this class, when the school has set it.
+    pub next_term_fees: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -226,6 +230,11 @@ pub struct ReportCard {
     /// the toggle is off or nothing was recorded.
     pub weekly: Vec<crate::commands::features::WeeklySummary>,
     pub activities: Vec<ActivityRating>,
+    /// What the learner owes, when the school prints balances on cards.
+    pub fees_balance: Option<i64>,
+    /// Proves the card is genuine (see `verify`): typed or scanned.
+    pub verification_code: Option<String>,
+    pub verification_qr: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -358,6 +367,43 @@ pub fn build_report_cards(
         batch
             .cards
             .retain(|card| request.student_ids.contains(&card.student_id));
+    }
+
+    // Each card carries a code and QR that prove its results are the ones
+    // the school printed (see `verify`).
+    let school: String = conn.query_row("SELECT name FROM institution WHERE id = 1", [], |r| r.get(0))?;
+    for card in &mut batch.cards {
+        let mut summary = format!("{} {}", batch.term_name, batch.academic_year);
+        if let Some(points) = card.total_points {
+            summary.push_str(&format!(", aggregate {points}"));
+        }
+        if let Some(division) = &card.division {
+            summary.push_str(&format!(", division {division}"));
+        }
+        if let Some(mean) = card.mean_percentage {
+            summary.push_str(&format!(", average {mean:.1}%"));
+        }
+        if let Some(position) = card.position {
+            summary.push_str(&format!(", position {position} of {}", card.class_size));
+        }
+        let facts = crate::verify::report_card_facts(
+            &card.student_id,
+            &request.term_id,
+            card.total_points,
+            card.division.as_deref(),
+            card.position,
+            card.mean_percentage,
+        );
+        let code = crate::verify::code_for_report_card(&conn, &facts)?;
+        card.verification_qr = Some(crate::verify::qr_data_url(&crate::verify::report_card_qr(
+            &school,
+            &card.full_name,
+            &summary,
+            &card.reg_number,
+            &facts,
+            &code,
+        ))?);
+        card.verification_code = Some(code);
     }
 
     audit::record(
@@ -569,6 +615,12 @@ fn compute_report_cards(
     let class_size = learners.len() as i64;
     let photos_on = repo::feature_enabled(&conn, "student_photos")?;
     let fees_rule_on = repo::get_setting(&conn, "rule.fees_block")?.as_deref() == Some("on");
+    let report_fees = if history {
+        crate::commands::fees::ReportFees { show: false, balances: HashMap::new(), next_term_fees: None, block_above: None }
+    } else {
+        let ids: Vec<String> = learners.iter().map(|l| l.id.clone()).collect();
+        crate::commands::fees::report_fees(conn, term_id, class_id, &ids)?
+    };
 
     // --- Marks, in one query for the whole class ----------------------------
     // key: (student_id, class_subject_id, exam_id)
@@ -693,15 +745,22 @@ fn compute_report_cards(
     let mut blocked = Vec::new();
 
     for learner in &learners {
-        if fees_rule_on && learner.fees_blocked && !history {
+        // With the fees rule on, a learner is held back by the manual flag,
+        // or automatically by a balance above the school's limit.
+        let over_limit = report_fees
+            .block_above
+            .zip(report_fees.balances.get(&learner.id))
+            .filter(|(limit, balance)| **balance > *limit)
+            .map(|(_, balance)| *balance);
+        if fees_rule_on && (learner.fees_blocked || over_limit.is_some()) && !history {
             blocked.push(BlockedLearner {
                 student_id: learner.id.clone(),
                 full_name: learner.full_name.clone(),
                 reg_number: learner.reg_number.clone(),
-                reason: learner
-                    .fees_note
-                    .clone()
-                    .unwrap_or_else(|| "Fees not cleared".into()),
+                reason: match (learner.fees_blocked, over_limit) {
+                    (false, Some(balance)) => format!("Fees balance {}", crate::fees::ugx(balance)),
+                    _ => learner.fees_note.clone().unwrap_or_else(|| "Fees not cleared".into()),
+                },
             });
             continue;
         }
@@ -842,6 +901,9 @@ fn compute_report_cards(
             previous: None,
             weekly: Vec::new(),
             activities: ratings.remove(&learner.id).unwrap_or_default(),
+            fees_balance: if report_fees.show { report_fees.balances.get(&learner.id).copied() } else { None },
+            verification_code: None,
+            verification_qr: None,
         });
     }
 
@@ -956,6 +1018,8 @@ fn compute_report_cards(
         cards,
         blocked,
         signatures,
+        show_fees: report_fees.show,
+        next_term_fees: if report_fees.show { report_fees.next_term_fees } else { None },
     })
 }
 
@@ -1449,17 +1513,27 @@ pub fn build_exam_permits(
                 row.get::<_, Option<String>>(6)?,
             ))
         })?;
-        for row in rows {
-            let (id, full_name, reg_number, stream_name, photo, fees_blocked, fees_note) = row?;
+        let rows = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+        let over_limit = if fees_rule_on {
+            let ids: Vec<String> = rows.iter().map(|r| r.0.clone()).collect();
+            crate::commands::fees::over_fees_limit(&conn, &ids)?.unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+        for (id, full_name, reg_number, stream_name, photo, fees_blocked, fees_note) in rows {
             if !request.student_ids.is_empty() && !request.student_ids.contains(&id) {
                 continue;
             }
-            if fees_rule_on && fees_blocked {
+            let over = over_limit.get(&id).copied();
+            if fees_rule_on && (fees_blocked || over.is_some()) {
                 blocked.push(BlockedLearner {
                     student_id: id,
                     full_name,
                     reg_number,
-                    reason: fees_note.unwrap_or_else(|| "Fees not cleared".into()),
+                    reason: match (fees_blocked, over) {
+                        (false, Some(balance)) => format!("Fees balance {}", crate::fees::ugx(balance)),
+                        _ => fees_note.unwrap_or_else(|| "Fees not cleared".into()),
+                    },
                 });
                 continue;
             }
@@ -2081,6 +2155,9 @@ mod tests {
             previous: None,
             weekly: vec![],
             activities: vec![],
+            fees_balance: None,
+            verification_code: None,
+            verification_qr: None,
         }
     }
 

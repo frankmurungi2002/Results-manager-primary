@@ -2,6 +2,7 @@ pub mod academics;
 pub mod attendance;
 pub mod auth;
 pub mod features;
+pub mod fees;
 pub mod importer;
 pub mod insights;
 pub mod marks;

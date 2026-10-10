@@ -37,7 +37,9 @@ again on every call, so a screen showing a button is never what grants it.
 | Entering or correcting marks in any class | ✓ | | ✓ | | | |
 | Admitting, editing, transferring and importing learners | ✓ | ✓ | | ✓ | | |
 | Pass-outs for a learner in any class | ✓ | ✓ | | ✓ | | |
-| The fees block on report cards and permits | ✓ | ✓ | | | ✓ | |
+| Fee structure, bursaries, taking payments, receipts and invoices, the fees block | ✓ | ✓ | | | ✓ | |
+| Fee balances, collections and the Day Book's money figures | ✓ | ✓ | | | ✓ | |
+| Cancelling a receipt someone else issued | ✓ | ✓ | | | | |
 | Bulk SMS to any part of the school, and learner groups | ✓ | ✓ | | ✓ | ✓ | |
 | The headteacher's comment on report cards | ✓ | ✓ | | | | |
 | The PLE projection and subject heat map | ✓ | ✓ | ✓ | | | |

@@ -54,6 +54,14 @@ import type {
   ReportCardBatch,
   TimetableDocument,
 } from "../lib/types";
+import type {
+  Collections,
+  FeeAccountDetail,
+  FeeAccountList,
+  FeeInvoiceBatch,
+  FeeReceipt,
+} from "../lib/types";
+import { ugx } from "../lib/types";
 import { Button } from "./ui";
 
 // ---------------------------------------------------------------------------
@@ -1022,12 +1030,25 @@ function ReportCardSheet({
             <span>Next term begins</span>
             <strong>{formatDate(batch.nextTermBegins) || "\u00a0"}</strong>
           </div>
+          {batch.showFees && (
+            <>
+              <div>
+                <span>Fees balance</span>
+                <strong>{card.feesBalance === null ? "\u00a0" : card.feesBalance > 0 ? ugx(card.feesBalance) : "Cleared"}</strong>
+              </div>
+              <div>
+                <span>Next term's fees</span>
+                <strong>{batch.nextTermFees === null ? "\u00a0" : ugx(batch.nextTermFees)}</strong>
+              </div>
+            </>
+          )}
           <div className="nr-requirements">
             <span>School requirements</span>
             <strong>{batch.requirements ?? "\u00a0"}</strong>
           </div>
         </div>
         <Stamp src={branding.stampDataUrl} />
+        <VerifyMark qr={card.verificationQr} code={card.verificationCode} />
       </div>
     </Sheet>
   );
@@ -1286,12 +1307,25 @@ function NurseryReportSheet({
             <span>Next term begins</span>
             <strong>{formatDate(batch.nextTermBegins) || "\u00a0"}</strong>
           </div>
+          {batch.showFees && (
+            <>
+              <div>
+                <span>Fees balance</span>
+                <strong>{card.feesBalance === null ? "\u00a0" : card.feesBalance > 0 ? ugx(card.feesBalance) : "Cleared"}</strong>
+              </div>
+              <div>
+                <span>Next term's fees</span>
+                <strong>{batch.nextTermFees === null ? "\u00a0" : ugx(batch.nextTermFees)}</strong>
+              </div>
+            </>
+          )}
           <div className="nr-requirements">
             <span>School requirements</span>
             <strong>{batch.requirements ?? "\u00a0"}</strong>
           </div>
         </div>
         <Stamp src={branding.stampDataUrl} />
+        <VerifyMark qr={card.verificationQr} code={card.verificationCode} />
       </div>
     </Sheet>
   );
@@ -1752,4 +1786,402 @@ function formatDateTimePrint(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+// ---------------------------------------------------------------------------
+// Proof that a document is genuine
+// ---------------------------------------------------------------------------
+
+/** The QR and code that let anyone check a printed document (see verify.rs). */
+function VerifyMark({ qr, code }: { qr: string | null | undefined; code: string | null | undefined }) {
+  if (!qr || !code) return null;
+  return (
+    <div className="verify-mark">
+      <img src={qr} alt="" />
+      <span>{code}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR-G5 — fees: receipt, invoices, statement, balances, collections
+// ---------------------------------------------------------------------------
+
+function printDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/**
+ * Two copies on one A4 page: the parent keeps one, the school files the
+ * other. A cancelled receipt prints across both copies so a reprint can
+ * never pass for proof of payment.
+ */
+export function FeeReceiptSheet({ envelope }: { envelope: DocumentEnvelope<FeeReceipt> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      variant="compact"
+      title="Official Receipt"
+      subtitle={`${body.payment.receiptLabel}  •  ${printDate(body.payment.paidOn)}`}
+      pageNumber={1}
+      pageCount={1}
+    >
+      <div className="po-sheet" style={{ "--doc-accent": branding.accentColor } as CSSProperties}>
+        <ReceiptCopy receipt={body} copy="Parent's copy" />
+        <div className="po-cut">
+          <span>Cut here</span>
+        </div>
+        <ReceiptCopy receipt={body} copy="School copy" />
+      </div>
+    </Sheet>
+  );
+}
+
+function ReceiptCopy({ receipt, copy }: { receipt: FeeReceipt; copy: string }) {
+  const p = receipt.payment;
+  const balance = p.balanceAfter;
+  return (
+    <section className={p.status === "voided" ? "po-copy rc-copy rc-voided" : "po-copy rc-copy"}>
+      <header className="po-copy-head">
+        <span className="po-copy-kind">{copy}</span>
+        <span className="po-copy-number">{p.receiptLabel}</span>
+      </header>
+      {p.status === "voided" && (
+        <div className="rc-void-banner">
+          CANCELLED{p.voidReason ? `: ${p.voidReason}` : ""}. Not valid as proof of payment.
+        </div>
+      )}
+      <div className="rc-body">
+        <dl className="po-facts rc-facts">
+          <dt>Received from</dt>
+          <dd>{p.paidBy ?? "—"}</dd>
+          <dt>For learner</dt>
+          <dd>
+            <strong>{p.studentName}</strong>  •  {p.className ?? ""}  •  {receipt.regNumber}
+          </dd>
+          <dt>Term</dt>
+          <dd>{receipt.termName}</dd>
+          <dt>Paid by</dt>
+          <dd>
+            {p.methodLabel}
+            {p.reference ? `  •  ${p.reference}` : ""}
+          </dd>
+          <dt>The sum of</dt>
+          <dd className="rc-words">{receipt.amountWords}</dd>
+          {p.note && (
+            <>
+              <dt>Note</dt>
+              <dd>{p.note}</dd>
+            </>
+          )}
+        </dl>
+        <div className="rc-side">
+          <div className="rc-amount">
+            <span>Amount</span>
+            <strong>{ugx(p.amount)}</strong>
+          </div>
+          {balance !== null && (
+            <div className="rc-balance">
+              <span>{balance > 0 ? "Balance" : balance === 0 ? "Fees" : "Credit"}</span>
+              <strong>{balance > 0 ? ugx(balance) : balance === 0 ? "Fully paid" : ugx(-balance)}</strong>
+            </div>
+          )}
+        </div>
+        <VerifyMark qr={receipt.verificationQr} code={receipt.verificationCode} />
+      </div>
+      <footer className="po-copy-foot">
+        <div className="po-sign">
+          {p.receivedByName ?? ""}
+          <span>Received by</span>
+        </div>
+        <div className="po-sign">
+          <span>Signature and stamp</span>
+        </div>
+      </footer>
+      <div className="po-note">
+        To check this receipt is genuine, scan the code with any phone, or give the receipt number and code to the
+        school office.
+      </div>
+    </section>
+  );
+}
+
+const INVOICES_PER_SHEET = 2;
+
+/** Two invoices per A4 page, one per learner, to send home or hand out. */
+export function FeeInvoiceSheets({ envelope }: { envelope: DocumentEnvelope<FeeInvoiceBatch> }) {
+  const { branding, footer, body } = envelope;
+  const pages: (typeof body.invoices)[] = [];
+  for (let i = 0; i < body.invoices.length; i += INVOICES_PER_SHEET) {
+    pages.push(body.invoices.slice(i, i + INVOICES_PER_SHEET));
+  }
+  if (pages.length === 0) {
+    return (
+      <Sheet branding={branding} footer={footer} title="Fees Invoice" subtitle={body.termName}>
+        <p>Nobody in this list owes anything.</p>
+      </Sheet>
+    );
+  }
+  return (
+    <>
+      {pages.map((invoices, index) => (
+        <Sheet
+          key={index}
+          branding={branding}
+          footer={footer}
+          variant="compact"
+          title="Fees Invoice"
+          subtitle={`${body.termName}${body.className ? `  •  ${body.className}` : ""}`}
+          pageNumber={index + 1}
+          pageCount={pages.length}
+        >
+          <div className="inv-page">
+            {invoices.map((invoice, i) => (
+              <Fragment key={invoice.learner.studentId}>
+                {i > 0 && (
+                  <div className="po-cut">
+                    <span>Cut here</span>
+                  </div>
+                )}
+                <section className="inv">
+                  <header className="inv-head">
+                    <div>
+                      <div className="inv-name">{invoice.learner.fullName}</div>
+                      <div className="inv-sub">
+                        {invoice.learner.className ?? ""}  •  {invoice.learner.regNumber}
+                        {invoice.learner.guardianName ? `  •  Parent: ${invoice.learner.guardianName}` : ""}
+                      </div>
+                    </div>
+                    <div className="inv-due">
+                      <span>{invoice.balance > 0 ? "Amount due" : invoice.balance === 0 ? "Fees" : "Credit"}</span>
+                      <strong>
+                        {invoice.balance > 0 ? ugx(invoice.balance) : invoice.balance === 0 ? "Fully paid" : ugx(-invoice.balance)}
+                      </strong>
+                    </div>
+                  </header>
+                  <table className="inv-table">
+                    <tbody>
+                      {invoice.broughtForward !== 0 && (
+                        <tr>
+                          <td>{invoice.broughtForward > 0 ? "Balance from earlier terms" : "Credit from earlier terms"}</td>
+                          <td className="num">{ugx(invoice.broughtForward)}</td>
+                        </tr>
+                      )}
+                      {invoice.lines.map((line, n) => (
+                        <tr key={n} className={line.amount < 0 ? "inv-less" : undefined}>
+                          <td>{line.label}</td>
+                          <td className="num">{ugx(line.amount)}</td>
+                        </tr>
+                      ))}
+                      {invoice.paid > 0 && (
+                        <tr className="inv-less">
+                          <td>Paid this term</td>
+                          <td className="num">{ugx(-invoice.paid)}</td>
+                        </tr>
+                      )}
+                      <tr className="inv-total">
+                        <td>Balance</td>
+                        <td className="num">{ugx(invoice.balance)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  {invoice.promise && (
+                    <p className="inv-promise">
+                      Agreed: {ugx(invoice.promise.amount)} by {printDate(invoice.promise.dueOn)}
+                      {invoice.promise.promisedBy ? ` (${invoice.promise.promisedBy})` : ""}.
+                    </p>
+                  )}
+                  {body.paymentInstructions && <div className="inv-pay">{body.paymentInstructions}</div>}
+                </section>
+              </Fragment>
+            ))}
+          </div>
+        </Sheet>
+      ))}
+    </>
+  );
+}
+
+/** Every term, every payment: what a parent who disputes a balance is shown. */
+export function FeeStatementSheet({ envelope }: { envelope: DocumentEnvelope<FeeAccountDetail> }) {
+  const { branding, footer, body } = envelope;
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      title="Fees Statement"
+      subtitle={`${body.learner.fullName}  •  ${body.learner.className ?? ""}  •  ${body.learner.regNumber}`}
+    >
+      {body.terms.map((term) => (
+        <table key={term.termId} className="inv-table st-term">
+          <thead>
+            <tr>
+              <th>
+                {term.termName} {term.yearLabel}
+                {term.className ? `  •  ${term.className}` : ""}
+              </th>
+              <th className="num">UGX</th>
+            </tr>
+          </thead>
+          <tbody>
+            {term.broughtForward !== 0 && (
+              <tr>
+                <td>Brought forward</td>
+                <td className="num">{term.broughtForward.toLocaleString("en-US")}</td>
+              </tr>
+            )}
+            {term.lines.map((line, n) => (
+              <tr key={n} className={line.amount < 0 ? "inv-less" : undefined}>
+                <td>{line.label}</td>
+                <td className="num">{line.amount.toLocaleString("en-US")}</td>
+              </tr>
+            ))}
+            {body.payments
+              .filter((p) => p.termId === term.termId && p.status === "valid")
+              .slice()
+              .reverse()
+              .map((p) => (
+                <tr key={p.id} className="inv-less">
+                  <td>
+                    {p.receiptLabel}  •  {printDate(p.paidOn)}  •  {p.methodLabel}
+                    {p.reference ? ` ${p.reference}` : ""}
+                  </td>
+                  <td className="num">{(-p.amount).toLocaleString("en-US")}</td>
+                </tr>
+              ))}
+            <tr className="inv-total">
+              <td>Balance at the end of {term.termName}</td>
+              <td className="num">{term.balance.toLocaleString("en-US")}</td>
+            </tr>
+          </tbody>
+        </table>
+      ))}
+      <div className="st-final">
+        <span>{body.balance > 0 ? "Balance now" : body.balance === 0 ? "Fees" : "Credit"}</span>
+        <strong>{body.balance > 0 ? ugx(body.balance) : body.balance === 0 ? "Fully paid" : ugx(-body.balance)}</strong>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Who still owes, largest balance first, with any agreed payment date. */
+export function FeeBalancesSheet({ envelope }: { envelope: DocumentEnvelope<FeeAccountList> }) {
+  const { branding, footer, body } = envelope;
+  const total = body.rows.reduce((sum, r) => sum + r.balance, 0);
+  return (
+    <Sheet branding={branding} footer={footer} title="Fees Balances" subtitle={body.termName}>
+      <table className="cl-table">
+        <thead>
+          <tr>
+            <th className="num">#</th>
+            <th>Learner</th>
+            <th style={{ width: "10%" }}>Class</th>
+            <th style={{ width: "16%" }}>Parent's phone</th>
+            <th className="num" style={{ width: "16%" }}>Balance</th>
+            <th style={{ width: "22%" }}>Agreed to pay</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.rows.map((row, i) => (
+            <tr key={row.studentId}>
+              <td className="num">{i + 1}</td>
+              <td>{row.fullName}</td>
+              <td>{row.className}</td>
+              <td>{row.guardianPhone ?? "—"}</td>
+              <td className="num">{row.balance.toLocaleString("en-US")}</td>
+              <td>{row.promise ? `${ugx(row.promise.amount)} by ${printDate(row.promise.dueOn)}` : ""}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="cl-totals">
+        <span>{body.rows.length} learner(s) owe</span>
+        <span>Total {ugx(total)}</span>
+      </div>
+    </Sheet>
+  );
+}
+
+/** What came in, day by day and by how it was paid, with cancelled receipts. */
+export function FeeCollectionsSheet({ envelope }: { envelope: DocumentEnvelope<Collections> }) {
+  const { branding, footer, body } = envelope;
+  const t = body.totals;
+  return (
+    <Sheet
+      branding={branding}
+      footer={footer}
+      title="Fees Collections"
+      subtitle={body.from === body.to ? printDate(body.from) : `${printDate(body.from)} to ${printDate(body.to)}`}
+      landscape
+    >
+      <table className="cl-table">
+        <thead>
+          <tr>
+            <th>Receipt</th>
+            <th>Date</th>
+            <th>Learner</th>
+            <th>Class</th>
+            <th>Method</th>
+            <th>Reference</th>
+            <th>Received by</th>
+            <th className="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {body.payments.map((p) => (
+            <tr key={p.id}>
+              <td>{p.receiptLabel}</td>
+              <td>{printDate(p.paidOn)}</td>
+              <td>{p.studentName}</td>
+              <td>{p.className ?? ""}</td>
+              <td>{p.methodLabel}</td>
+              <td>{p.reference ?? ""}</td>
+              <td>{p.receivedByName ?? ""}</td>
+              <td className="num">{p.amount.toLocaleString("en-US")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="col-totals">
+        <span>Cash {ugx(t.cash)}</span>
+        <span>Mobile Money {ugx(t.mobileMoney)}</span>
+        <span>Bank {ugx(t.bank)}</span>
+        <span>SchoolPay {ugx(t.schoolpay)}</span>
+        {t.other > 0 && <span>Other {ugx(t.other)}</span>}
+        <strong>Total {ugx(t.total)} from {t.receipts} receipt(s)</strong>
+      </div>
+      {body.voided.length > 0 && (
+        <>
+          <div className="col-voided-title">Cancelled receipts</div>
+          <table className="cl-table">
+            <tbody>
+              {body.voided.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.receiptLabel}</td>
+                  <td>{p.studentName}</td>
+                  <td className="num">{p.amount.toLocaleString("en-US")}</td>
+                  <td>
+                    Cancelled by {p.voidedByName ?? "?"}: {p.voidReason}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      <div className="col-sign">
+        <div>
+          <span>Bursar</span>
+        </div>
+        <div>
+          <span>Headteacher / Director</span>
+        </div>
+      </div>
+    </Sheet>
+  );
 }

@@ -121,8 +121,14 @@ pub enum Permission {
     ManageLearners,
     /// Pass-outs for a learner in any class.
     IssuePassOuts,
-    /// The fees block on report cards and permits.
+    /// The fee structure, bursaries, recording payments and printing
+    /// receipts and invoices, and the fees block.
     ManageFees,
+    /// Fee balances, collections and the Day Book's money figures.
+    ViewFinance,
+    /// Cancelling a receipt. Kept from whoever takes the money, so the
+    /// person holding the cash cannot also make a receipt disappear.
+    VoidReceipts,
     /// Bulk SMS to any part of the school, and learner groups.
     SendMessages,
     /// Writing the headteacher's comment on report cards.
@@ -136,7 +142,8 @@ use Permission::*;
 const ALL: &[Permission] = &[
     ManageSchool, ManageBackups, ManageStaff, ViewAudit, ManageCalendar, ManageAcademics,
     ViewAllLearners, ViewAllClasses, ManageAllClasses, EditAllMarks, ManageLearners,
-    IssuePassOuts, ManageFees, SendMessages, HeadTeacherComment, ViewInsights,
+    IssuePassOuts, ManageFees, ViewFinance, VoidReceipts, SendMessages, HeadTeacherComment,
+    ViewInsights,
 ];
 
 /// The whole policy. Changing who may do what is a change to this table.
@@ -153,7 +160,7 @@ pub fn permissions_for(role: Role, office: Option<Office>) -> HashSet<Permission
         Some(Office::HeadTeacher) => &[
             ManageStaff, ViewAudit, ManageCalendar, ManageAcademics, ViewAllLearners,
             ViewAllClasses, ManageAllClasses, ManageLearners, IssuePassOuts, ManageFees,
-            SendMessages, HeadTeacherComment, ViewInsights,
+            ViewFinance, VoidReceipts, SendMessages, HeadTeacherComment, ViewInsights,
         ],
         // Academics end to end, including correcting marks; no money, no gate.
         Some(Office::DirectorOfStudies) => &[
@@ -165,8 +172,9 @@ pub fn permissions_for(role: Role, office: Option<Office>) -> HashSet<Permission
         Some(Office::Secretary) => &[
             ViewAllLearners, ViewAllClasses, ManageLearners, IssuePassOuts, SendMessages,
         ],
-        // Money only, and the reminders that go with it.
-        Some(Office::Bursar) => &[ViewAllLearners, ManageFees, SendMessages],
+        // Money only, and the reminders that go with it. Takes payments but
+        // cannot void a receipt: that is the head's or the School Admin's.
+        Some(Office::Bursar) => &[ViewAllLearners, ManageFees, ViewFinance, SendMessages],
         None => &[],
     };
     account.iter().chain(office).copied().collect()
@@ -188,7 +196,9 @@ impl Permission {
             EditAllMarks => "Entering or correcting marks in any class",
             ManageLearners => "Admitting, editing, transferring and importing learners",
             IssuePassOuts => "Pass-outs for a learner in any class",
-            ManageFees => "The fees block on report cards and permits",
+            ManageFees => "Fee structure, bursaries, taking payments, receipts and invoices, the fees block",
+            ViewFinance => "Fee balances, collections and the Day Book's money figures",
+            VoidReceipts => "Cancelling a receipt someone else issued",
             SendMessages => "Bulk SMS to any part of the school, and learner groups",
             HeadTeacherComment => "The headteacher's comment on report cards",
             ViewInsights => "The PLE projection and subject heat map",
@@ -540,7 +550,8 @@ mod tests {
         let bursar = test_session("b", Role::Teacher, Some(Office::Bursar), &[]);
         assert!(bursar.may_view_learners_of("p5"));
         assert!(!bursar.may_view_class("p5"), "marks are not the bursar's business");
-        assert!(bursar.has(ManageFees));
+        assert!(bursar.has(ManageFees) && bursar.has(ViewFinance));
+        assert!(!bursar.has(VoidReceipts), "whoever holds the cash cannot cancel its receipt");
     }
 
     #[test]

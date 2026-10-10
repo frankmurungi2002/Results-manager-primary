@@ -86,6 +86,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "licence_school_code",
         sql: M013_LICENCE_SCHOOL_CODE,
     },
+    Migration {
+        version: 14,
+        name: "fees_ledger",
+        sql: M014_FEES_LEDGER,
+    },
 ];
 
 /// Applies every migration this binary knows about that the database has not
@@ -982,4 +987,155 @@ const M013_LICENCE_SCHOOL_CODE: &str = r#"
 -- when it pays; the key the owner sends back works only here.
 INSERT OR IGNORE INTO settings (key, value, updated_at)
 VALUES ('licence.school_code', upper(hex(randomblob(5))), datetime('now'));
+"#;
+
+// ---------------------------------------------------------------------------
+// 014 — the fees ledger (FR-G5): fee structure, bursaries, receipts
+// ---------------------------------------------------------------------------
+//
+// Money is whole Uganda shillings in INTEGER columns: never a float, which
+// would lose a shilling somewhere in 800 learners' balances.
+//
+// A receipt is the one record a parent holds against the school, so the
+// database itself refuses to change or delete one. A mistake is put right by
+// voiding the receipt, with a reason and the name of who voided it, and
+// issuing a new one. The voided receipt stays, numbered, for the auditor.
+
+const M014_FEES_LEDGER: &str = r#"
+-- What the school charges for: Tuition, Lunch, Transport, Development...
+-- 'termly' is charged to every learner in a class that has a rate for it;
+-- 'optional' only to learners signed up for it this term (lunch, transport).
+CREATE TABLE fee_items (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    kind        TEXT NOT NULL DEFAULT 'termly' CHECK (kind IN ('termly', 'optional')),
+    position    INTEGER NOT NULL DEFAULT 0,
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'retired')),
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_fee_items_name ON fee_items (name COLLATE NOCASE) WHERE status = 'active';
+
+-- The fee structure: how much one item costs one class in one term.
+CREATE TABLE fee_rates (
+    term_id     TEXT NOT NULL REFERENCES terms (id),
+    fee_item_id TEXT NOT NULL REFERENCES fee_items (id),
+    class_id    TEXT NOT NULL REFERENCES classes (id),
+    amount      INTEGER NOT NULL CHECK (amount >= 0),
+    updated_by  TEXT REFERENCES users (id),
+    updated_at  TEXT NOT NULL,
+    PRIMARY KEY (term_id, fee_item_id, class_id)
+);
+
+-- Who takes an optional item this term. Removed, never deleted.
+CREATE TABLE fee_optins (
+    term_id     TEXT NOT NULL REFERENCES terms (id),
+    fee_item_id TEXT NOT NULL REFERENCES fee_items (id),
+    student_id  TEXT NOT NULL REFERENCES students (id),
+    status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'removed')),
+    changed_by  TEXT REFERENCES users (id),
+    changed_at  TEXT NOT NULL,
+    PRIMARY KEY (term_id, fee_item_id, student_id)
+);
+
+-- Anything that changes one learner's bill: a bursary, a sibling discount,
+-- a waiver (each an amount or a percentage), an extra charge, a balance
+-- brought forward from before Phantom, or money paid before Phantom.
+CREATE TABLE fee_adjustments (
+    id            TEXT PRIMARY KEY,
+    student_id    TEXT NOT NULL REFERENCES students (id),
+    term_id       TEXT NOT NULL REFERENCES terms (id),
+    fee_item_id   TEXT REFERENCES fee_items (id),        -- NULL: the whole bill
+    kind          TEXT NOT NULL CHECK (kind IN ('bursary', 'discount', 'waiver', 'charge',
+                                                'balance_forward', 'prepayment')),
+    amount        INTEGER CHECK (amount IS NULL OR amount > 0),
+    percent       REAL CHECK (percent IS NULL OR (percent > 0 AND percent <= 100)),
+    reason        TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled')),
+    created_by    TEXT REFERENCES users (id),
+    created_at    TEXT NOT NULL,
+    cancelled_by  TEXT REFERENCES users (id),
+    cancelled_at  TEXT,
+    cancel_reason TEXT,
+    CHECK ((amount IS NULL) <> (percent IS NULL)),
+    CHECK (percent IS NULL OR kind IN ('bursary', 'discount', 'waiver')),
+    CHECK (status = 'active' OR cancel_reason IS NOT NULL)
+);
+
+CREATE INDEX idx_fee_adjustments_student ON fee_adjustments (student_id, status);
+
+-- Every shilling received. One row is one numbered receipt.
+CREATE TABLE fee_payments (
+    id            TEXT PRIMARY KEY,
+    receipt_no    INTEGER NOT NULL UNIQUE,
+    student_id    TEXT NOT NULL REFERENCES students (id),
+    term_id       TEXT NOT NULL REFERENCES terms (id),
+    amount        INTEGER NOT NULL CHECK (amount > 0),
+    method        TEXT NOT NULL CHECK (method IN ('cash', 'mobile_money', 'bank', 'schoolpay',
+                                                  'cheque', 'other')),
+    -- The transaction ID, bank slip or cheque number. Required for anything
+    -- but cash, so one slip cannot be presented twice.
+    reference     TEXT,
+    paid_by       TEXT,
+    payer_phone   TEXT,
+    paid_on       TEXT NOT NULL,                         -- YYYY-MM-DD
+    note          TEXT,
+    source        TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'schoolpay_import')),
+    -- What the parent was told they still owed, as printed on the receipt.
+    balance_after INTEGER,
+    status        TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid', 'voided')),
+    received_by   TEXT REFERENCES users (id),
+    created_at    TEXT NOT NULL,
+    voided_by     TEXT REFERENCES users (id),
+    voided_at     TEXT,
+    void_reason   TEXT,
+    CHECK (method IN ('cash', 'other') OR reference IS NOT NULL),
+    CHECK (status = 'valid' OR (voided_at IS NOT NULL AND void_reason IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX idx_fee_payments_reference
+    ON fee_payments (method, reference COLLATE NOCASE)
+    WHERE reference IS NOT NULL AND status = 'valid';
+CREATE INDEX idx_fee_payments_student ON fee_payments (student_id, status);
+CREATE INDEX idx_fee_payments_day ON fee_payments (paid_on, status);
+CREATE INDEX idx_fee_payments_term ON fee_payments (term_id, status);
+
+CREATE TRIGGER trg_fee_payments_fixed
+BEFORE UPDATE OF receipt_no, student_id, term_id, amount, method, reference, paid_on,
+                 received_by, balance_after, created_at ON fee_payments
+BEGIN
+    SELECT RAISE(ABORT, 'a receipt cannot be changed: void it and issue a new one');
+END;
+
+CREATE TRIGGER trg_fee_payments_void_once
+BEFORE UPDATE OF status ON fee_payments
+WHEN OLD.status = 'voided'
+BEGIN
+    SELECT RAISE(ABORT, 'a voided receipt stays voided');
+END;
+
+CREATE TRIGGER trg_fee_payments_no_delete
+BEFORE DELETE ON fee_payments
+BEGIN
+    SELECT RAISE(ABORT, 'receipts are never deleted');
+END;
+
+-- A parent's agreement to pay by a date: what the Ministry asks schools to
+-- do instead of sending a learner home.
+CREATE TABLE fee_promises (
+    id           TEXT PRIMARY KEY,
+    student_id   TEXT NOT NULL REFERENCES students (id),
+    term_id      TEXT NOT NULL REFERENCES terms (id),
+    amount       INTEGER NOT NULL CHECK (amount > 0),
+    due_on       TEXT NOT NULL,                          -- YYYY-MM-DD
+    promised_by  TEXT,
+    note         TEXT,
+    status       TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'kept', 'broken', 'cancelled')),
+    created_by   TEXT REFERENCES users (id),
+    created_at   TEXT NOT NULL,
+    closed_at    TEXT
+);
+
+CREATE INDEX idx_fee_promises_open ON fee_promises (status, due_on);
 "#;

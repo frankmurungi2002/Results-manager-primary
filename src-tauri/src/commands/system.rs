@@ -413,6 +413,35 @@ pub fn install_licence_key(state: State<'_, AppState>, key: String) -> AppResult
 }
 
 // ---------------------------------------------------------------------------
+// Checking a printed receipt or report card
+// ---------------------------------------------------------------------------
+
+/// Checks the text a phone or scanner read from a document's QR code.
+/// Anyone signed in may check: the gate, the secretary, a class teacher.
+#[tauri::command]
+pub fn check_document(state: State<'_, AppState>, text: String) -> AppResult<crate::verify::DocumentCheck> {
+    let session = state.sessions.require()?;
+    let conn = state.db.lock();
+    let check = crate::verify::check_text(&conn, &text)?;
+    audit::record(&conn, Some(&session), "verify.document", "document", &check.kind, format!("Checked a document: {}", check.headline))?;
+    Ok(check)
+}
+
+/// Checks a receipt from the number and code typed off the paper.
+#[tauri::command]
+pub fn check_receipt_code(
+    state: State<'_, AppState>,
+    receipt_no: i64,
+    code: String,
+) -> AppResult<crate::verify::DocumentCheck> {
+    let session = state.sessions.require()?;
+    let conn = state.db.lock();
+    let check = crate::verify::check_receipt(&conn, receipt_no, &code)?;
+    audit::record(&conn, Some(&session), "verify.receipt", "receipt", &receipt_no.to_string(), format!("Checked a receipt: {}", check.headline))?;
+    Ok(check)
+}
+
+// ---------------------------------------------------------------------------
 // Offline only
 // ---------------------------------------------------------------------------
 

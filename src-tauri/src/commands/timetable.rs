@@ -629,7 +629,7 @@ pub fn auto_fill_timetable(state: State<'_, AppState>, request: AutoFillRequest)
                             && subject
                                 .teacher_id
                                 .as_ref()
-                                .is_none_or(|t| !busy.contains(&(t.clone(), day, period.id.clone())))
+                                .map_or(true, |t| !busy.contains(&(t.clone(), day, period.id.clone())))
                     });
                     let Some(period) = free else { continue };
                     tx.execute(
@@ -1389,7 +1389,7 @@ pub fn build_exam_timetable(
 
     let papers: Vec<ExamPaperRow> = exam_papers(&conn, &exam_id)?
         .into_iter()
-        .filter(|paper| class_id.as_ref().is_none_or(|c| paper.class_ids.contains(c)))
+        .filter(|paper| class_id.as_ref().map_or(true, |c| paper.class_ids.contains(c)))
         .collect();
     if papers.is_empty() {
         return Err(AppError::validation("That examination has no papers on its timetable yet."));
@@ -1397,7 +1397,7 @@ pub fn build_exam_timetable(
 
     let mut days: Vec<ExamDay> = Vec::new();
     for paper in papers {
-        if days.last().is_none_or(|day| day.date != paper.on_date) {
+        if days.last().map_or(true, |day| day.date != paper.on_date) {
             let label = NaiveDate::parse_from_str(&paper.on_date, "%Y-%m-%d")
                 .map(|d| d.format("%A %-d %B").to_string())
                 .unwrap_or_else(|_| paper.on_date.clone());

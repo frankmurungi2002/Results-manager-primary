@@ -20,6 +20,8 @@ export type ScreenId =
   | "calendar"
   | "grading"
   | "audit"
+  | "fees"
+  | "verify"
   | "settings";
 
 /**

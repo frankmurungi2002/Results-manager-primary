@@ -229,6 +229,45 @@ def check_invariants(con):
          "entered_at,updated_at) VALUES ('mW','ghost','cs1','e1',50,0,?,?)",
          (now, now), must_fail=True)
 
+    # FR-G5 — a receipt is the parent's proof; the database protects it.
+    con.execute("INSERT INTO fee_payments (id,receipt_no,student_id,term_id,amount,"
+                "method,reference,paid_on,created_at) VALUES ('fp1',1,'st1','t1',"
+                "250000,'mobile_money','MP2610A1','2026-02-03',?)", (now,))
+    con.commit()
+    case("a receipt's amount cannot be changed",
+         "UPDATE fee_payments SET amount = 25000 WHERE id = 'fp1'", must_fail=True)
+    case("a receipt cannot be moved to another learner",
+         "UPDATE fee_payments SET student_id = 'stX' WHERE id = 'fp1'", must_fail=True)
+    case("a receipt cannot be deleted", "DELETE FROM fee_payments", must_fail=True)
+    case("one mobile money transaction cannot be receipted twice",
+         "INSERT INTO fee_payments (id,receipt_no,student_id,term_id,amount,method,"
+         "reference,paid_on,created_at) VALUES ('fp2',2,'st1','t1',250000,"
+         "'mobile_money','mp2610a1','2026-02-04',?)", (now,), must_fail=True)
+    case("a bank payment needs its slip number",
+         "INSERT INTO fee_payments (id,receipt_no,student_id,term_id,amount,method,"
+         "paid_on,created_at) VALUES ('fp3',3,'st1','t1',1000,'bank','2026-02-04',?)",
+         (now,), must_fail=True)
+    case("a void needs a reason",
+         "UPDATE fee_payments SET status = 'voided', voided_at = ? WHERE id = 'fp1'",
+         (now,), must_fail=True)
+    case("a receipt can be voided with a reason",
+         "UPDATE fee_payments SET status = 'voided', voided_at = ?, void_reason = 'typo'"
+         " WHERE id = 'fp1'", (now,))
+    case("a voided receipt stays voided",
+         "UPDATE fee_payments SET status = 'valid' WHERE id = 'fp1'", must_fail=True)
+    case("the voided slip number can be receipted again correctly",
+         "INSERT INTO fee_payments (id,receipt_no,student_id,term_id,amount,method,"
+         "reference,paid_on,created_at) VALUES ('fp4',4,'st1','t1',250000,"
+         "'mobile_money','MP2610A1','2026-02-03',?)", (now,))
+    case("a discount is an amount or a percentage, not both",
+         "INSERT INTO fee_adjustments (id,student_id,term_id,kind,amount,percent,reason,"
+         "created_at) VALUES ('fa1','st1','t1','bursary',1000,10,'x',?)", (now,),
+         must_fail=True)
+    case("an extra charge cannot be a percentage",
+         "INSERT INTO fee_adjustments (id,student_id,term_id,kind,percent,reason,"
+         "created_at) VALUES ('fa2','st1','t1','charge',10,'x',?)", (now,),
+         must_fail=True)
+
     # SRS 4.2 — every possible mark must land in exactly one band.
     for system in ("gs_uneb_primary", "gs_nursery_desc", "gs_percentage"):
         uncovered = con.execute(

@@ -16,6 +16,8 @@ import { WeeklyScreen } from "./screens/WeeklyScreen";
 import { AttendanceScreen } from "./screens/AttendanceScreen";
 import { TimetablesScreen } from "./screens/TimetablesScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
+import { FeesScreen } from "./screens/FeesScreen";
+import { VerifyScreen } from "./screens/VerifyScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SetupWizard } from "./screens/SetupWizard";
 import { StaffScreen } from "./screens/StaffScreen";
@@ -121,6 +123,10 @@ function renderScreen(screen: string) {
       return <AuditScreen />;
     case "settings":
       return <SettingsScreen />;
+    case "fees":
+      return <FeesScreen />;
+    case "verify":
+      return <VerifyScreen />;
     default:
       return <DashboardScreen />;
   }

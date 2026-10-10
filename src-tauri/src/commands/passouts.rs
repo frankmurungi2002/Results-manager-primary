@@ -12,7 +12,7 @@
 use chrono::{DateTime, Local, SecondsFormat, TimeZone, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use crate::audit;
 use crate::domain::ids::new_id;
@@ -258,7 +258,6 @@ pub fn leaving_message(
 
 #[tauri::command]
 pub fn create_pass_out(
-    app: AppHandle,
     state: State<'_, AppState>,
     request: CreatePassOutRequest,
 ) -> AppResult<PassOutRow> {
@@ -405,7 +404,7 @@ pub fn create_pass_out(
     drop(conn);
 
     if sms_id.is_some() {
-        sms::flush_in_background(app);
+        sms::wake();
     }
     Ok(created)
 }
@@ -416,7 +415,6 @@ pub fn create_pass_out(
 
 #[tauri::command]
 pub fn mark_pass_out_returned(
-    app: AppHandle,
     state: State<'_, AppState>,
     id: String,
     notify_guardian: bool,
@@ -493,7 +491,7 @@ pub fn mark_pass_out_returned(
     drop(conn);
 
     if sms_id.is_some() {
-        sms::flush_in_background(app);
+        sms::wake();
     }
     Ok(updated)
 }
@@ -555,7 +553,6 @@ pub fn get_sms_settings(state: State<'_, AppState>) -> AppResult<SmsSettings> {
 
 #[tauri::command]
 pub fn save_sms_settings(
-    app: AppHandle,
     state: State<'_, AppState>,
     settings: SmsSettings,
 ) -> AppResult<()> {
@@ -579,7 +576,7 @@ pub fn save_sms_settings(
     drop(conn);
 
     // Anything waiting for SMS to be set up can go now.
-    sms::flush_in_background(app);
+    sms::wake();
     Ok(())
 }
 

@@ -62,6 +62,12 @@ base64 = "0.22"
 
 # OS-keychain storage for the database key, used only by `encrypted-db`.
 keyring = { version = "3", optional = true }
+qrcodegen = "1.8"
+
+[dev-dependencies]
+# `tauri::test`'s mock runtime, for examples/ui_bridge.rs: the real commands
+# behind a local port, so the interface can be checked in a headless browser.
+tauri = { version = "2", features = ["test"] }
 
 [features]
 default = []

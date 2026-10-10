@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use chrono::{Datelike, NaiveDate, Utc, Weekday};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use crate::audit;
 use crate::domain::ids::{new_id, prefix};
@@ -202,7 +202,6 @@ pub struct SaveRegisterResult {
 
 #[tauri::command]
 pub fn save_register(
-    app: AppHandle,
     state: State<'_, AppState>,
     request: SaveRegisterRequest,
 ) -> AppResult<SaveRegisterResult> {
@@ -342,7 +341,7 @@ pub fn save_register(
     drop(conn);
 
     if result.texts_queued > 0 {
-        sms::flush_in_background(app);
+        sms::wake();
     }
     Ok(result)
 }

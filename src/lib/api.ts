@@ -9,6 +9,25 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AdjustmentInput,
+  Collections,
+  DocumentCheck,
+  FeeAccountDetail,
+  FeeAccountList,
+  FeeInvoiceBatch,
+  FeeItemInput,
+  FeeItemRow,
+  FeeRateInput,
+  FeeReceipt,
+  FeeSettings,
+  FeeSetup,
+  InvoiceRequest,
+  OptinRow,
+  PaymentRow,
+  PromiseInput,
+  PromiseRow,
+  RecordPaymentRequest,
+  RecordedPayment,
   Connectivity,
   LicenceStatus,
   AuditExport,
@@ -566,4 +585,45 @@ export const api = {
   // --- Offline only -------------------------------------------------------
   getConnectivity: () => call<Connectivity>("get_connectivity"),
   setOfflineOnly: (on: boolean) => call<Connectivity>("set_offline_only", { on }),
+
+  // --- Checking a printed document -----------------------------------------
+  checkDocument: (text: string) => call<DocumentCheck>("check_document", { text }),
+  checkReceiptCode: (receiptNo: number, code: string) =>
+    call<DocumentCheck>("check_receipt_code", { receiptNo, code }),
+
+  // --- Fees (FR-G5) ----------------------------------------------------------
+  getFeeSettings: () => call<FeeSettings>("get_fee_settings"),
+  saveFeeSettings: (settings: FeeSettings) => call<void>("save_fee_settings", { settings }),
+  getFeeSetup: (termId: string | null) => call<FeeSetup>("get_fee_setup", { termId }),
+  saveFeeItem: (item: FeeItemInput) => call<FeeItemRow>("save_fee_item", { item }),
+  retireFeeItem: (id: string) => call<void>("retire_fee_item", { id }),
+  saveFeeRates: (termId: string, rates: FeeRateInput[]) => call<number>("save_fee_rates", { termId, rates }),
+  copyFeeStructure: (fromTermId: string, toTermId: string) =>
+    call<number>("copy_fee_structure", { fromTermId, toTermId }),
+  listFeeOptins: (termId: string, feeItemId: string, classId: string | null) =>
+    call<OptinRow[]>("list_fee_optins", { termId, feeItemId, classId }),
+  setFeeOptins: (termId: string, feeItemId: string, studentIds: string[], on: boolean) =>
+    call<number>("set_fee_optins", { termId, feeItemId, studentIds, on }),
+  listFeeAccounts: (termId: string | null, classId: string | null) =>
+    call<FeeAccountList>("list_fee_accounts", { termId, classId }),
+  getFeeAccount: (studentId: string) => call<FeeAccountDetail>("get_fee_account", { studentId }),
+  recordFeePayment: (request: RecordPaymentRequest) =>
+    call<RecordedPayment>("record_fee_payment", { request }),
+  voidFeePayment: (id: string, reason: string) => call<PaymentRow>("void_fee_payment", { id, reason }),
+  addFeeAdjustment: (input: AdjustmentInput) => call<number>("add_fee_adjustment", { input }),
+  cancelFeeAdjustment: (id: string, reason: string) => call<void>("cancel_fee_adjustment", { id, reason }),
+  addFeePromise: (input: PromiseInput) => call<PromiseRow>("add_fee_promise", { input }),
+  closeFeePromise: (id: string, status: "kept" | "broken" | "cancelled") =>
+    call<void>("close_fee_promise", { id, status }),
+  feeCollections: (from: string, to: string) => call<Collections>("fee_collections", { from, to }),
+  buildFeeReceipt: (paymentId: string) =>
+    call<DocumentEnvelope<FeeReceipt>>("build_fee_receipt", { paymentId }),
+  buildFeeInvoices: (request: InvoiceRequest) =>
+    call<DocumentEnvelope<FeeInvoiceBatch>>("build_fee_invoices", { request }),
+  buildFeeStatement: (studentId: string) =>
+    call<DocumentEnvelope<FeeAccountDetail>>("build_fee_statement", { studentId }),
+  buildFeeBalances: (termId: string | null, classId: string | null) =>
+    call<DocumentEnvelope<FeeAccountList>>("build_fee_balances", { termId, classId }),
+  buildFeeCollections: (from: string, to: string) =>
+    call<DocumentEnvelope<Collections>>("build_fee_collections", { from, to }),
 };

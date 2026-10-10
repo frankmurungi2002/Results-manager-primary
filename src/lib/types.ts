@@ -39,6 +39,8 @@ export type Permission =
   | "manage_learners"
   | "issue_pass_outs"
   | "manage_fees"
+  | "view_finance"
+  | "void_receipts"
   | "send_messages"
   | "head_teacher_comment"
   | "view_insights";
@@ -464,6 +466,11 @@ export interface ReportCard {
   previous: PreviousTerm | null;
   weekly: WeeklySummary[];
   activities: ActivityRating[];
+  /** What the learner owes, when the school prints balances on cards. */
+  feesBalance: number | null;
+  /** Proves the card is genuine: typed into Phantom or scanned. */
+  verificationCode: string | null;
+  verificationQr: string | null;
 }
 
 // --- Optional features: streams (FR-C11), weekly work (FR-C12), permits ------
@@ -813,6 +820,9 @@ export interface ReportCardBatch {
   blocked: BlockedLearner[];
   /** Class Teachers' signatures, once each. */
   signatures: SignatureImage[];
+  /** Print the fees block (balance and next term's fees) on each card. */
+  showFees: boolean;
+  nextTermFees: number | null;
 }
 
 export interface SignatureImage {
@@ -1345,3 +1355,319 @@ export interface Connectivity {
   /** Texts waiting in the outbox. */
   queuedMessages: number;
 }
+
+// ---------------------------------------------------------------------------
+// Fees (FR-G5)
+// ---------------------------------------------------------------------------
+
+export type FeeItemKind = "termly" | "optional";
+export type PaymentMethod = "cash" | "mobile_money" | "bank" | "schoolpay" | "cheque" | "other";
+export type AdjustmentKind = "bursary" | "discount" | "waiver" | "charge" | "balance_forward" | "prepayment";
+
+export interface FeeSettings {
+  paymentInstructions: string;
+  showOnReportCard: boolean;
+  autoBlockAbove: number | null;
+  textReceipts: boolean;
+}
+
+export interface FeeItemRow {
+  id: string;
+  name: string;
+  kind: FeeItemKind;
+  position: number;
+}
+
+export interface FeeRateRow {
+  feeItemId: string;
+  classId: string;
+  amount: number;
+}
+
+export interface FeeTermOption {
+  id: string;
+  label: string;
+  status: string;
+  hasRates: boolean;
+}
+
+export interface FeeClassOption {
+  id: string;
+  name: string;
+  learners: number;
+}
+
+export interface FeeSetup {
+  termId: string;
+  terms: FeeTermOption[];
+  items: FeeItemRow[];
+  classes: FeeClassOption[];
+  rates: FeeRateRow[];
+  /** Learners taking each optional item, per class (`amount` is the count). */
+  optinCounts: FeeRateRow[];
+}
+
+export interface FeeItemInput {
+  id: string | null;
+  name: string;
+  kind: FeeItemKind;
+  position: number | null;
+}
+
+export interface FeeRateInput {
+  feeItemId: string;
+  classId: string;
+  amount: number;
+}
+
+export interface OptinRow {
+  studentId: string;
+  fullName: string;
+  className: string;
+  taking: boolean;
+}
+
+export interface PromiseRow {
+  id: string;
+  studentId: string;
+  termId: string;
+  amount: number;
+  dueOn: string;
+  promisedBy: string | null;
+  note: string | null;
+  status: "open" | "kept" | "broken" | "cancelled";
+  createdAt: string;
+  overdue: boolean;
+}
+
+export interface FeeAccountRow {
+  studentId: string;
+  fullName: string;
+  regNumber: string;
+  className: string;
+  guardianPhone: string | null;
+  broughtForward: number;
+  billed: number;
+  paid: number;
+  balance: number;
+  promise: PromiseRow | null;
+}
+
+export interface FeeTotals {
+  learners: number;
+  expected: number;
+  collected: number;
+  outstanding: number;
+  owing: number;
+  credit: number;
+}
+
+export interface FeeAccountList {
+  termId: string;
+  termName: string;
+  rows: FeeAccountRow[];
+  totals: FeeTotals;
+}
+
+export interface PaymentRow {
+  id: string;
+  receiptNo: number;
+  receiptLabel: string;
+  studentId: string;
+  studentName: string;
+  className: string | null;
+  termId: string;
+  amount: number;
+  method: PaymentMethod;
+  methodLabel: string;
+  reference: string | null;
+  paidBy: string | null;
+  paidOn: string;
+  note: string | null;
+  source: string;
+  balanceAfter: number | null;
+  status: "valid" | "voided";
+  receivedByName: string | null;
+  createdAt: string;
+  voidReason: string | null;
+  voidedByName: string | null;
+  voidedAt: string | null;
+}
+
+export interface AdjustmentRow {
+  id: string;
+  termId: string;
+  termName: string;
+  feeItemName: string | null;
+  kind: AdjustmentKind;
+  label: string;
+  amount: number | null;
+  percent: number | null;
+  reason: string;
+  status: "active" | "cancelled";
+  createdByName: string | null;
+  createdAt: string;
+  cancelReason: string | null;
+}
+
+export interface LearnerBrief {
+  studentId: string;
+  fullName: string;
+  regNumber: string;
+  className: string | null;
+  guardianName: string | null;
+  guardianPhone: string | null;
+}
+
+export interface BillLine {
+  label: string;
+  amount: number;
+  kind: string;
+}
+
+export interface TermAccount {
+  termId: string;
+  termName: string;
+  yearLabel: string;
+  className: string | null;
+  broughtForward: number;
+  lines: BillLine[];
+  billed: number;
+  paid: number;
+  balance: number;
+}
+
+export interface FeeAccountDetail {
+  learner: LearnerBrief;
+  terms: TermAccount[];
+  balance: number;
+  payments: PaymentRow[];
+  adjustments: AdjustmentRow[];
+  promises: PromiseRow[];
+}
+
+export interface RecordPaymentRequest {
+  studentId: string;
+  amount: number;
+  method: PaymentMethod;
+  reference: string | null;
+  paidBy: string | null;
+  payerPhone: string | null;
+  paidOn: string | null;
+  note: string | null;
+  textGuardian: boolean;
+}
+
+export interface RecordedPayment {
+  payment: PaymentRow;
+  guardianTexted: boolean;
+  promisesKept: number;
+}
+
+export interface AdjustmentInput {
+  studentIds: string[];
+  termId: string | null;
+  feeItemId: string | null;
+  kind: AdjustmentKind;
+  amount: number | null;
+  percent: number | null;
+  reason: string;
+}
+
+export interface PromiseInput {
+  studentId: string;
+  amount: number;
+  dueOn: string;
+  promisedBy: string | null;
+  note: string | null;
+}
+
+export interface CollectionDay {
+  date: string;
+  cash: number;
+  mobileMoney: number;
+  bank: number;
+  schoolpay: number;
+  other: number;
+  total: number;
+  receipts: number;
+}
+
+export interface Collections {
+  from: string;
+  to: string;
+  days: CollectionDay[];
+  totals: CollectionDay;
+  payments: PaymentRow[];
+  voided: PaymentRow[];
+}
+
+export interface FeeReceipt {
+  payment: PaymentRow;
+  regNumber: string;
+  termName: string;
+  amountWords: string;
+  verificationCode: string;
+  verificationQr: string;
+}
+
+export interface FeeInvoice {
+  learner: LearnerBrief;
+  broughtForward: number;
+  lines: BillLine[];
+  billed: number;
+  paid: number;
+  balance: number;
+  promise: PromiseRow | null;
+}
+
+export interface FeeInvoiceBatch {
+  termName: string;
+  className: string | null;
+  paymentInstructions: string;
+  invoices: FeeInvoice[];
+}
+
+export interface InvoiceRequest {
+  termId: string | null;
+  classId: string | null;
+  studentIds: string[] | null;
+  onlyOwing: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Checking a printed document
+// ---------------------------------------------------------------------------
+
+export interface DocumentCheck {
+  genuine: boolean;
+  kind: "receipt" | "report_card" | "";
+  headline: string;
+  /** What the school recorded, label then value, to compare with the paper. */
+  facts: [string, string][];
+  warning: string | null;
+}
+
+/** "UGX 1,250,000". */
+export function ugx(amount: number): string {
+  const sign = amount < 0 ? "-" : "";
+  return `${sign}UGX ${Math.abs(Math.round(amount)).toLocaleString("en-US")}`;
+}
+
+export const PAYMENT_METHODS: { id: PaymentMethod; label: string; needsReference: boolean; referenceLabel: string }[] = [
+  { id: "cash", label: "Cash", needsReference: false, referenceLabel: "Reference (optional)" },
+  { id: "mobile_money", label: "Mobile Money", needsReference: true, referenceLabel: "Transaction ID" },
+  { id: "bank", label: "Bank deposit", needsReference: true, referenceLabel: "Bank slip number" },
+  { id: "schoolpay", label: "SchoolPay", needsReference: true, referenceLabel: "SchoolPay transaction ID" },
+  { id: "cheque", label: "Cheque", needsReference: true, referenceLabel: "Cheque number" },
+  { id: "other", label: "Other", needsReference: false, referenceLabel: "Reference (optional)" },
+];
+
+export const ADJUSTMENT_KINDS: { id: AdjustmentKind; label: string; reduces: boolean; percentAllowed: boolean; hint: string }[] = [
+  { id: "bursary", label: "Bursary", reduces: true, percentAllowed: true, hint: "Sponsored or a school bursary" },
+  { id: "discount", label: "Discount", reduces: true, percentAllowed: true, hint: "Sibling, staff child, early payment" },
+  { id: "waiver", label: "Waiver", reduces: true, percentAllowed: true, hint: "Forgiven by the head or director" },
+  { id: "charge", label: "Extra charge", reduces: false, percentAllowed: false, hint: "A trip, a broken window, a new uniform" },
+  { id: "balance_forward", label: "Balance brought forward", reduces: false, percentAllowed: false, hint: "Owed from before Phantom" },
+  { id: "prepayment", label: "Paid before Phantom", reduces: true, percentAllowed: false, hint: "Money already paid, from the old books" },
+];

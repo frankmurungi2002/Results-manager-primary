@@ -26,7 +26,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use chrono::Utc;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use crate::audit;
 use crate::domain::ids::new_id;
@@ -651,7 +651,6 @@ pub struct BroadcastSent {
 /// added, a phone number changed), nothing is sent.
 #[tauri::command]
 pub fn send_sms_broadcast(
-    app: AppHandle,
     state: State<'_, AppState>,
     audience: Vec<AudiencePart>,
     message: String,
@@ -661,7 +660,7 @@ pub fn send_sms_broadcast(
     let conn = state.db.lock();
     let sent = queue_broadcast(&conn, &session, &audience, &message, expected_units)?;
     drop(conn);
-    sms::flush_in_background(app);
+    sms::wake();
     Ok(sent)
 }
 
