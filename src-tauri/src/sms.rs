@@ -234,6 +234,11 @@ pub fn queue(
     let Some(to) = phone.and_then(normalize_phone) else {
         return Ok(None);
     };
+    // A school that chose offline only gets the pass-out or register saved
+    // without a text, never a text that waits for an internet it will not use.
+    if crate::network::offline_only(conn)? {
+        return Ok(None);
+    }
     Ok(Some(insert(conn, &to, body, kind, Some(related_id), created_by)?))
 }
 
@@ -246,6 +251,7 @@ pub fn insert(
     related_id: Option<&str>,
     created_by: Option<&str>,
 ) -> AppResult<String> {
+    crate::network::require_online_allowed(conn)?;
     let (priority, lifetime) = policy(kind);
     let now = Utc::now();
     let id = new_id(ID_PREFIX);
@@ -370,13 +376,16 @@ fn drain(db: &Database, total: &mut FlushResult, deliver: &Deliver<'_>) -> AppRe
              WHERE status = 'queued' AND expires_at IS NOT NULL AND expires_at <= ?2",
             params![EXPIRED_REASON, stamp(Utc::now())],
         )?;
-        load_settings(&conn)?
+        (load_settings(&conn)?, crate::network::offline_only(&conn)?)
     };
+    let (settings, offline_only) = settings;
 
     let configured =
         settings.provider != "off" && !settings.username.is_empty() && !settings.api_key.is_empty();
 
-    if configured {
+    if offline_only {
+        total.skipped_reason = Some(crate::network::OFFLINE_ONLY_MESSAGE.into());
+    } else if configured {
         'rounds: loop {
             let batch: Vec<(String, String, String)> = {
                 let conn = db.lock();
@@ -685,6 +694,32 @@ mod tests {
         let result = flush_with(&gate, &db, &delivered).unwrap();
         assert_eq!((result.sent, result.still_queued), (1, 0));
         assert_eq!(row(&db, &id).0, "sent");
+    }
+
+    #[test]
+    fn offline_only_never_touches_the_network_and_queues_nothing() {
+        let gate = Gate::new();
+        let db = configured_db();
+        let waiting = put(&db, "+256772000001", "bulk");
+        crate::network::set_offline_only(&db.lock(), true).unwrap();
+
+        let calls = AtomicUsize::new(0);
+        let counting = |_: &SmsSettings, _: &str, _: &str| -> Result<String, SendError> {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Ok("ref".into())
+        };
+        let result = flush_with(&gate, &db, &counting).unwrap();
+        assert_eq!(calls.load(Ordering::SeqCst), 0, "not one call to the gateway");
+        assert!(result.skipped_reason.unwrap().contains("offline only"));
+        assert_eq!(row(&db, &waiting).0, "queued");
+
+        // New messages are refused outright, or skipped where a text is a
+        // side effect of something else (a pass-out still gets issued).
+        assert!(insert(&db.lock(), "+256772000002", "hi", "bulk", None, None).is_err());
+        assert_eq!(
+            queue(&db.lock(), Some("0772000003"), "hi", "pass_out", "pas_1", None).unwrap(),
+            None
+        );
     }
 
     #[test]

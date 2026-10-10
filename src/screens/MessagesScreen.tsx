@@ -63,6 +63,7 @@ const key = (part: AudiencePart) => `${part.kind}:${part.id ?? ""}`;
 
 export function MessagesScreen() {
   const can = useCan();
+  const offlineOnly = useStore((state) => state.offlineOnly);
   const [tab, setTab] = useState<Tab>("compose");
 
   return (
@@ -93,7 +94,13 @@ export function MessagesScreen() {
           ))}
         </div>
 
-        {tab === "compose" && <Compose onSent={() => setTab("sent")} />}
+        {offlineOnly && (
+          <Alert tone="info" title="This school uses Phantom offline only">
+            Texts cannot be sent. To send them, a School Admin turns off "Offline only" in Settings → Internet &amp;
+            updates. Groups can still be kept up to date here.
+          </Alert>
+        )}
+        {tab === "compose" && !offlineOnly && <Compose onSent={() => setTab("sent")} />}
         {tab === "sent" && <SentList />}
         {tab === "groups" && <Groups isAdmin={can("send_messages")} />}
       </div>

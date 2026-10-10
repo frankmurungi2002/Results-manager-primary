@@ -28,6 +28,7 @@ import type {
   SmsSettings,
 } from "../lib/types";
 import { useCan, useStore } from "../state/store";
+import { InternetSettings } from "../components/InternetSettings";
 import { SignaturesSettings } from "../components/SignaturesSettings";
 import { SubscriptionSettings } from "../components/Subscription";
 import {
@@ -47,7 +48,7 @@ import {
   relativeTime,
 } from "../components/ui";
 
-type Tab = "school" | "features" | "sms" | "signatures" | "subscription" | "backup" | "account";
+type Tab = "school" | "features" | "sms" | "internet" | "signatures" | "subscription" | "backup" | "account";
 
 const ACCENTS = [
   "#4F63D2",
@@ -70,6 +71,7 @@ export function SettingsScreen() {
     { id: "school", label: "School", allowed: can("manage_school") },
     { id: "features", label: "Optional features", allowed: can("manage_school") },
     { id: "sms", label: "SMS", allowed: can("manage_school") },
+    { id: "internet", label: "Internet & updates", allowed: can("manage_school") },
     { id: "signatures", label: "Signatures & stamp", allowed: true },
     { id: "subscription", label: "Subscription", allowed: can("manage_school") },
     { id: "backup", label: "Backup", allowed: can("manage_backups") },
@@ -111,6 +113,7 @@ export function SettingsScreen() {
         {tab === "school" && allowed("school") && <SchoolTab />}
         {tab === "features" && allowed("features") && <FeaturesTab />}
         {tab === "sms" && allowed("sms") && <SmsTab />}
+        {tab === "internet" && allowed("internet") && <InternetSettings />}
         {tab === "signatures" && <SignaturesSettings />}
         {tab === "subscription" && allowed("subscription") && <SubscriptionSettings />}
         {tab === "backup" && allowed("backup") && <BackupTab />}

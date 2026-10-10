@@ -15,6 +15,7 @@ pub mod error;
 pub mod ink;
 pub mod licence;
 pub mod licence_format;
+pub mod network;
 pub mod security;
 pub mod sms;
 pub mod state;
@@ -73,6 +74,8 @@ pub fn run() {
             commands::system::verify_audit_code,
             commands::system::licence_status,
             commands::system::install_licence_key,
+            commands::system::get_connectivity,
+            commands::system::set_offline_only,
             commands::system::backup_status,
             commands::system::set_mirror_path,
             commands::system::run_backup,

@@ -9,6 +9,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  Connectivity,
   LicenceStatus,
   AuditExport,
   AuditIntegrity,
@@ -561,4 +562,8 @@ export const api = {
     call<void>("set_fees_block", { studentId, blocked, note: note ?? null }),
   setFeesRule: (enabled: boolean) => call<void>("set_fees_rule", { enabled }),
   getFeesRule: () => call<boolean>("get_fees_rule"),
+
+  // --- Offline only -------------------------------------------------------
+  getConnectivity: () => call<Connectivity>("get_connectivity"),
+  setOfflineOnly: (on: boolean) => call<Connectivity>("set_offline_only", { on }),
 };

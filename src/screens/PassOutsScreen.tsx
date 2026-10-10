@@ -368,6 +368,7 @@ function NewPassOutModal({
   const [pickerPhone, setPickerPhone] = useState("");
   const [awayMinutes, setAwayMinutes] = useState<number | null>(60);
   const [backBy, setBackBy] = useState("");
+  const offlineOnly = useStore((state) => state.offlineOnly);
   const [notify, setNotify] = useState(true);
   const [guardianPhone, setGuardianPhone] = useState("");
   const [busy, setBusy] = useState(false);
@@ -445,7 +446,7 @@ function NewPassOutModal({
         pickedUpRelationship: relationship.trim() || null,
         pickedUpPhone: pickerPhone.trim() || null,
         awayMinutes: minutes,
-        notifyGuardian: notify,
+        notifyGuardian: notify && !offlineOnly,
         guardianPhone: guardianPhone.trim() || null,
       });
       onCreated(row);
@@ -602,7 +603,7 @@ function NewPassOutModal({
           </div>
         </div>
 
-        <div className="po-sms">
+        <div className="po-sms" hidden={offlineOnly}>
           <div className="row-between">
             <label className="row" style={{ gap: "var(--space-3)" }}>
               <Switch

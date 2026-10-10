@@ -654,6 +654,7 @@ pub async fn send_test_sms(state: State<'_, AppState>, phone: String) -> AppResu
     })?;
     let (settings, body) = {
         let conn = state.db.lock();
+        crate::network::require_online_allowed(&conn)?;
         let settings = sms::load_settings(&conn)?;
         let body = format!(
             "{}: this is a test message from Phantom School Manager. SMS is working.",

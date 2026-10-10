@@ -48,6 +48,9 @@ interface AppStore {
   session: SessionView | null;
   institution: Institution | null;
   features: FeatureFlags;
+  /** The school chose to use no internet at all: hide what needs it. */
+  offlineOnly: boolean;
+  setOfflineOnly: (on: boolean) => void;
 
   // --- Navigation ---------------------------------------------------------
   screen: ScreenId;
@@ -91,6 +94,7 @@ export const useStore = create<AppStore>((set, get) => ({
   session: null,
   institution: null,
   features: NO_FEATURES,
+  offlineOnly: false,
 
   screen: "dashboard",
   screenParams: {},
@@ -186,11 +190,12 @@ export const useStore = create<AppStore>((set, get) => ({
 
   async refreshInstitution() {
     try {
-      const [institution, features] = await Promise.all([
+      const [institution, features, connectivity] = await Promise.all([
         api.getInstitution(),
         api.getFeatures(),
+        api.getConnectivity(),
       ]);
-      set({ institution, features });
+      set({ institution, features, offlineOnly: connectivity.offlineOnly });
       applyAccent(institution.accentColor);
     } catch {
       // A teacher signing in before setup finishes is not an error worth
@@ -201,6 +206,10 @@ export const useStore = create<AppStore>((set, get) => ({
   async setTeacherMode(mode) {
     const session = await api.setTeacherMode(mode);
     set({ session });
+  },
+
+  setOfflineOnly(on) {
+    set({ offlineOnly: on });
   },
 
   markProvisioned() {

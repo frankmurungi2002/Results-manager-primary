@@ -1334,3 +1334,14 @@ export interface LicenceStatus {
   clockRolledBack: boolean;
 }
 
+
+// ---------------------------------------------------------------------------
+// Offline only
+// ---------------------------------------------------------------------------
+
+export interface Connectivity {
+  /** The school switched every internet feature off. */
+  offlineOnly: boolean;
+  /** Texts waiting in the outbox. */
+  queuedMessages: number;
+}

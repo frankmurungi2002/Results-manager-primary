@@ -413,6 +413,64 @@ pub fn install_licence_key(state: State<'_, AppState>, key: String) -> AppResult
 }
 
 // ---------------------------------------------------------------------------
+// Offline only
+// ---------------------------------------------------------------------------
+
+/// Whether the internet features are switched off. Every signed-in person
+/// may ask: the screens use it to hide what cannot work.
+#[tauri::command]
+pub fn get_connectivity(state: State<'_, AppState>) -> AppResult<crate::network::Connectivity> {
+    state.sessions.require()?;
+    let conn = state.db.lock();
+    crate::network::connectivity(&conn)
+}
+
+#[tauri::command]
+pub fn set_offline_only(
+    state: State<'_, AppState>,
+    on: bool,
+) -> AppResult<crate::network::Connectivity> {
+    let session = state.sessions.require()?;
+    session.require(Permission::ManageSchool)?;
+    let conn = state.db.lock();
+    let tx = conn.unchecked_transaction()?;
+    set_offline_only_in(&tx, &session, on)?;
+    tx.commit()?;
+    crate::network::connectivity(&conn)
+}
+
+/// Switching to offline only also closes every text still waiting, with a
+/// plain reason. Left queued, they would all go out the day someone turned
+/// the internet back on: weeks-old pass-out and fees texts, which tell
+/// parents things that are no longer true.
+pub fn set_offline_only_in(conn: &Connection, session: &Session, on: bool) -> AppResult<usize> {
+    crate::network::set_offline_only(conn, on)?;
+    let closed = if on {
+        conn.execute(
+            "UPDATE sms_outbox SET status = 'failed',
+                    last_error = 'Not sent: the school switched to offline only.'
+             WHERE status = 'queued'",
+            [],
+        )?
+    } else {
+        0
+    };
+    audit::record(
+        conn,
+        Some(session),
+        "network.offline_only",
+        "setting",
+        "network",
+        if on {
+            format!("Switched to offline only ({closed} waiting text(s) closed unsent)")
+        } else {
+            "Allowed internet features again".to_string()
+        },
+    )?;
+    Ok(closed)
+}
+
+// ---------------------------------------------------------------------------
 // Backup (simplified FR-B12, per SRS 16.1)
 // ---------------------------------------------------------------------------
 
@@ -798,5 +856,27 @@ mod tests {
         assert!(!is_hex_color("#4F63D"));
         assert!(!is_hex_color("#GGGGGG"));
         assert!(!is_hex_color("red"));
+    }
+
+    #[test]
+    fn going_offline_only_closes_waiting_texts_so_none_go_out_late() {
+        use crate::security::session::test_session;
+        use crate::security::Role;
+        let db = crate::db::Database::open_in_memory().unwrap();
+        let conn = db.lock();
+        crate::sms::insert(&conn, "+256772000001", "Fees reminder", "bulk", None, None).unwrap();
+        let admin = test_session("a", Role::SchoolAdmin, None, &[]);
+
+        assert_eq!(set_offline_only_in(&conn, &admin, true).unwrap(), 1);
+        let (status, reason): (String, String) = conn
+            .query_row("SELECT status, last_error FROM sms_outbox", [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert_eq!(status, "failed");
+        assert!(reason.contains("offline only"));
+        assert_eq!(crate::network::connectivity(&conn).unwrap().queued_messages, 0);
+
+        // Back online: nothing is resurrected by surprise.
+        assert_eq!(set_offline_only_in(&conn, &admin, false).unwrap(), 0);
+        assert_eq!(crate::network::connectivity(&conn).unwrap().queued_messages, 0);
     }
 }
