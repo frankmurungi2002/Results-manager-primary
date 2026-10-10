@@ -552,7 +552,7 @@ button.sidebar-mark-empty:hover {
 .login-brand-mark {
   display: grid;
   place-items: center;
-  filter: drop-shadow(0 6px 12px rgba(55, 48, 163, 0.28));
+  filter: none;
 }
 
 .login-center {
