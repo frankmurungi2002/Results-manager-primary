@@ -21,6 +21,24 @@ entered. A school is never locked out of its own records.
 
 ## For the owner (you)
 
+Everything lives in `tools/termbook-licence`. On Windows there are two files
+to double-click there, so no commands need typing:
+
+| File | When |
+|---|---|
+| `make-signing-key.bat` | Once, ever. Makes `termbook-issuer.key` and shows the public key line to paste into the app. |
+| `issue-key.bat` | Every time a school pays. Asks for the school code, name, term or year, start date and payment reference, then opens the key in Notepad to copy and send. |
+
+`issue-key.bat` must sit in the same folder as `termbook-issuer.key`. Both need
+Rust (`cargo`), which is already on the computer that builds Termbook.
+
+There was only ever one tool. Before the rename it was called
+`phantom-licence` and its keys started `PSM1.`; it is now `termbook-licence`
+and keys start `TBK1.`. No `PSM1` key was ever issued, because the app's
+public key was still empty, so nothing needs replacing.
+
+The same steps by hand:
+
 ### Once, ever: make your signing key
 
 ```bash

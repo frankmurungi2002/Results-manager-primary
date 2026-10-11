@@ -50,4 +50,5 @@ node_modules/
 termbook-issuer.key
 *.key
 issued-keys.csv
+last-key.txt
 tools/termbook-licence/target/
