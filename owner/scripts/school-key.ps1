@@ -39,8 +39,8 @@ Say "$name, $plan plan from $from. Press Enter to make the key, or close this wi
 
 $cmd = @('run', '--release', '--quiet', '--manifest-path', $tool, '--', 'issue', '--key', $lic, '--school', $school, '--name', $name, '--plan', $plan, '--from', $from)
 if ($ref -ne '') { $cmd += @('--id', $ref) }
-Push-Location $keys
-try { $out = & cargo @cmd 2>&1 | Out-String } finally { Pop-Location }
+Push-Location -LiteralPath $keys
+try { $out = & cargo @cmd 2>&1 | ForEach-Object { "$_" } | Out-String } finally { Pop-Location }
 if ($LASTEXITCODE -ne 0) { Say $out 'Red'; Say 'No key was made.' 'Red'; exit 1 }
 
 $key = ($out -split "`r?`n" | Where-Object { $_ -like 'TBK1.*' } | Select-Object -First 1).Trim()

@@ -47,8 +47,8 @@ if (Test-Path $up) {
     Say '2. Update key: you already have one. Keeping it.' 'Yellow'
 } else {
     Say '2. Making your update key...'
-    Push-Location $repo
-    try { & npx tauri signer generate --ci -w $up | Out-Null } finally { Pop-Location }
+    Push-Location -LiteralPath $repo
+    try { & npx tauri signer generate --ci -w $up 2>$null | Out-Null } finally { Pop-Location }
     if (-not (Test-Path "$up.pub")) { throw 'The update key could not be made. Run "npm install" in the project folder first.' }
     Say '   Done.' 'Green'
 }
