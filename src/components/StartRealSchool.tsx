@@ -19,7 +19,7 @@ export function StartRealSchoolCard() {
   return (
     <Card
       title="Start my real school"
-      subtitle="Clears the practice school (a backup of it is kept) and opens the setup wizard for your real school. Everyone is signed out."
+      subtitle="Clears the demonstration school (a backup of it is kept) and opens the setup wizard for your real school. Everyone is signed out."
       footer={
         <div className="row-between" style={{ gap: 12, alignItems: "end", flexWrap: "wrap" }}>
           <div style={{ width: 220 }}>
@@ -39,12 +39,12 @@ export function StartRealSchoolCard() {
                 .finally(() => setBusy(false));
             }}
           >
-            Clear the practice school
+            Clear the demonstration school
           </Button>
         </div>
       }
     >
-      <span className="field-hint">The practice school's backup stays in the backups list if you ever want it back.</span>
+      <span className="field-hint">The demonstration school's backup stays in the backups list if you ever want it back.</span>
     </Card>
   );
 }

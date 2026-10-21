@@ -337,8 +337,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LicenceBanner status={licence} />
         {practice && (
           <div className="practice-banner no-print">
-            <strong>Practice school.</strong> Nothing here is real and no text is sent. When you are ready, a School Admin clears it under
-            Settings → School → Start my real school.
+            <strong>Demonstration school.</strong> Nothing here is real and no SMS is sent.
           </div>
         )}
         {children}

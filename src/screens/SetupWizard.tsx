@@ -48,6 +48,24 @@ export function SetupWizard() {
   const [done, setDone] = useState<{ username: string } | null>(null);
   const [practice, setPractice] = useState<{ step: string; done: number; total: number; finished: boolean; error: string | null } | null>(null);
 
+  // The demonstration school is for the owner's demonstrations only, so it
+  // has no button: Ctrl+Shift+D on the first step of a new installation.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "d") || step !== 0 || practice) return;
+      event.preventDefault();
+      if (!window.confirm("Build the demonstration school on this computer?")) return;
+      setPractice({ step: "Starting", done: 0, total: 9, finished: false, error: null });
+      buildPracticeSchool((stepName, doneSteps, total) => setPractice({ step: stepName, done: doneSteps, total, finished: false, error: null }))
+        .then(() => setPractice({ step: "", done: 9, total: 9, finished: true, error: null }))
+        .catch((e: unknown) =>
+          setPractice({ step: "", done: 0, total: 9, finished: false, error: e instanceof Error ? e.message : (e as { message?: string })?.message ?? String(e) }),
+        );
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step, practice]);
+
   // --- Step 1: the school ---
   const [institutionName, setInstitutionName] = useState("");
   const [motto, setMotto] = useState("");
@@ -119,7 +137,7 @@ export function SetupWizard() {
     return (
       <div className="auth-panel">
         <div className="auth-form">
-          <h2 className="auth-title">{practice.finished ? "The practice school is ready" : "Building the practice school"}</h2>
+          <h2 className="auth-title">{practice.finished ? "The demonstration school is ready" : "Building the demonstration school"}</h2>
           {practice.error ? (
             <Alert tone="danger" title="It stopped part way">
               {practice.error} Sign in as admin, then Settings → Start my real school clears it and starts again.
@@ -290,31 +308,6 @@ export function SetupWizard() {
         </div>
 
         {error && <Alert tone="danger">{error}</Alert>}
-
-        {step === 0 && (
-          <Alert tone="info" title="Just looking, or training staff first?">
-            <div className="row-between" style={{ gap: 12, flexWrap: "wrap" }}>
-              <span>
-                Open a practice school instead: a made-up school with learners, marks, fees and staff to try everything on. Clear it later
-                and set up your real school.
-              </span>
-              <Button
-                onClick={() => {
-                  setPractice({ step: "Starting", done: 0, total: 9, finished: false, error: null });
-                  buildPracticeSchool((stepName, doneSteps, total) =>
-                    setPractice({ step: stepName, done: doneSteps, total, finished: false, error: null }),
-                  )
-                    .then(() => setPractice({ step: "", done: 9, total: 9, finished: true, error: null }))
-                    .catch((e: unknown) =>
-                      setPractice({ step: "", done: 0, total: 9, finished: false, error: e instanceof Error ? e.message : (e as { message?: string })?.message ?? String(e) }),
-                    );
-                }}
-              >
-                Open a practice school
-              </Button>
-            </div>
-          </Alert>
-        )}
 
         {step === 0 && (
           <Card
