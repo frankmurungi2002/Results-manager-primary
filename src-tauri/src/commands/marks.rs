@@ -18,6 +18,7 @@ use crate::domain::ids::{new_id, prefix};
 use crate::domain::models::MarkEntry;
 use crate::domain::repo;
 use crate::error::{AppError, AppResult};
+use crate::security::Session;
 use crate::state::AppState;
 
 // ---------------------------------------------------------------------------
@@ -353,9 +354,42 @@ pub fn save_marks(
     entries: Vec<MarkEntry>,
 ) -> AppResult<SaveMarksResult> {
     let session = state.sessions.require()?;
-
     let mut conn = state.db.lock();
+    save_marks_in(&mut conn, &session, &class_subject_id, &exam_id, &entries)
+}
 
+/// May this person write marks for this subject in this class? A Class
+/// Teacher (or an office that manages marks) writes every subject; a Subject
+/// Teacher only the subjects they were assigned (FR-C1).
+pub fn may_write_subject(
+    conn: &rusqlite::Connection,
+    session: &Session,
+    class_id: &str,
+    class_subject_id: &str,
+) -> AppResult<bool> {
+    if session.require_view_class(class_id).is_err() {
+        return Ok(false);
+    }
+    if session.may_write_all_marks_in(class_id) {
+        return Ok(true);
+    }
+    let assigned: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM teacher_assignments ta
+         JOIN class_subjects cs ON cs.subject_id = ta.subject_id AND cs.class_id = ta.class_id
+         WHERE ta.user_id = ?1 AND cs.id = ?2 AND ta.status = 'active'",
+        params![session.user_id, class_subject_id],
+        |row| row.get(0),
+    )?;
+    Ok(assigned > 0)
+}
+
+pub fn save_marks_in(
+    conn: &mut rusqlite::Connection,
+    session: &Session,
+    class_subject_id: &str,
+    exam_id: &str,
+    entries: &[MarkEntry],
+) -> AppResult<SaveMarksResult> {
     type Context = (String, f64, String, String, String);
     let (class_id, max_score, exam_status, subject_name, exam_name): Context = conn
         .query_row(
@@ -386,17 +420,8 @@ pub fn save_marks(
 
     // FR-C1 again, one level finer: a Subject Teacher may only write marks for
     // the subject they were assigned. Being in the class is not enough.
-    if !session.may_write_all_marks_in(&class_id) {
-        let assigned: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM teacher_assignments ta
-             JOIN class_subjects cs ON cs.subject_id = ta.subject_id AND cs.class_id = ta.class_id
-             WHERE ta.user_id = ?1 AND cs.id = ?2 AND ta.status = 'active'",
-            params![session.user_id, class_subject_id],
-            |row| row.get(0),
-        )?;
-        if assigned == 0 {
-            return Err(AppError::Forbidden);
-        }
+    if !may_write_subject(conn, session, &class_id, class_subject_id)? {
+        return Err(AppError::Forbidden);
     }
 
     // A closed term is closed. Reopening one cell is a separate, approved
@@ -431,7 +456,7 @@ pub fn save_marks(
     let mut saved = 0usize;
     let mut skipped = Vec::new();
 
-    for entry in &entries {
+    for entry in entries {
         let Some(student_name) = roster.get(&entry.student_id) else {
             skipped.push(RejectedMark {
                 student_id: entry.student_id.clone(),
@@ -509,19 +534,19 @@ pub fn save_marks(
     let warnings = detect_anomalies(
         &tx,
         &class_id,
-        &class_subject_id,
-        &exam_id,
+        class_subject_id,
+        exam_id,
         max_score,
-        &entries,
+        entries,
         &roster,
     )?;
 
     audit::record(
         &tx,
-        Some(&session),
+        Some(session),
         "marks.save",
         "class_subject",
-        &class_subject_id,
+        class_subject_id,
         format!(
             "Saved {saved} marks for {subject_name}, {exam_name}{}",
             if warnings.is_empty() {

@@ -16,6 +16,7 @@ import {
   BarChart3,
   Check,
   ClipboardList,
+  FileSpreadsheet,
   Save,
   UserX,
 } from "lucide-react";
@@ -25,13 +26,15 @@ import type {
   AcademicYearRow,
   ClassRow,
   ClassSubjectRow,
+  ExamDeadline,
   ExamRow,
   MarkEntry,
   MarksSheet,
   SubjectAnalytics,
   SubjectProgress,
 } from "../lib/types";
-import { useStore } from "../state/store";
+import { useCan, useStore } from "../state/store";
+import { MarksExcelModal } from "../components/MarksExcel";
 import {
   Alert,
   Badge,
@@ -69,6 +72,10 @@ export function MarksScreen() {
   const [progress, setProgress] = useState<SubjectProgress[]>([]);
   const [analytics, setAnalytics] = useState<SubjectAnalytics | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [excel, setExcel] = useState(false);
+  const [deadline, setDeadline] = useState<ExamDeadline | null>(null);
+  const [deadlineEdit, setDeadlineEdit] = useState<string | null>(null);
+  const can = useCan();
 
   // --- Load the pickers ---------------------------------------------------
 
@@ -150,6 +157,13 @@ export function MarksScreen() {
     if (!classId || !examId) return;
     api.marksProgress(classId, examId).then(setProgress).catch(() => undefined);
   }, [classId, examId, sheet]);
+
+  const loadDeadline = useCallback(() => {
+    if (!classId || !examId) return;
+    api.getExamDeadline(classId, examId).then(setDeadline).catch(() => setDeadline(null));
+  }, [classId, examId]);
+
+  useEffect(loadDeadline, [loadDeadline]);
 
   // --- Dirty tracking -----------------------------------------------------
 
@@ -265,9 +279,9 @@ export function MarksScreen() {
           <div>
             <h1 className="page-title">Marks entry</h1>
             <p className="page-description">
-              Type marks straight into the grid, or step through one learner at
-              a time. The grade updates as you type, using this subject's own
-              grading system.
+              Type marks straight into the grid, step through one learner at a
+              time, or fill a sheet in Excel and upload it. The grade updates as
+              you type, using this subject's own grading system.
             </p>
           </div>
           <div className="page-actions">
@@ -279,6 +293,11 @@ export function MarksScreen() {
                 { value: "form", label: "One by one" },
               ]}
             />
+            {sheet && sheet.isOpen && sheet.rows.length > 0 && (
+              <Button variant="secondary" icon={<FileSpreadsheet size={15} />} onClick={() => setExcel(true)}>
+                Excel
+              </Button>
+            )}
             {sheet && (
               <Button
                 variant="ghost"
@@ -354,6 +373,34 @@ export function MarksScreen() {
           </div>
         </Card>
 
+        {deadline?.date && sheet?.isOpen && (
+          <Alert tone={deadline.daysLeft !== null && deadline.daysLeft <= 2 ? "warning" : "info"}>
+            {currentExam?.name ?? "These"} marks are due{" "}
+            {deadline.daysLeft === 0
+              ? "today"
+              : deadline.daysLeft !== null && deadline.daysLeft < 0
+                ? `since ${deadline.label} (the date has passed)`
+                : `by ${deadline.label}`}
+            .
+          </Alert>
+        )}
+
+        {excel && sheet && (
+          <MarksExcelModal
+            classId={sheet.classId}
+            className={sheet.className}
+            examId={sheet.examId}
+            examName={sheet.examName}
+            classSubjectId={sheet.classSubjectId}
+            subjectName={sheet.subjectName}
+            onClose={() => setExcel(false)}
+            onSaved={() => {
+              setExcel(false);
+              void loadSheet();
+            }}
+          />
+        )}
+
         {sheet && !sheet.isOpen && (
           <Alert tone="warning" title="This examination is closed">
             Marks can be read but not changed. A School Admin can reopen the
@@ -399,6 +446,43 @@ export function MarksScreen() {
           <Card
             title="Marks entered this examination"
             subtitle={`${sheet?.className ?? ""}${currentExam ? ` · ${currentExam.name}` : ""}`}
+            actions={
+              can("manage_academics") && currentExam ? (
+                deadlineEdit === null ? (
+                  <Button variant="ghost" onClick={() => setDeadlineEdit(deadline?.date ?? "")}>
+                    {deadline?.date ? `Due ${deadline.label}: change` : "Set a deadline"}
+                  </Button>
+                ) : (
+                  <div className="row" style={{ gap: 8 }}>
+                    <input
+                      className="input"
+                      type="date"
+                      aria-label="Marks deadline"
+                      value={deadlineEdit}
+                      onChange={(event) => setDeadlineEdit(event.target.value)}
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={() =>
+                        api
+                          .setExamDeadline(currentExam.id, deadlineEdit || null)
+                          .then(() => {
+                            toast("success", deadlineEdit ? `Every class's ${currentExam.name} marks are now due on that date.` : "Deadline removed.");
+                            setDeadlineEdit(null);
+                            loadDeadline();
+                          })
+                          .catch(reportError)
+                      }
+                    >
+                      Save for every class
+                    </Button>
+                    <Button variant="ghost" onClick={() => setDeadlineEdit(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                )
+              ) : undefined
+            }
             flush
           >
             <div className="table-wrap">

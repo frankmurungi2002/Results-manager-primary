@@ -58,7 +58,7 @@ Nothing leaves this folder unless someone exports or backs up.
 | FR-B10 | Backup status; cloud controls visible and marked coming soon |
 | FR-B12 | Simplified per SRS 16.1 — a snapshot every 15 minutes while data changes and on close, to this PC and a second drive, not a hand-built RAID |
 | FR-E4 | Restore from any snapshot, with a preview first; the data it replaces is saved before anything is overwritten |
-| FR-C3 | Marks entry: in-app grid and guided form, one shared validator and save path |
+| FR-C3 | Marks entry: in-app grid, guided form and Excel upload, one shared validator and save path |
 | FR-C5 | Subject analytics — mean, pass rate, range, grade distribution |
 | FR-C6 | Per-subject marks-entry progress |
 | FR-C7, FR-C8 | Search by name or registration number; audited bio-data |
@@ -83,7 +83,9 @@ Nothing leaves this folder unless someone exports or backs up.
 | Insights | PLE projection with the learners nearest the next division, a projector view, and the subject heat map |
 | Requirements | The term's list (reams, brooms, books), ticked as it arrives, printed on report cards |
 | Visitors and conduct (FR-G2, FR-G14) | Visitors' book with slips; conduct log with commendations, corrective actions and optional parent SMS |
-| Staff | Sign-in register, invites so staff set their own passwords, admin recovery codes |
+| Staff | Sign-in register, import from Excel, invites so staff set their own passwords, admin recovery codes |
+| Marks in Excel | A pre-filled sheet per subject or per class, checked on upload and saved through the same path as the grid; deadlines per examination with optional SMS reminders to teachers |
+| Getting started | A dashboard checklist for a new school, ticked from its own records |
 | New school year | Promotion and the new calendar in one step |
 | Export (FR-G10) | The school's data in one Excel workbook, each sheet only for a reader allowed to see it |
 | Internet | One "offline only" switch; SMS, invites and updates are the only network uses, and all are optional. Automatic updates are signed and off until the owner's key is set ([`docs/UPDATES.md`](docs/UPDATES.md)) |

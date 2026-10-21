@@ -692,3 +692,39 @@
     align-self: center;
   }
 }
+
+/* ---- Getting started ---------------------------------------------------- */
+.getting-started .gs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-2);
+}
+.getting-started .gs-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.getting-started .gs-step:first-child {
+  border-top: none;
+}
+.getting-started .gs-icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-tertiary);
+}
+.getting-started .gs-step.is-done .gs-icon {
+  color: var(--success);
+}
+.getting-started .gs-step.is-done strong {
+  font-weight: 500;
+  opacity: 0.75;
+}
+.getting-started .gs-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

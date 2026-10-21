@@ -38,6 +38,7 @@ const JOBS: &[(&str, Job)] = &[
     ("fee reminders", crate::commands::autosms::fee_reminder_job),
     ("promise reminders", crate::commands::autosms::promise_reminder_job),
     ("not reported", crate::commands::autosms::not_reported_job),
+    ("marks reminders", crate::commands::deadlines::marks_reminder_job),
 ];
 
 pub fn spawn_scheduler(app: AppHandle) {

@@ -876,8 +876,15 @@ pub fn open_term(state: State<'_, AppState>, term_id: String) -> AppResult<()> {
         "UPDATE academic_years SET status = 'active', updated_at = ?1 WHERE id = ?2",
         params![now, year_id],
     )?;
+    // The examinations follow their term: the one opened takes marks again
+    // (including after a reopen), and the one just closed stops taking them.
     tx.execute(
-        "UPDATE exams SET status = 'open', updated_at = ?1 WHERE term_id = ?2 AND status = 'planning'",
+        "UPDATE exams SET status = 'closed', updated_at = ?1
+         WHERE status = 'open' AND term_id IN (SELECT id FROM terms WHERE status = 'closed')",
+        params![now],
+    )?;
+    tx.execute(
+        "UPDATE exams SET status = 'open', updated_at = ?1 WHERE term_id = ?2",
         params![now, term_id],
     )?;
 

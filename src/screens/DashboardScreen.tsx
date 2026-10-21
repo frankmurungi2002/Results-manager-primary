@@ -22,6 +22,7 @@ import type {
   SmsBalance, AcademicYearRow, ClassRow, DashboardSummary, Permission } from "../lib/types";
 import { useCan, useStore, type ScreenId } from "../state/store";
 import { YourDesk, deskActions } from "../components/YourDesk";
+import { GettingStarted } from "../components/GettingStarted";
 import { Alert, Button, EmptyState, formatDate, relativeTime } from "../components/ui";
 
 export function DashboardScreen() {
@@ -102,6 +103,8 @@ export function DashboardScreen() {
             ))}
           </div>
         </header>
+
+        <GettingStarted />
 
         <YourDesk session={session} summary={summary} onGo={(screen, params) => navigate(screen, params)} />
 

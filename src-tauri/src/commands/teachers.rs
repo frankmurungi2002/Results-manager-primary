@@ -141,6 +141,16 @@ pub fn create_staff(
     request: CreateStaffRequest,
 ) -> AppResult<CreateStaffResult> {
     let session = state.sessions.require()?;
+    let conn = state.db.lock();
+    create_staff_in(&conn, &session, &request)
+}
+
+/// One new account, checked the same way whether it was typed in or imported.
+pub fn create_staff_in(
+    conn: &rusqlite::Connection,
+    session: &crate::security::Session,
+    request: &CreateStaffRequest,
+) -> AppResult<CreateStaffResult> {
     session.require(Permission::ManageStaff)?;
 
     if request.full_name.trim().is_empty() {
@@ -159,8 +169,6 @@ pub fn create_staff(
     let office = request.office.as_deref().filter(|o| !o.is_empty()).map(Office::parse).transpose()?;
     // Nobody creates an account that can do more than they can.
     session.require_act_on(Role::parse(&request.role)?, office)?;
-
-    let conn = state.db.lock();
 
     let taken: i64 = conn.query_row(
         "SELECT COUNT(*) FROM users WHERE username = ?1 COLLATE NOCASE",
@@ -211,8 +219,8 @@ pub fn create_staff(
     )?;
 
     audit::record(
-        &conn,
-        Some(&session),
+        conn,
+        Some(session),
         "user.create",
         "user",
         &id,

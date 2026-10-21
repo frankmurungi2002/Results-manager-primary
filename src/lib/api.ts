@@ -139,6 +139,13 @@ import type {
   ReportCommentDetail,
   ReportSettings,
   SaveMarksResult,
+  MarksUpload,
+  MarksUploadResult,
+  StaffColumns,
+  Checklist,
+  StaffImportPlan,
+  StaffImported,
+  ExamDeadline,
   SessionView,
   SpreadsheetPreview,
   SubjectHeatmap,
@@ -365,6 +372,16 @@ export const api = {
     call<MarksSheet>("load_marks_sheet", { classSubjectId, examId }),
   saveMarks: (classSubjectId: string, examId: string, entries: MarkEntry[]) =>
     call<SaveMarksResult>("save_marks", { classSubjectId, examId, entries }),
+  /** A sheet to fill in Excel: one subject, or (no subject) every subject this person enters. */
+  downloadMarksTemplate: (classId: string, examId: string, classSubjectId: string | null) =>
+    call<StagedFile>("download_marks_template", { request: { classId, examId, classSubjectId } }),
+  getExamDeadline: (classId: string, examId: string) => call<ExamDeadline>("get_exam_deadline", { classId, examId }),
+  /** One date for every class; null removes it. */
+  setExamDeadline: (examId: string, date: string | null) => call<void>("set_exam_deadline", { examId, date }),
+  saveTermExams: (termId: string, exams: { id: string | null; code: string; name: string; weight: number; isFinal: boolean }[]) =>
+    call<void>("save_term_exams", { termId, exams }),
+  checkMarksUpload: (path: string) => call<MarksUpload>("check_marks_upload", { path }),
+  applyMarksUpload: (path: string) => call<MarksUploadResult>("apply_marks_upload", { path }),
   marksProgress: (classId: string, examId: string) =>
     call<SubjectProgress[]>("marks_progress", { classId, examId }),
   subjectAnalytics: (classSubjectId: string, examId: string) =>
@@ -748,6 +765,11 @@ export const api = {
   exportSportsTeam: (eventId: string) => call<StagedFile[]>("export_sports_team", { eventId }),
   buildCorrectionLetter: (input: LetterInput) => call<DocumentEnvelope<CorrectionLetter>>("build_correction_letter", { input }),
   saveExport: (file: string, destination: string) => call<string>("save_export", { file, destination }),
+  setupChecklist: () => call<Checklist>("setup_checklist"),
+  dismissSetupChecklist: () => call<void>("dismiss_setup_checklist"),
+  planStaffImport: (path: string, columns: StaffColumns | null) => call<StaffImportPlan>("plan_staff_import", { path, columns }),
+  importStaff: (path: string, columns: StaffColumns, skipRows: number[], sendSms: boolean) =>
+    call<DocumentEnvelope<StaffImported>>("import_staff", { path, columns, skipRows, sendSms }),
   inviteStaff: (userId: string, sendSms: boolean) => call<DocumentEnvelope<Invite>>("invite_staff", { userId, sendSms }),
   acceptInvite: (username: string, code: string, newPassword: string) =>
     call<string>("accept_invite", { username, code, newPassword }),

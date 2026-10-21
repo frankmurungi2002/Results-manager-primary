@@ -97,6 +97,7 @@ export function AutoSmsCard() {
         )}
         {row("promiseReminders", "Promise reminders", "The morning a parent's promise to pay falls due, remind them.")}
         {row("notReported", "Not yet reported", "In the first two weeks of term, text parents of learners who have not come to school at all.")}
+        {row("marksReminders", "Marks reminders to teachers", "A day or two before a marks deadline, and on the morning itself, text each teacher who still has marks to enter, naming what is left. Set the deadline in Marks entry.")}
       </div>
       <p className="field-hint" style={{ marginTop: "var(--space-3)" }}>
         Termbook sends these while it is open on the office computer. Texts waiting more than a day are not sent late.

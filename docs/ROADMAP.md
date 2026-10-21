@@ -91,7 +91,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-B0 | Hardware binding (PC lock) | ⏸ | M4 | SRS 16.4: licence key tied to institution ID instead |
 | FR-B1 | One login frame, role-based routing | ✅ | — | Offices on top of accounts: Headteacher, Director of Studies, Secretary, Bursar, each with its own permissions, sidebar and dashboard desk. Every command names the permission it needs; see [`ROLES.md`](ROLES.md), which a test keeps in step with the code |
 | FR-B2 | Institution name, logo, accent colour | ✅ | — | |
-| FR-B3 | Academic calendar: 3 terms, BOT/MID/EOT | ✅ | — | Opening a term closes the others |
+| FR-B3 | Academic calendar: 3 terms, BOT/MID/EOT | ✅ | — | Opening a term closes the others, and its examinations follow it (reopening a closed term takes marks again; the closed term stops taking them). Terms & exams → Examinations: rename, re-weight (shares add to 100% or are all 0%), add a test, remove one with no marks; exactly one end-of-term examination; sealed years are left alone |
 | FR-B4 | Up to three School Admins | ✅ | — | Enforced in the backend |
 | FR-B5 | Class ladder, subject catalogue, registration numbers | ✅ | — | |
 | FR-B6 | Teacher assignment; one Class Teacher and one Assistant per class | ✅ | — | Enforced by a unique index |
@@ -110,9 +110,9 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | --- | --- | --- | --- | --- |
 | FR-C1 | Teachers see only their assigned classes and subjects | ✅ | — | |
 | FR-C2 | Subject Teacher / Class Teacher mode | ✅ | — | |
-| FR-C3 | Marks entry: Excel upload, in-app grid, guided form | 🟡 | **M1** | Grid and form done. **Excel upload missing**: export a pre-filled template and read it back through the same validator and save path. Both layouts are required (decided 2026-09-27): one sheet per subject (a subject teacher's class and exam) and one workbook per class with all subjects (a class teacher's view). SRS 14.7 requires all three to be equally reliable |
+| FR-C3 | Marks entry: Excel upload, in-app grid, guided form | ✅ | — | All three done. Marks entry → Excel: a sheet already filled with the class (one subject, or every subject the person enters), Excel itself refusing impossible marks; the upload is checked first (problems by row), empty boxes keep what Termbook has, only new or changed marks are written, and everything goes through the same `save_marks_in` as the grid. A hidden page and a hidden learner-id column keep a sorted or forwarded sheet on the right class and learners |
 | FR-C5 | Subject analytics | ✅ | — | |
-| FR-C6 | Marks-entry deadline and per-teacher progress | ✅ | — | |
+| FR-C6 | Marks-entry deadline and per-teacher progress | ✅ | — | One deadline per examination for every class (a class may have its own), shown to teachers on Marks entry. Optional "Marks reminders to teachers" SMS a day or two before and on the morning, naming what each teacher still has to enter |
 | FR-C7 | Search by name or registration number | ✅ | — | |
 | FR-C8 | Audited bio-data editing | ✅ | — | |
 | FR-C9 | Correction messages from Subject Teacher to Class Teacher | ⬜ | M2 | Needs a small inbox: message, learner, status (open/resolved) |
@@ -167,7 +167,7 @@ the pilot SRS 16.4 replaces it with manual payment and a manual activation key.
 | FR-G10 | Full data export to Excel/CSV | ✅ | M2 | Reports & printing → Export to Excel: one workbook with learners and parents, staff, this term's marks and attendance, fee balances, the year's receipts and vouchers; each sheet only for someone allowed to read it, and every export in the activity log |
 | FR-G11 | Comment bank | ✅ | — | |
 | FR-G12 | Bulk print with skipped-learner summary | ✅ (class scope) | M2 adds stream and whole-school scope, with progress | |
-| FR-G13 | Onboarding import of learners and staff | 🟡 | **M1** (staff) | Learner import done: Learners → Import spreadsheet (choose file, match columns, check every row, import). Missing: staff import, and offering it from the setup wizard |
+| FR-G13 | Onboarding import of learners and staff | ✅ | — | Learners → Import spreadsheet; Staff → Import from Excel (columns found by heading, titles stripped, usernames made from names, offices read from the position column, each new person invited by SMS and on a printed slip instead of being given a password). Still to do: offering the imports from the setup wizard |
 | FR-G14 | Discipline and conduct log | ✅ | M3 | Conduct screen: commendations as well as incidents, the corrective action taken (corporal punishment is banned, so it is not offered), whether the parent was told, and an optional SMS to the parent; kept by the Class Teacher and the school-wide offices only; withdrawn with a reason, never deleted |
 | FR-G15 | Boarding module (toggle) | ⬜ | M4 | Only when a boarding school signs up |
 | FR-G16 | Student and staff ID cards | ✅ | **M1** | Learners by class or selection, and staff; 8 per A4 sheet or CR80 card printer; photos when the toggle is on |
@@ -254,6 +254,7 @@ or consciously rejected.
 
 | Date | Decision |
 | --- | --- |
+| 2026-10-21 | Version 1 additions before the first paying school: Excel marks upload, marks deadlines with teacher SMS reminders, examinations editable after setup, staff import, and the "Getting started" checklist on the dashboard (ticks worked out from the records, hidden once every required step is done) |
 | 2026-10-10 | The product is renamed **Termbook** (was Phantom School Manager, and before that Results Manager). Identifier `ug.co.termbook`, version 1.0.0. On first start the data folder from the old identifier is moved across; QR codes printed before the rename still check; the audit chain keeps its original starting point |
 | 2026-09-27 | The pilot school is **Rainbow Nursery and Primary School** (for now). The SRS names MB Primary School as sponsor; the SRS text is left unchanged |
 | 2026-09-27 | M1 is SRS Phase 0 **minus the Custom Report Builder** (FR-G1), which moves to M2. M1 ships one fixed, well-designed report card |

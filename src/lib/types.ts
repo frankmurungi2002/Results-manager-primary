@@ -366,6 +366,42 @@ export interface SaveMarksResult {
   warnings: MarkWarning[];
 }
 
+export interface UploadSubject {
+  classSubjectId: string;
+  subjectName: string;
+  maxScore: number;
+  marks: number;
+  absent: number;
+  /** Differ from what Termbook has now; only these are written. */
+  changed: number;
+}
+
+export interface UploadProblem {
+  row: number | null;
+  learner: string | null;
+  subject: string | null;
+  message: string;
+}
+
+export interface MarksUpload {
+  fileName: string;
+  classId: string;
+  className: string;
+  examId: string;
+  examName: string;
+  subjects: UploadSubject[];
+  problems: UploadProblem[];
+  ready: number;
+  changed: number;
+}
+
+export interface MarksUploadResult {
+  saved: number;
+  subjects: number;
+  skipped: RejectedMark[];
+  warnings: MarkWarning[];
+}
+
 export interface SubjectProgress {
   classSubjectId: string;
   subjectName: string;
@@ -1796,6 +1832,15 @@ export interface AutoSmsSettings {
   feeReminderAbove: number;
   promiseReminders: boolean;
   notReported: boolean;
+  /** Teachers with marks still missing, before an examination's deadline. */
+  marksReminders: boolean;
+}
+
+export interface ExamDeadline {
+  date: string | null;
+  /** Negative once it has passed. */
+  daysLeft: number | null;
+  label: string | null;
 }
 
 export interface TextPlan {
@@ -2153,6 +2198,65 @@ export interface StagedFile {
   /** xlsx, csv or folder */
   kind: string;
   detail: string;
+}
+
+export interface ChecklistStep {
+  id: string;
+  title: string;
+  detail: string;
+  done: boolean;
+  optional: boolean;
+  screen: string;
+  tab: string | null;
+}
+
+export interface Checklist {
+  show: boolean;
+  done: number;
+  total: number;
+  steps: ChecklistStep[];
+}
+
+export interface StaffColumns {
+  fullName: number | null;
+  phone: number | null;
+  email: number | null;
+  gender: number | null;
+  position: number | null;
+  username: number | null;
+  nin: number | null;
+  tmis: number | null;
+}
+
+export interface StaffRowPlan {
+  row: number;
+  fullName: string;
+  username: string;
+  phone: string | null;
+  email: string | null;
+  gender: string | null;
+  office: string | null;
+  officeLabel: string;
+  nin: string | null;
+  tmis: string | null;
+  /** ready, exists or blocked. */
+  status: string;
+  problems: string[];
+  notes: string[];
+}
+
+export interface StaffImportPlan {
+  fileName: string;
+  headers: string[];
+  columns: StaffColumns;
+  rows: StaffRowPlan[];
+  ready: number;
+}
+
+export interface StaffImported {
+  created: number;
+  smsSent: number;
+  invites: Invite[];
 }
 
 export interface Invite {

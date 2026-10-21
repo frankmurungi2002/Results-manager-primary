@@ -1,11 +1,12 @@
 /** FR-B3 — the academic calendar: years, terms and the examinations in each. */
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, GraduationCap, LockKeyhole, Unlock } from "lucide-react";
+import { CalendarDays, GraduationCap, ListChecks, LockKeyhole, Unlock } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { AcademicYearRow } from "../lib/types";
-import { useStore } from "../state/store";
+import type { AcademicYearRow, TermRow } from "../lib/types";
+import { TermExamsModal } from "../components/TermExams";
+import { useCan, useStore } from "../state/store";
 import { NewYearModal } from "../components/NewYear";
 import {
   Alert,
@@ -25,6 +26,8 @@ export function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [busyTerm, setBusyTerm] = useState<string | null>(null);
   const [newYear, setNewYear] = useState(false);
+  const [editing, setEditing] = useState<TermRow | null>(null);
+  const can = useCan();
 
   const reload = useCallback(async () => {
     try {
@@ -68,6 +71,17 @@ export function CalendarScreen() {
             onClose={() => setNewYear(false)}
             onDone={() => {
               setNewYear(false);
+              void reload();
+            }}
+          />
+        )}
+
+        {editing && (
+          <TermExamsModal
+            term={editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null);
               void reload();
             }}
           />
@@ -147,6 +161,11 @@ export function CalendarScreen() {
                       </div>
                     </div>
 
+                    {year.status !== "sealed" && can("manage_calendar") && (
+                      <Button size="sm" variant="ghost" icon={<ListChecks size={14} />} onClick={() => setEditing(term)} style={{ marginRight: 8 }}>
+                        Examinations
+                      </Button>
+                    )}
                     {term.status === "open" ? (
                       <Button
                         size="sm"

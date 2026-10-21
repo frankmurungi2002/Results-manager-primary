@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Briefcase, Camera, Copy, KeyRound, Printer, Send, UserPlus, UserX, UsersRound } from "lucide-react";
+import { ArrowLeft, Briefcase, Camera, Copy, FileSpreadsheet, KeyRound, Printer, Send, UserPlus, UserX, UsersRound } from "lucide-react";
 
 import { PhotoModal } from "../components/PhotoModal";
 import { api } from "../lib/api";
@@ -22,6 +22,7 @@ import type {
 import { useStore } from "../state/store";
 import { StaffRegister } from "../components/StaffRegister";
 import { InviteSlipSheet, PrintPreview } from "../components/PrintDocument";
+import { StaffImportModal } from "../components/StaffImport";
 import {
   Alert,
   Badge,
@@ -64,6 +65,8 @@ export function StaffScreen() {
   } | null>(null);
   const [inviteFor, setInviteFor] = useState<UserSummary | null>(null);
   const [slip, setSlip] = useState<DocumentEnvelope<Invite> | null>(null);
+  const [slips, setSlips] = useState<DocumentEnvelope<Invite>[] | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -88,6 +91,18 @@ export function StaffScreen() {
 
   const admins = staff.filter((person) => person.role === "school_admin");
   const teachers = staff.filter((person) => person.role === "teacher");
+
+  if (slips && slips.length > 0) {
+    return (
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <PrintPreview actions={<Button variant="ghost" icon={<ArrowLeft size={15} />} onClick={() => setSlips(null)}>Back</Button>}>
+          {slips.map((one) => (
+            <InviteSlipSheet key={one.body.userId} envelope={one} />
+          ))}
+        </PrintPreview>
+      </div>
+    );
+  }
 
   if (slip) {
     return (
@@ -117,6 +132,9 @@ export function StaffScreen() {
               disabled={teachers.length === 0 || classes.length === 0}
             >
               Assign to a class
+            </Button>
+            <Button icon={<FileSpreadsheet size={15} />} onClick={() => setImportOpen(true)}>
+              Import from Excel
             </Button>
             <Button
               variant="primary"
@@ -353,6 +371,17 @@ export function StaffScreen() {
         save={(png) => (photoFor ? api.setStaffPhoto(photoFor.id, png) : Promise.resolve())}
         onClose={() => setPhotoFor(null)}
       />
+
+      {importOpen && (
+        <StaffImportModal
+          onClose={() => setImportOpen(false)}
+          onDone={(made) => {
+            setImportOpen(false);
+            void reload();
+            setSlips(made);
+          }}
+        />
+      )}
 
       {inviteFor && (
         <InviteModal

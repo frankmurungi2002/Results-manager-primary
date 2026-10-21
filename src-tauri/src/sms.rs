@@ -233,7 +233,7 @@ pub fn policy(kind: &str) -> (i64, Option<chrono::Duration>) {
             (PRIORITY_URGENT, Some(chrono::Duration::hours(12)))
         }
         // A reminder that arrives days late is worse than none.
-        "fee_reminder" | "promise_reminder" | "not_reported" | "daybook" => {
+        "fee_reminder" | "promise_reminder" | "not_reported" | "daybook" | "marks_reminder" => {
             (PRIORITY_BULK, Some(chrono::Duration::hours(24)))
         }
         "test" => (PRIORITY_URGENT, None),

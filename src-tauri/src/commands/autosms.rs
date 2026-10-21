@@ -8,6 +8,7 @@
 //! | Fee reminders   | Once a week, at the day and time the school chooses | yes            |
 //! | Promises        | The morning a parent's promise to pay falls due     | yes            |
 //! | Not reported    | Weekday mornings in a term's first two weeks        | yes            |
+//! | Marks reminders | To teachers, before a marks deadline (deadlines.rs) | yes            |
 //!
 //! A parent with several children gets one text naming them all. Nothing is
 //! sent twice: each kind remembers whom it has texted (in the outbox itself).
@@ -42,6 +43,9 @@ pub struct AutoSmsSettings {
     pub fee_reminder_above: i64,
     pub promise_reminders: bool,
     pub not_reported: bool,
+    /// Teachers with marks still missing, before an examination's deadline.
+    #[serde(default)]
+    pub marks_reminders: bool,
 }
 
 fn flag(conn: &Connection, key: &str) -> AppResult<bool> {
@@ -60,6 +64,7 @@ pub fn load(conn: &Connection) -> AppResult<AutoSmsSettings> {
         fee_reminder_above: get("auto_sms.fee_reminder_above")?.parse().unwrap_or(0),
         promise_reminders: flag(conn, "auto_sms.promise_reminders")?,
         not_reported: flag(conn, "auto_sms.not_reported")?,
+        marks_reminders: flag(conn, "auto_sms.marks_reminders")?,
     })
 }
 
@@ -85,7 +90,7 @@ pub fn save_auto_sms(state: State<'_, AppState>, settings: AutoSmsSettings) -> A
         return Err(AppError::validation("The amount must be zero or more."));
     }
     let conn = state.db.lock();
-    let any_on = settings.absence || settings.results || settings.fee_reminders || settings.promise_reminders || settings.not_reported;
+    let any_on = settings.absence || settings.results || settings.fee_reminders || settings.promise_reminders || settings.not_reported || settings.marks_reminders;
     if any_on {
         crate::network::require_online_allowed(&conn)?;
     }
@@ -96,6 +101,7 @@ pub fn save_auto_sms(state: State<'_, AppState>, settings: AutoSmsSettings) -> A
     set("auto_sms.fee_reminders", settings.fee_reminders)?;
     set("auto_sms.promise_reminders", settings.promise_reminders)?;
     set("auto_sms.not_reported", settings.not_reported)?;
+    set("auto_sms.marks_reminders", settings.marks_reminders)?;
     repo::set_setting(&conn, "auto_sms.fee_reminder_day", &settings.fee_reminder_day.to_string())?;
     repo::set_setting(&conn, "auto_sms.fee_reminder_time", &settings.fee_reminder_time)?;
     repo::set_setting(&conn, "auto_sms.fee_reminder_above", &settings.fee_reminder_above.to_string())?;
@@ -106,6 +112,7 @@ pub fn save_auto_sms(state: State<'_, AppState>, settings: AutoSmsSettings) -> A
         ("weekly fee reminders", before.fee_reminders, settings.fee_reminders),
         ("promise reminders", before.promise_reminders, settings.promise_reminders),
         ("not-reported texts", before.not_reported, settings.not_reported),
+        ("marks reminders to teachers", before.marks_reminders, settings.marks_reminders),
     ] {
         if was != now {
             changes.push(format!("{} {name}", if now { "turned on" } else { "turned off" }));
