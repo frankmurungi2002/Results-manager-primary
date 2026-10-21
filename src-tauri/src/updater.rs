@@ -22,7 +22,7 @@ use crate::security::Permission;
 use crate::state::AppState;
 
 const PUBLIC_KEY: &str = include_str!("../updater.pub");
-const ENDPOINT: &str = "https://github.com/frankmurungi2002/Results-manager-primary/releases/latest/download/latest.json";
+const ENDPOINT: &str = "https://github.com/frankmurungi2002/termbook-releases/releases/latest/download/latest.json";
 
 pub fn configured() -> bool {
     !PUBLIC_KEY.trim().is_empty()

@@ -21,60 +21,28 @@ entered. A school is never locked out of its own records.
 
 ## For the owner (you)
 
-Everything lives in `tools/termbook-licence`. On Windows there are two files
-to double-click there, so no commands need typing:
+Everything is in the **owner** folder of the project. Double-click:
 
 | File | When |
 |---|---|
-| `make-signing-key.bat` | Once, ever. Makes `termbook-issuer.key` and shows the public key line to paste into the app. |
-| `issue-key.bat` | Every time a school pays. Asks for the school code, name, term or year, start date and payment reference, then opens the key in Notepad to copy and send. |
+| `1 Set up my keys (once).bat` | Once, ever. Makes your licence key and your update key in `%USERPROFILE%\TermbookKeys`, and puts their public halves into the program (`src-tauri/src/licence.rs`, `src-tauri/updater.pub`, `tauri.conf.json`). Safe to run again: it never replaces a key. |
+| `2 Make a licence key for a school.bat` | Every payment. Asks for the school code, name, term or year, start date and payment reference; the key is copied, ready to paste into WhatsApp or email, and recorded in `TermbookKeys\issued-keys.csv`. |
 
-`issue-key.bat` must sit in the same folder as `termbook-issuer.key`. Both need
-Rust (`cargo`), which is already on the computer that builds Termbook.
+After step 1: commit and push the changed files, and build the installer
+again. Copies built before that do not check licences.
+
+**The keys folder is the business.** Anyone with `termbook-issuer.key` can
+make keys for every school; anyone with `updater.key` can push an update to
+every school. Copy the folder to a USB disk kept somewhere safe. Never put it
+on a school computer, in Google Drive, WhatsApp or email. It is outside the
+project folder, so it is never committed or zipped with the code. Lose it
+without a copy and every school needs a new installation with new keys.
+
+Behind the scripts is `tools/termbook-licence` (`keygen`, `issue`,
+`inspect`, `pubkey`), which can still be run by hand.
 
 There was only ever one tool. Before the rename it was called
-`phantom-licence` and its keys started `PSM1.`; it is now `termbook-licence`
-and keys start `TBK1.`. No `PSM1` key was ever issued, because the app's
-public key was still empty, so nothing needs replacing.
-
-The same steps by hand:
-
-### Once, ever: make your signing key
-
-```bash
-cd tools/termbook-licence
-cargo run --release -- keygen
-```
-
-This writes `termbook-issuer.key` and prints a line like:
-
-```rust
-pub const ISSUER_PUBLIC_KEY_HEX: &str = "3b6a27bc...";
-```
-
-Paste that line over the empty one in `src-tauri/src/licence.rs` and build.
-From that build on, subscriptions are switched on. Until then every copy runs
-as a pilot with no limits, which is what Rainbow is on now.
-
-**The signing key is the business.** Anyone who has it can issue keys for
-every school. Keep it on your own computer, never on a school's; back it up
-offline (a USB stick somewhere safe); never email or WhatsApp it. It is
-listed in `.gitignore` so it cannot be committed by accident. If you lose
-it, every school needs a new copy of Termbook with a new public key.
-
-### Each payment: issue a key
-
-```bash
-cargo run --release -- issue --school 9F3AC-2B1E0 --name "Rainbow Nursery and Primary School" \
-    --plan term --from 2026-09-01 --id R-0042
-```
-
-`--until` is optional: a term runs 120 days from `--from`, a year 365. Set it
-to match the school calendar if you prefer. The key is printed; send that one
-line to the school. Every key you issue is also recorded in
-`issued-keys.csv`, your sales register.
-
-`inspect TBK1...` reads any key back and confirms you signed it.
+`phantom-licence` and its keys started `PSM1.`; no such key was ever issued.
 
 ## What it protects, honestly
 
@@ -85,6 +53,10 @@ line to the school. Every key you issue is also recorded in
   latest date it has seen and uses that.
 - Read-only is enforced **inside SQLite** (an authorizer on the connection),
   so no screen or command can forget to check it.
+
+Keep the source code private. The licence check lives in the program, so
+anyone holding the code could build a copy without it; the installers are
+published from a separate public repository so the code never has to be.
 
 What it is not: protection against someone who patches the program itself,
 or who restores an old database *and* turns the clock back. It keeps honest

@@ -66,7 +66,7 @@
     "updater": {
       "pubkey": "",
       "endpoints": [
-        "https://github.com/frankmurungi2002/Results-manager-primary/releases/latest/download/latest.json"
+        "https://github.com/frankmurungi2002/termbook-releases/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

@@ -4,6 +4,7 @@
 //! termbook-licence keygen                 make your signing key (once, ever)
 //! termbook-licence issue  --school CODE --name "School" --plan term --from 2026-09-01 [--until 2026-12-12] [--id R-0001]
 //! termbook-licence inspect TBK1....        read a key and check it
+//! termbook-licence pubkey                  print the public key (safe to share)
 //! ```
 //!
 //! The signing key (`termbook-issuer.key`) is the only thing that can make a
@@ -36,6 +37,7 @@ fn main() {
         Some("keygen") => keygen(&args[1..]),
         Some("issue") => issue(&args[1..]),
         Some("inspect") => inspect(&args[1..]),
+        Some("pubkey") => pubkey(&args[1..]),
         _ => Err(USAGE.to_string()),
     };
     if let Err(message) = result {
@@ -47,7 +49,8 @@ fn main() {
 const USAGE: &str = "Usage:
   termbook-licence keygen [--key FILE]
   termbook-licence issue --school CODE --name NAME --plan term|year --from YYYY-MM-DD [--until YYYY-MM-DD] [--id REF] [--key FILE]
-  termbook-licence inspect KEY [--key FILE]";
+  termbook-licence inspect KEY [--key FILE]
+  termbook-licence pubkey [--key FILE]";
 
 fn flag(args: &[String], name: &str) -> Option<String> {
     args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).cloned()
@@ -70,6 +73,14 @@ fn load(path: &PathBuf) -> Result<SigningKey, String> {
         .collect();
     let seed: [u8; 32] = bytes.try_into().map_err(|_| format!("{} is not a signing key.", path.display()))?;
     Ok(SigningKey::from_bytes(&seed))
+}
+
+/// Prints only the public half, for owner-setup to put into the application.
+/// The public key is safe to share; the signing key never leaves its file.
+fn pubkey(args: &[String]) -> Result<(), String> {
+    let signing = load(&key_path(args))?;
+    println!("{}", hex(signing.verifying_key().as_bytes()));
+    Ok(())
 }
 
 fn keygen(args: &[String]) -> Result<(), String> {

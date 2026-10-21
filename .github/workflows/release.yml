@@ -1,10 +1,13 @@
 name: Release
 
 # Builds the Windows installer, signs it for automatic updates and publishes
-# it as a GitHub release with latest.json, which every installed copy checks
-# once a day. Runs when a version tag is pushed, e.g. `git tag v0.2.0`.
-# Needs the repository secrets TAURI_SIGNING_PRIVATE_KEY and
-# TAURI_SIGNING_PRIVATE_KEY_PASSWORD (see docs/UPDATES.md).
+# it, with latest.json, as a release of the PUBLIC repository
+# frankmurungi2002/termbook-releases. Schools download from there; this
+# source repository stays private, so nobody can rebuild Termbook without
+# its licence check. Runs when a version tag is pushed, e.g. `v1.0.1`.
+# Needs the secrets TAURI_SIGNING_PRIVATE_KEY (the whole updater.key file)
+# and RELEASES_TOKEN (a token that may write to termbook-releases); see
+# docs/UPDATES.md.
 
 on:
   push:
@@ -29,10 +32,12 @@ jobs:
       - run: npm ci
       - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          owner: frankmurungi2002
+          repo: termbook-releases
           tagName: ${{ github.ref_name }}
           releaseName: Termbook ${{ github.ref_name }}
           releaseBody: See the changes in this release below.
